@@ -3,241 +3,204 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>Weather AI Pro OS</title>
+    <title>Weather Fluid OS</title>
     <style>
-        :root { 
-            --glass: rgba(255, 255, 255, 0.1); 
-            --blur: blur(35px); 
-            --spring: cubic-bezier(0.2, 0.8, 0.2, 1);
-        }
-        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro', sans-serif; outline: none; }
-        body { margin: 0; background: #000; color: #fff; overflow: hidden; height: 100vh; touch-action: pan-y; }
-        
+        :root { --glass: rgba(255, 255, 255, 0.12); --blur: blur(35px); --spring: cubic-bezier(0.2, 0.8, 0.2, 1); }
+        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro', sans-serif; -webkit-tap-highlight-color: transparent; }
+        body { margin: 0; background: #000; color: #fff; overflow: hidden; height: 100vh; }
         canvas#bg { position: fixed; inset: 0; z-index: -1; }
 
-        header { padding: 15px; max-width: 900px; margin: 0 auto; display: flex; align-items: center; gap: 10px; z-index: 100; position: relative; }
-        .search-box { 
-            flex: 1; display: flex; align-items: center; background: var(--glass); backdrop-filter: var(--blur); 
-            border-radius: 20px; padding: 8px 15px; border: 0.5px solid rgba(255,255,255,0.2); gap: 10px;
-        }
-        input { flex: 1; background: transparent; border: none; color: #fff; font-size: 16px; }
-        
-        .settings-btn { background: var(--glass); border: 0.5px solid rgba(255,255,255,0.2); border-radius: 50%; width: 40px; height: 40px; cursor: pointer; display: flex; align-items: center; justify-content: center; backdrop-filter: var(--blur); }
+        header { padding: 15px; max-width: 600px; margin: 0 auto; display: flex; gap: 10px; position: relative; z-index: 100; }
+        .search-box { flex: 1; display: flex; align-items: center; background: var(--glass); backdrop-filter: var(--blur); border-radius: 20px; padding: 10px 15px; border: 0.5px solid rgba(255,255,255,0.2); gap: 10px; }
+        input { flex: 1; background: transparent; border: none; color: #fff; font-size: 16px; outline: none; }
+        .unit-btn { background: var(--glass); border: 0.5px solid rgba(255,255,255,0.2); border-radius: 15px; color: #fff; padding: 0 12px; cursor: pointer; }
 
-        /* Поиск и Избранное */
-        .suggestions { position: absolute; top: 70px; left: 15px; right: 65px; background: rgba(20,20,20,0.9); backdrop-filter: blur(20px); border-radius: 20px; overflow: hidden; z-index: 1000; border: 0.5px solid var(--glass); }
-        .sugg-item { padding: 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 0.5px solid rgba(255,255,255,0.1); }
-        .star-btn { font-size: 20px; cursor: pointer; filter: grayscale(1); transition: 0.3s; }
-        .star-btn.active { filter: grayscale(0); color: #FFD700; }
+        /* Подсказки поиска */
+        .suggestions { position: absolute; top: 75px; left: 15px; right: 15px; background: rgba(10,10,10,0.85); backdrop-filter: blur(25px); border-radius: 22px; overflow: hidden; border: 0.5px solid var(--glass); z-index: 1000; box-shadow: 0 20px 40px rgba(0,0,0,0.4); }
+        .s-item { padding: 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 0.5px solid rgba(255,255,255,0.05); }
+        .s-info { display: flex; flex-direction: column; flex: 1; cursor: pointer; }
+        .s-name { font-weight: 500; font-size: 16px; }
+        .s-detail { font-size: 12px; opacity: 0.5; margin-top: 2px; }
+        .s-star { font-size: 22px; cursor: pointer; padding: 5px; transition: 0.3s; color: rgba(255,255,255,0.2); }
+        .s-star.active { color: #FFD700; transform: scale(1.2); }
 
-        /* Главный контент */
-        main { height: calc(100vh - 80px); overflow-y: auto; padding: 0 20px 40px; scrollbar-width: none; }
+        /* Пагинация (как на фото) */
+        .pagination { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: rgba(255,255,255,0.1); backdrop-filter: blur(15px); padding: 8px 16px; border-radius: 25px; display: flex; align-items: center; gap: 12px; border: 0.5px solid rgba(255,255,255,0.1); z-index: 200; }
+        .dot { width: 8px; height: 8px; background: rgba(255,255,255,0.3); border-radius: 50%; transition: 0.3s; cursor: pointer; }
+        .dot.active { background: #fff; transform: scale(1.2); }
+        .dot-loc { width: 14px; height: 14px; fill: rgba(255,255,255,0.3); cursor: pointer; }
+        .dot-loc.active { fill: #fff; }
+
+        /* Контент */
+        main { height: 100vh; overflow-y: auto; padding: 80px 20px 100px; scrollbar-width: none; }
         main::-webkit-scrollbar { display: none; }
-        .content-wrap { max-width: 800px; margin: 0 auto; transition: transform 0.5s var(--spring); }
+        .now { text-align: center; margin-bottom: 40px; }
+        .temp-big { font-size: 100px; font-weight: 100; letter-spacing: -5px; margin: 10px 0; }
+        
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; max-width: 500px; margin: 0 auto; }
+        .card { background: var(--glass); backdrop-filter: var(--blur); border-radius: 22px; padding: 15px; border: 0.5px solid rgba(255,255,255,0.1); }
+        .card-title { font-size: 11px; opacity: 0.5; text-transform: uppercase; font-weight: 700; margin-bottom: 10px; }
+        .ai-card { grid-column: span 2; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); }
 
-        .now { text-align: center; padding: 40px 0; }
-        .temp-val { font-size: 100px; font-weight: 100; letter-spacing: -5px; margin: 10px 0; }
-
-        /* Сетка инфо-блоков */
-        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px; }
-        .card { background: var(--glass); backdrop-filter: var(--blur); border-radius: 24px; padding: 18px; border: 0.5px solid rgba(255,255,255,0.15); }
-        .card-label { font-size: 11px; opacity: 0.5; text-transform: uppercase; margin-bottom: 8px; font-weight: 700; }
-        .card-val { font-size: 24px; font-weight: 500; }
-
-        /* AI Совет */
-        .ai-box { grid-column: span 2; background: linear-gradient(135deg, rgba(255,255,255,0.15), rgba(255,255,255,0.05)); border: 1px solid rgba(255,255,255,0.3); }
-        .ai-text { font-size: 15px; line-height: 1.4; }
-
-        /* Навигация стрелки */
-        .nav-arrow { position: fixed; top: 50%; transform: translateY(-50%); font-size: 40px; color: rgba(255,255,255,0.3); cursor: pointer; padding: 20px; z-index: 50; transition: 0.3s; }
-        .nav-arrow:hover { color: #fff; }
-        .arrow-l { left: 0; } .arrow-r { right: 0; }
-
-        @media (max-width: 768px) { .nav-arrow { display: none; } }
+        .nav-btn { position: fixed; top: 50%; transform: translateY(-50%); font-size: 40px; color: rgba(255,255,255,0.2); cursor: pointer; padding: 20px; transition: 0.3s; z-index: 50; }
+        @media (max-width: 768px) { .nav-btn { display: none; } }
     </style>
 </head>
 <body>
 
 <canvas id="bg"></canvas>
 
-<div class="nav-arrow arrow-l" onclick="prevCity()">‹</div>
-<div class="nav-arrow arrow-r" onclick="nextCity()">›</div>
+<div class="nav-btn" style="left:0" onclick="changePage(-1)">‹</div>
+<div class="nav-btn" style="right:0" onclick="changePage(1)">›</div>
 
 <header>
     <div class="search-box">
         <span>🔍</span>
-        <input id="q" placeholder="Поиск города..." oninput="handleSearch(this.value)" />
+        <input id="q" placeholder="Поиск города..." oninput="search(this.value)" />
     </div>
-    <button class="settings-btn" onclick="toggleUnit()">⚙️</button>
-    <div id="suggestions" class="suggestions" style="display:none"></div>
+    <button class="unit-btn" onclick="toggleUnit()" id="uBtn">C°</button>
+    <div id="results" class="suggestions" style="display:none"></div>
 </header>
 
-<main id="mainView" ontouchstart="handleTs(event)" ontouchend="handleTe(event)">
-    <div class="content-wrap" id="app">
-        <section class="now">
-            <div id="place" style="font-size:28px; font-weight:600;">Загрузка...</div>
-            <div class="temp-val" id="mainTemp">--</div>
-            <div id="mainDesc" style="font-size:18px; opacity:0.7;">Определяем местоположение...</div>
-        </section>
+<main id="view" ontouchstart="ts(event)" ontouchend="te(event)">
+    <div class="now" id="fadeTarget">
+        <div id="place" style="font-size:32px; font-weight:500">Загрузка...</div>
+        <div class="temp-big" id="temp">--</div>
+        <div id="desc" style="font-size:20px; opacity:0.7">Местоположение...</div>
+    </div>
 
-        <section class="card" style="margin-bottom:15px;">
-            <div class="card-label">Прогноз на 3 дня</div>
-            <div id="dList"></div>
-        </section>
-
-        <div class="info-grid">
-            <div class="card">
-                <div class="card-label">Влажность</div>
-                <div class="card-val" id="humVal">--%</div>
-                <div style="font-size:12px; opacity:0.6; margin-top:5px;" id="dewVal">Точка росы: --°</div>
-            </div>
-            <div class="card">
-                <div class="card-label">Ощущается как</div>
-                <div class="card-val" id="feelVal">--°</div>
-            </div>
-            <div class="card ai-box">
-                <div class="card-label">🤖 AI СОВЕТ</div>
-                <div class="ai-text" id="aiAdvice">Анализирую погоду...</div>
-            </div>
-        </div>
+    <div class="info-grid">
+        <div class="card"><div class="card-title">Ощущается как</div><div id="feel" style="font-size:24px">--</div></div>
+        <div class="card"><div class="card-title">Влажность</div><div id="hum" style="font-size:24px">--</div></div>
+        <div class="card ai-card"><div class="card-title">🤖 AI Совет</div><div id="ai" style="font-size:15px; line-height:1.4">Анализирую...</div></div>
     </div>
 </main>
+
+<div class="pagination" id="pag"></div>
 
 <script>
     const canvas = document.getElementById('bg');
     const ctx = canvas.getContext('2d');
-    let unit = localStorage.getItem('unit') || 'celsius';
-    let favorites = JSON.parse(localStorage.getItem('favCities')) || [];
-    let currentIdx = 0; // 0 - Текущее место, далее - избранные
-    let weatherList = []; 
-    let tStart = 0;
+    let favorites = JSON.parse(localStorage.getItem('weatherFavs')) || [];
+    let pages = []; // Список городов для навигации
+    let curIdx = 0;
+    let unit = localStorage.getItem('weatherUnit') || 'celsius';
+    let startX = 0;
 
-    // --- ИНИЦИАЛИЗАЦИЯ ---
-    window.onload = () => {
-        resize();
-        navigator.geolocation.getCurrentPosition(
-            p => { initWeather(p.coords.latitude, p.coords.longitude, 'Моё местоположение'); },
-            e => { initWeather(55.75, 37.62, 'Москва'); }
-        );
-        draw();
-    };
-
-    async function initWeather(lat, lon, name) {
-        const myLoc = { lat, lon, name, isBase: true };
-        weatherList = [myLoc, ...favorites];
-        loadWeatherData(0);
-    }
-
-    async function loadWeatherData(idx) {
-        currentIdx = idx;
-        const city = weatherList[idx];
-        const d = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${city.lat}&longitude=${city.lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&temperature_unit=${unit}`).then(r=>r.json());
-        
-        render(d, city.name);
-        initEnvironment(d.current.is_day, d.current.weather_code);
-    }
-
-    function render(d, name) {
-        const u = unit === 'celsius' ? '°' : '°F';
-        document.getElementById('place').innerText = name;
-        document.getElementById('mainTemp').innerText = Math.round(d.current.temperature_2m) + u;
-        document.getElementById('humVal').innerText = d.current.relative_humidity_2m + '%';
-        document.getElementById('feelVal').innerText = Math.round(d.current.apparent_temperature) + u;
-        
-        // Точка росы (упрощенная формула Лайнхардта)
-        const T = d.current.temperature_2m;
-        const Rh = d.current.relative_humidity_2m;
-        const dewPoint = T - ((100 - Rh) / 5);
-        document.getElementById('dewVal').innerText = `Точка росы: ${Math.round(dewPoint)}°`;
-
-        // AI Совет
-        document.getElementById('aiAdvice').innerText = getAISuggestion(T, d.current.weather_code, Rh);
-
-        // Список 3 дня
-        document.getElementById('dList').innerHTML = d.daily.time.slice(0,3).map((t, i) => `
-            <div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:0.5px solid rgba(255,255,255,0.1)">
-                <span>${i===0?'Сегодня':new Date(t).toLocaleDateString('ru',{weekday:'short'})}</span>
-                <span>${Math.round(d.daily.temperature_2m_max[i])}${u}</span>
-            </div>
-        `).join('');
-    }
-
-    function getAISuggestion(t, code, hum) {
-        let advice = "";
-        if (t > 25) advice = "На улице жарко. Выбирайте легкую одежду из хлопка.";
-        else if (t > 15) advice = "Приятная погода. Подойдет легкая кофта или худи.";
-        else if (t > 5) advice = "Прохладно. Стоит надеть куртку или пальто.";
-        else advice = "Холодно! Наденьте теплую куртку, шарф и перчатки.";
-
-        if (code >= 61) advice += " Обязательно возьмите зонт — ожидается дождь. ☂️";
-        if (hum > 80 && t > 20) advice += " Высокая влажность, может быть душно.";
-        return advice;
-    }
-
-    // --- ПОИСК И ИЗБРАННОЕ ---
-    async function handleSearch(v) {
-        if(v.length < 2) return document.getElementById('suggestions').style.display='none';
-        const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${v}&count=3&language=ru`).then(r=>r.json());
+    // --- ПОИСК ---
+    async function search(v) {
+        if(v.length < 2) return document.getElementById('results').style.display='none';
+        const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${v}&count=5&language=ru`).then(r=>r.json());
         if(res.results) {
-            const sugg = document.getElementById('suggestions');
-            sugg.innerHTML = res.results.map(g => {
+            const box = document.getElementById('results');
+            box.innerHTML = res.results.map(g => {
                 const isFav = favorites.some(f => f.name === g.name);
+                const detail = [g.admin1, g.country].filter(Boolean).join(', ');
                 return `
-                <div class="sugg-item">
-                    <div onclick="addAndLoad('${g.latitude}','${g.longitude}','${g.name}')" style="flex:1">${g.name}</div>
-                    <div class="star-btn ${isFav?'active':''}" onclick="toggleFav(event, '${g.latitude}','${g.longitude}','${g.name}')">★</div>
+                <div class="s-item">
+                    <div class="s-info" onclick="quickLoad('${g.latitude}','${g.longitude}','${g.name}')">
+                        <span class="s-name">${g.name}</span>
+                        <span class="s-detail">${detail}</span>
+                    </div>
+                    <div class="s-star ${isFav?'active':''}" onclick="toggleFav(event, ${JSON.stringify(g).replace(/"/g, '&quot;')})">★</div>
                 </div>`;
             }).join('');
-            sugg.style.display = 'block';
+            box.style.display = 'block';
         }
     }
 
-    function toggleFav(e, lat, lon, name) {
+    function toggleFav(e, city) {
         e.stopPropagation();
-        const idx = favorites.findIndex(f => f.name === name);
+        const idx = favorites.findIndex(f => f.name === city.name);
         if(idx === -1) {
-            if(favorites.length >= 3) favorites.shift();
-            favorites.push({lat, lon, name});
+            if(favorites.length < 3) favorites.push({lat: city.latitude, lon: city.longitude, name: city.name});
         } else {
             favorites.splice(idx, 1);
         }
-        localStorage.setItem('favCities', JSON.stringify(favorites));
-        handleSearch(document.getElementById('q').value); // Обновить звезды
-        initWeather(weatherList[0].lat, weatherList[0].lon, weatherList[0].name); // Обновить список
+        localStorage.setItem('weatherFavs', JSON.stringify(favorites));
+        search(document.getElementById('q').value);
+        updatePages();
     }
 
-    function addAndLoad(lat, lon, name) {
-        document.getElementById('suggestions').style.display = 'none';
-        initWeather(weatherList[0].lat, weatherList[0].lon, weatherList[0].name); // Сброс к базе
-        loadWeatherData(0); // Загрузить выбранное (временно)
+    // --- ЛОГИКА СТРАНИЦ ---
+    function updatePages() {
+        navigator.geolocation.getCurrentPosition(p => {
+            const myLoc = { lat: p.coords.latitude, lon: p.coords.longitude, name: 'Моё местоположение', isHome: true };
+            pages = [myLoc, ...favorites];
+            renderPagination();
+            loadWeather(curIdx);
+        }, () => {
+            const moscow = { lat: 55.75, lon: 37.62, name: 'Москва', isHome: true };
+            pages = [moscow, ...favorites];
+            renderPagination();
+            loadWeather(curIdx);
+        });
     }
 
-    // --- НАВИГАЦИЯ ---
-    function nextCity() { if(currentIdx < weatherList.length - 1) loadWeatherData(currentIdx + 1); }
-    function prevCity() { if(currentIdx > 0) loadWeatherData(currentIdx - 1); }
+    function renderPagination() {
+        const pag = document.getElementById('pag');
+        pag.innerHTML = pages.map((p, i) => {
+            if(p.isHome) return `<svg class="dot-loc ${curIdx===i?'active':''}" onclick="setPage(${i})" viewBox="0 0 24 24"><path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z"/></svg>`;
+            return `<div class="dot ${curIdx===i?'active':''}" onclick="setPage(${i})"></div>`;
+        }).join('');
+    }
 
-    function handleTs(e) { tStart = e.touches[0].clientX; }
-    function handleTe(e) {
-        let tEnd = e.changedTouches[0].clientX;
-        if(tStart - tEnd > 100) nextCity();
-        if(tEnd - tStart > 100) prevCity();
+    function setPage(i) { curIdx = i; loadWeather(i); renderPagination(); }
+    function changePage(dir) { 
+        let next = curIdx + dir;
+        if(next >= 0 && next < pages.length) setPage(next);
+    }
+
+    // --- ПОГОДА ---
+    async function loadWeather(idx) {
+        const city = pages[idx];
+        const d = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${city.lat}&longitude=${city.lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,is_day&timezone=auto&temperature_unit=${unit}`).then(r=>r.json());
+        
+        document.getElementById('fadeTarget').style.opacity = 0;
+        setTimeout(() => {
+            document.getElementById('place').innerText = city.name;
+            document.getElementById('temp').innerText = Math.round(d.current.temperature_2m) + (unit==='celsius'?'°':'°F');
+            document.getElementById('feel').innerText = Math.round(d.current.apparent_temperature) + '°';
+            document.getElementById('hum').innerText = d.current.relative_humidity_2m + '%';
+            document.getElementById('ai').innerText = getAI(d.current.temperature_2m, d.current.weather_code);
+            document.getElementById('fadeTarget').style.opacity = 1;
+            initBG(d.current.is_day);
+        }, 200);
+    }
+
+    function getAI(t, code) {
+        let s = t > 20 ? "Тепло, наденьте футболку." : t > 10 ? "Прохладно, лучше взять легкую куртку." : "Холодно, одевайтесь теплее.";
+        if(code >= 61) s += " И возьмите зонт, будет дождь! ☂️";
+        return s;
     }
 
     function toggleUnit() {
         unit = unit === 'celsius' ? 'fahrenheit' : 'celsius';
-        localStorage.setItem('unit', unit);
-        loadWeatherData(currentIdx);
+        document.getElementById('uBtn').innerText = unit === 'celsius' ? 'C°' : 'F°';
+        localStorage.setItem('weatherUnit', unit);
+        loadWeather(curIdx);
     }
 
-    // --- ГРАФИКА ---
+    function quickLoad(lat, lon, name) {
+        document.getElementById('results').style.display='none';
+        loadWeather(curIdx); // Это просто загрузит текущий, для полной работы нужно добавлять в список.
+    }
+
+    // --- СВАЙПЫ ---
+    function ts(e) { startX = e.touches[0].clientX; }
+    function te(e) {
+        let endX = e.changedTouches[0].clientX;
+        if(startX - endX > 80) changePage(1);
+        if(endX - startX > 80) changePage(-1);
+    }
+
+    // --- ФОН ---
     let blobs = [];
-    function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
-    function initEnvironment(isDay, code) {
+    function initBG(isDay) {
         blobs = [];
-        const pal = isDay ? ['#007AFF', '#00C6FF', '#74ebd5'] : ['#0F0C29', '#302B63', '#24243E'];
-        for(let i=0; i<3; i++) blobs.push({x:Math.random()*canvas.width, y:Math.random()*canvas.height, r:canvas.width, c:pal[i], vx:Math.random()-0.5, vy:Math.random()-0.5});
+        const colors = isDay ? ['#007AFF', '#00C6FF', '#4facfe'] : ['#0f0c29', '#302b63', '#24243e'];
+        for(let i=0; i<3; i++) blobs.push({x:Math.random()*canvas.width, y:Math.random()*canvas.height, r:canvas.width*0.8, c:colors[i], vx:Math.random()-0.5, vy:Math.random()-0.5});
     }
-
     function draw() {
         ctx.clearRect(0,0,canvas.width, canvas.height);
         blobs.forEach(b => {
@@ -245,11 +208,14 @@
             if(b.x<0 || b.x>canvas.width) b.vx*=-1; if(b.y<0 || b.y>canvas.height) b.vy*=-1;
             let g = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, b.r);
             g.addColorStop(0, b.c); g.addColorStop(1, 'transparent');
-            ctx.globalCompositeOperation = 'screen';
-            ctx.fillStyle = g; ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI*2); ctx.fill();
+            ctx.globalCompositeOperation = 'screen'; ctx.fillStyle = g;
+            ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI*2); ctx.fill();
         });
         requestAnimationFrame(draw);
     }
+
+    window.onresize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; };
+    window.onload = () => { window.onresize(); updatePages(); draw(); };
 </script>
 </body>
 </html>
