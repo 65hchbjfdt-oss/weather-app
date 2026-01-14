@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Weather Mini App</title>
+<style>
+:root{
+ --glass: rgba(255,255,255,0.25);
+ --blur: blur(18px);
+ --radius: 22px;
+ --text: #fff;
+}
+*{box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',sans-serif}
+body{margin:0;min-height:100vh;color:var(--text);background:#000;overflow:hidden}
+canvas#bg{position:fixed;inset:0;z-index:-1}
+header{padding:14px;display:flex;gap:10px}
+.search{flex:1;display:flex;background:var(--glass);backdrop-filter:var(--blur);border-radius:var(--radius);padding:10px}
+input{flex:1;background:transparent;border:none;color:#fff;font-size:16px;outline:none}
+button{background:rgba(255,255,255,.25);border:none;border-radius:16px;color:#fff;padding:8px 12px;cursor:pointer}
+main{padding:14px;display:grid;gap:14px}
+.card{background:var(--glass);backdrop-filter:var(--blur);border-radius:var(--radius);padding:16px;box-shadow:0 20px 40px rgba(0,0,0,.3);animation:fade .6s ease}
+@keyframes fade{from{opacity:0;transform:translateY(10px)}to{opacity:1}}
+.now{display:flex;justify-content:space-between;align-items:center}
+.temp{font-size:58px;font-weight:600}
+.meta{opacity:.85}
+.hourly,.days{display:grid;grid-auto-flow:column;gap:12px;overflow-x:auto}
+.hour,.day{min-width:72px;text-align:center}
+.windArrow{display:inline-block;transform-origin:center;transition:transform .5s}
+@media(min-width:768px){main{max-width:900px;margin:auto}}
+</style>
+</head>
+<body>
+<canvas id="bg"></canvas>
+<header>
+ <div class="search"><input id="q" placeholder="Город / City" /><button onclick="search()">🔍</button></div>
+ <button onclick="toggleLang()">RU / EN</button>
+</header>
+<main>
+ <section class="card now">
+  <div>
+   <div id="place">—</div>
+   <div class="meta" id="desc">—</div>
+   <div class="meta" id="wind">—</div>
+  </div>
+  <div class="temp" id="temp">—°</div>
+ </section>
+ <section class="card"><h3 id="hHourly">По часам</h3><div class="hourly" id="hourly"></div></section>
+ <section class="card"><h3 id="hDays">3 дня</h3><div class="days" id="days"></div></section>
+</main>
+<script>
+let lang='ru';
+const t={ru:{hourly:'По часам',days:'3 дня',wind:'Ветер'},en:{hourly:'Hourly',days:'3 days',wind:'Wind'}};
+
+function toggleLang(){lang=lang==='ru'?'en':'ru';hHourly.innerText=t[lang].hourly;hDays.innerText=t[lang].days}
+
+navigator.geolocation?.getCurrentPosition(p=>load(p.coords.latitude,p.coords.longitude,''));
+
+async function search(){const q=document.getElementById('q').value;const g=await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${q}&count=1&language=${lang}`).then(r=>r.json());if(g.results)load(g.results[0].latitude,g.results[0].longitude,g.results[0].name)}
+
+async function load(lat,lon,name){localStorage.setItem('last',JSON.stringify({lat,lon,name}));const data=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,wind_speed_10m,wind_direction_10m,is_day&hourly=temperature_2m,weather_code&daily=temperature_2m_max,temperature_2m_min&timezone=auto`).then(r=>r.json());render(data,name);animateBg(data.current.weather_code,data.current.is_day)}
+
+function render(d,name){place.innerText=name||'Ваше местоположение';temp.innerText=Math.round(d.current.temperature_2m)+'°';desc.innerText=codeToText(d.current.weather_code);wind.innerHTML=`${t[lang].wind}: ${d.current.wind_speed_10m} м/с <span class="windArrow" style="transform:rotate(${d.current.wind_direction_10m}deg)">↑</span>`;
+hourly.innerHTML='';d.hourly.temperature_2m.slice(0,12).forEach((x,i)=>{hourly.innerHTML+=`<div class="hour">${i}:00<br>${Math.round(x)}°</div>`});
+days.innerHTML='';d.daily.temperature_2m_max.slice(0,3).forEach((x,i)=>{days.innerHTML+=`<div class="day">${Math.round(x)}° / ${Math.round(d.daily.temperature_2m_min[i])}°</div>`})}
+
+function codeToText(c){return({0:'Ясно',1:'Почти ясно',2:'Облачно',3:'Пасмурно',61:'Дождь',71:'Снег'})[c]||'Погода'}
+
+const c=document.getElementById('bg'),ctx=c.getContext('2d');function resize(){c.width=innerWidth;c.height=innerHeight}resize();onresize=resize;let particles=[];
+function animateBg(code,isDay){particles=[];for(let i=0;i<(code>=60?250:80);i++)particles.push({x:Math.random()*c.width,y:Math.random()*c.height,s:Math.random()*4+1});ctx.fillStyle=isDay?'#87ceeb':'#0b1d3a'}
+(function loop(){ctx.fillRect(0,0,c.width,c.height);ctx.fillStyle='rgba(255,255,255,.7)';particles.forEach(p=>{p.y+=p.s;if(p.y>c.height)p.y=0;ctx.fillRect(p.x,p.y,2,10)});requestAnimationFrame(loop)})();
+</script>
+</body>
+</html>
