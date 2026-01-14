@@ -5,42 +5,92 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Weather iOS Ultimate</title>
     <style>
-        :root { --glass: rgba(255, 255, 255, 0.1); --blur: blur(50px); --spring: cubic-bezier(0.165, 0.84, 0.44, 1); }
-        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro', sans-serif; -webkit-tap-highlight-color: transparent; }
+        :root { 
+            --glass: rgba(60, 60, 60, 0.4); 
+            --glass-border: rgba(255, 255, 255, 0.2);
+            --blur: blur(30px); 
+            --spring: cubic-bezier(0.25, 1, 0.5, 1); 
+        }
+        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro', sans-serif; -webkit-tap-highlight-color: transparent; }
         body { margin: 0; background: #000; color: #fff; overflow: hidden; height: 100vh; }
-        canvas#bg { position: fixed; inset: 0; z-index: -1; }
+        canvas#bg { position: fixed; inset: 0; z-index: -1; transition: filter 1s ease; }
 
         header { padding: 15px; max-width: 600px; margin: 0 auto; display: flex; gap: 10px; position: relative; z-index: 2000; }
-        .search-box { flex: 1; display: flex; align-items: center; background: var(--glass); backdrop-filter: var(--blur); border-radius: 20px; padding: 10px 15px; border: 0.5px solid rgba(255,255,255,0.2); position: relative; }
-        input { flex: 1; background: transparent; border: none; color: #fff; font-size: 16px; outline: none; margin-left: 10px; }
-        .icon-btn { background: var(--glass); border: 0.5px solid rgba(255,255,255,0.2); border-radius: 15px; width: 45px; height: 45px; cursor: pointer; display: flex; align-items: center; justify-content: center; backdrop-filter: var(--blur); }
+        .search-box { flex: 1; display: flex; align-items: center; background: rgba(30,30,30,0.5); backdrop-filter: var(--blur); border-radius: 18px; padding: 10px 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border: 1px solid var(--glass-border); position: relative; }
+        input { flex: 1; background: transparent; border: none; color: #fff; font-size: 17px; outline: none; margin-left: 10px; font-weight: 500; }
+        .icon-btn { background: rgba(30,30,30,0.5); border: 1px solid var(--glass-border); border-radius: 50%; width: 44px; height: 44px; cursor: pointer; display: flex; align-items: center; justify-content: center; backdrop-filter: var(--blur); box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
 
-        #stage { height: 100vh; overflow: hidden; position: relative; }
-        .page-container {
-            position: absolute; inset: 0; padding: 20px 20px 180px;
-            transition: transform 0.6s var(--spring), opacity 0.6s var(--spring);
-            will-change: transform, opacity; overflow-y: auto;
+        #stage { 
+            height: 100vh; 
+            overflow: hidden; 
+            position: relative; 
         }
-        .page-container.next { transform: translateX(100%); opacity: 0; }
-        .page-container.prev { transform: translateX(-100%); opacity: 0; }
+        .page-container {
+            position: absolute;
+            inset: 0;
+            padding: 10px 20px 180px;
+            transition: transform 0.7s var(--spring), opacity 0.5s ease;
+            will-change: transform, opacity;
+            overflow-y: auto;
+            scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch;
+        }
+        .page-container.next { transform: translateX(100%); opacity: 0; pointer-events: none; }
+        .page-container.prev { transform: translateX(-100%); opacity: 0; pointer-events: none; }
         .page-container.active { transform: translateX(0); opacity: 1; }
 
-        .city-header { text-align: center; margin: 40px 0; text-shadow: 0 2px 10px rgba(0,0,0,0.3); }
-        .temp-big { font-size: 110px; font-weight: 100; letter-spacing: -5px; margin: 5px 0; }
+        .city-header { text-align: center; margin: 40px 0 50px; text-shadow: 0 2px 10px rgba(0,0,0,0.2); }
+        .city-name { font-size: 34px; font-weight: 600; letter-spacing: 0.5px; margin-bottom: 5px; }
+        .temp-big { font-size: 96px; font-weight: 200; letter-spacing: -3px; line-height: 1; }
+        .condition-text { font-size: 20px; font-weight: 500; opacity: 0.9; text-transform: capitalize; margin-bottom: 5px; }
+        .hl-temp { font-size: 20px; font-weight: 500; opacity: 1; }
         
-        .card { background: var(--glass); backdrop-filter: var(--blur); border-radius: 28px; padding: 20px; border: 0.5px solid rgba(255,255,255,0.15); margin-bottom: 20px; }
-        .card-label { font-size: 11px; opacity: 0.5; text-transform: uppercase; font-weight: 700; margin-bottom: 15px; }
+        /* Glassmorphism Cards */
+        .card { 
+            background: var(--glass); 
+            backdrop-filter: var(--blur); 
+            -webkit-backdrop-filter: var(--blur);
+            border-radius: 24px; 
+            padding: 20px; 
+            border: 1px solid var(--glass-border); 
+            margin-bottom: 15px; 
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        .card-label { font-size: 13px; opacity: 0.6; text-transform: uppercase; font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; gap: 5px; letter-spacing: 0.5px; }
 
-        .h-scroll { display: flex; gap: 20px; overflow-x: auto; scrollbar-width: none; }
+        .extra-cards { display: flex; gap: 15px; }
+        .extra-card { flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
+
+        .h-scroll { display: flex; gap: 24px; overflow-x: auto; scrollbar-width: none; padding-bottom: 5px; }
         .h-scroll::-webkit-scrollbar { display: none; }
-        .h-item { text-align: center; min-width: 60px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+        .h-item { text-align: center; min-width: 50px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+        .wind-icon { font-size: 12px; transition: transform 0.3s; opacity: 0.7; }
 
-        .day-row { display: grid; grid-template-columns: 1fr 1fr 1fr; align-items: center; padding: 12px 0; border-bottom: 0.5px solid rgba(255,255,255,0.1); font-size: 14px; }
+        .day-row { display: grid; grid-template-columns: 1.2fr 1fr 1fr; align-items: center; padding: 14px 0; border-bottom: 1px solid rgba(255,255,255,0.15); font-size: 16px; font-weight: 500; }
+        .day-row:last-child { border: none; padding-bottom: 0; }
+        .bar-container { height: 4px; background: rgba(0,0,0,0.2); border-radius: 2px; overflow: hidden; position: relative; width: 100%; margin: 0 10px; }
+        .bar-fill { height: 100%; background: linear-gradient(90deg, #8bc34a, #ffeb3b, #ff9800); opacity: 0.8; }
 
-        #settings { position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(30px); z-index: 3000; display: none; padding: 40px 20px; }
-        .nav-dock { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.3); backdrop-filter: blur(20px); padding: 10px 20px; border-radius: 25px; display: flex; gap: 8px; border: 0.5px solid rgba(255,255,255,0.1); z-index: 2500; }
-        .dot { width: 6px; height: 6px; background: rgba(255,255,255,0.3); border-radius: 50%; }
-        .dot.active { background: #fff; width: 12px; border-radius: 3px; }
+        #settings { position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(40px); z-index: 3000; display: none; padding: 60px 20px; overflow-y: auto; animation: fadeIn 0.3s; }
+        .close-settings { position: absolute; top: 20px; right: 20px; width: 36px; height: 36px; background: rgba(255,255,255,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; cursor: pointer; }
+
+        .nav-dock { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(40,40,40,0.6); backdrop-filter: blur(20px); padding: 8px 16px; border-radius: 20px; display: flex; align-items: center; gap: 10px; border: 1px solid rgba(255,255,255,0.1); z-index: 2500; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+        .dot { width: 8px; height: 8px; background: rgba(255,255,255,0.3); border-radius: 50%; transition: 0.3s; }
+        .dot.active { background: #fff; transform: scale(1.2); }
+
+        .fav-star { font-size: 20px; cursor: pointer; color: #fff; opacity: 0.3; transition: 0.2s; }
+        .fav-star.active { opacity: 1; color: #FFD60A; text-shadow: 0 0 10px #FFD60A; }
+
+        .settings-section { margin: 30px 0; background: rgba(255,255,255,0.08); border-radius: 16px; padding: 0 15px; }
+        .settings-item { display: flex; justify-content: space-between; align-items: center; padding: 16px 0; border-bottom: 1px solid rgba(255,255,255,0.1); font-size: 17px; }
+        .settings-item:last-child { border: none; }
+        
+        .delete-btn { color: #ff453a; font-size: 16px; cursor: pointer; background: rgba(255,69,58,0.15); padding: 5px 12px; border-radius: 12px; }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        /* Анимации погоды */
+        .sun-ray { position: absolute; top: 50%; left: 50%; width: 200%; height: 200%; background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 60%); animation: rotate 20s linear infinite; transform-origin: top left; pointer-events: none; }
+        @keyframes rotate { from {transform: rotate(0deg);} to {transform: rotate(360deg);} }
     </style>
 </head>
 <body>
@@ -49,19 +99,35 @@
 
 <header>
     <div class="search-box">
-        🔍 <input id="q" placeholder="Поиск города..." oninput="search(this.value)">
+        <span style="opacity:0.6">🔍</span> <input id="q" placeholder="Поиск города..." oninput="search(this.value)">
     </div>
     <div class="icon-btn" onclick="toggleSet(true)">⚙️</div>
-    <div id="results" style="position:absolute; top:75px; left:15px; right:15px; background:rgba(30,30,30,0.9); border-radius:20px; overflow:hidden; display:none; z-index:2500;"></div>
+    <div id="results" style="position:absolute; top:75px; left:15px; right:15px; background:rgba(40,40,40,0.95); border-radius:18px; overflow:hidden; display:none; z-index:2500; border:1px solid rgba(255,255,255,0.2); backdrop-filter:blur(20px);"></div>
 </header>
 
 <div id="stage"></div>
 
 <div id="settings">
-    <div style="float:right; font-size:30px" onclick="toggleSet(false)">✕</div>
-    <h2>Настройки</h2>
-    <div id="favList"></div>
-    <p style="margin-top:20px; opacity:0.6">Единицы: °C</p>
+    <div class="close-settings" onclick="toggleSet(false)">✕</div>
+    <h2 style="margin-top:0">Настройки</h2>
+
+    <div class="settings-section">
+        <div class="settings-item">
+            <span>Единицы измерения</span>
+            <select id="unitSelect" onchange="changeUnit(this.value)" style="background:transparent; color:#0a84ff; border:none; font-size:17px; outline:none;">
+                <option value="C">Цельсий (°C)</option>
+                <option value="F">Фаренгейт (°F)</option>
+            </select>
+        </div>
+    </div>
+
+    <h3>Избранное</h3>
+    <div class="settings-section" id="favList"></div>
+
+    <div style="text-align:center; margin-top:40px; opacity:0.6; font-size:13px;">
+        <p id="locStatus">Геолокация активна</p>
+        <button onclick="requestLocation()" style="background:#333; border:none; color:#fff; padding:10px 20px; border-radius:20px; font-size:14px;">Обновить мое местоположение</button>
+    </div>
 </div>
 
 <div class="nav-dock" id="pag"></div>
@@ -70,13 +136,26 @@
     const canvas = document.getElementById('bg');
     const ctx = canvas.getContext('2d');
     let pages = [], curIdx = 0, startX = 0;
-    
-    // Состояние окружения для анимаций
+    // Env now stores enhanced animation props
     let env = { 
-        isDay: true, code: 0, wSpeed: 0, 
-        particles: [], clouds: [], stars: [], lightning: 0,
-        theme: { top: '#00C6FF', bottom: '#007AFF' }
+        isDay: true, code: 0, wind: 0, wSpeed: 0, 
+        stars: [], clouds: [], particles: [], lightning: [], fog: [],
+        timeProgress: 0, // 0 to 1 for day cycle
+        phase: 'day' // dawn, day, dusk, night
     };
+    let unit = localStorage.getItem('unit') || 'C';
+
+    document.getElementById('unitSelect').value = unit;
+
+    function toDisplayTemp(c) {
+        return unit === 'F' ? Math.round(c * 9/5 + 32) : Math.round(c);
+    }
+
+    function changeUnit(u) {
+        unit = u;
+        localStorage.setItem('unit', u);
+        if (pages.length > 0) loadWeather(curIdx);
+    }
 
     async function init() {
         resize();
@@ -84,158 +163,196 @@
         loop();
     }
 
-    function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
-    window.onresize = resize;
+    // --- Геолокация и название ---
+    function requestLocation() {
+        if (navigator.geolocation) {
+            document.getElementById('locStatus').innerText = 'Определение координат...';
+            navigator.geolocation.getCurrentPosition(
+                async p => {
+                    // Сначала получаем данные о локации (страна и город)
+                    const locData = await getLocationName(p.coords.latitude, p.coords.longitude);
+                    
+                    unit = (locData.countryCode === 'us') ? 'F' : 'C';
+                    localStorage.setItem('unit', unit);
+                    document.getElementById('unitSelect').value = unit;
+                    
+                    // Обновляем главную страницу
+                    fetchMain(p.coords.latitude, p.coords.longitude, locData.name, true);
+                    document.getElementById('locStatus').innerText = `Текущая: ${locData.name}`;
+                },
+                err => {
+                    fetchMain(55.75, 37.62, 'Москва', true);
+                    document.getElementById('locStatus').innerText = 'Доступ запрещен, выбрана Москва';
+                }
+            );
+        } else {
+            fetchMain(55.75, 37.62, 'Москва', true);
+        }
+    }
 
-    async function requestLocation() {
-        navigator.geolocation.getCurrentPosition(async p => {
-            const { latitude: lat, longitude: lon } = p.coords;
-            // Получаем название города через Reverse Geocoding
-            const geo = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=ru`).then(r=>r.json());
-            const cityName = geo.address.city || geo.address.town || geo.address.village || "Мой город";
-            fetchMain(lat, lon, cityName, true);
-        }, () => fetchMain(55.75, 37.62, 'Москва', true));
+    async function getLocationName(lat, lon) {
+        try {
+            // Используем Nominatim для получения названия населенного пункта
+            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&zoom=10&accept-language=ru`);
+            const data = await res.json();
+            const addr = data.address;
+            
+            // Приоритет названия: Город > Поселок > Деревня > Район
+            let name = addr.city || addr.town || addr.village || addr.hamlet || addr.county || 'Моя локация';
+            // Убираем лишние слова типа "городской округ" если есть
+            name = name.replace('городской округ', '').trim();
+            
+            return {
+                name: name,
+                countryCode: addr.country_code || 'unknown'
+            };
+        } catch (e) {
+            return { name: 'Моя локация', countryCode: 'unknown' };
+        }
     }
 
     async function fetchMain(lat, lon, name, isHome = false) {
-        pages = [{lat, lon, name, home: isHome}];
-        const favs = JSON.parse(localStorage.getItem('favs') || '[]');
-        pages.push(...favs);
-        renderPag();
-        loadWeather(0);
+        const existing = pages.find(p => p.home);
+        if (existing && isHome) {
+            existing.lat = lat; existing.lon = lon; existing.name = name;
+            loadWeather(curIdx);
+        } else {
+            pages = [{lat, lon, name, home: true}];
+            const favs = JSON.parse(localStorage.getItem('favs') || '[]');
+            pages.push(...favs.map(f => ({...f, home: false})));
+            renderPag();
+            loadWeather(0);
+        }
     }
 
-    async function loadWeather(idx) {
+    // --- Погода ---
+    async function loadWeather(idx, direction = 0) {
         curIdx = idx;
         const city = pages[idx];
-        const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${city.lat}&longitude=${city.lon}&current=temperature_2m,weather_code,is_day,wind_speed_10m,apparent_temperature&hourly=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset&timezone=auto`).then(r=>r.json());
+
+        // Запрашиваем данные
+        const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${city.lat}&longitude=${city.lon}&current=temperature_2m,apparent_temperature,weather_code,is_day,wind_direction_10m,wind_speed_10m,relative_humidity_2m,dewpoint_2m,pressure_msl&hourly=temperature_2m,weather_code,wind_direction_10m,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,relative_humidity_2m_max,wind_speed_10m_max,wind_direction_10m_dominant,sunrise,sunset,precipitation_probability_max&timezone=auto`).then(r=>r.json());
         
         updateEnv(res);
         renderPageContent(idx, res, city);
-        renderPag();
-    }
-
-    function updateEnv(data) {
-        const cur = data.current;
-        env.isDay = !!cur.is_day;
-        env.code = cur.weather_code;
-        env.wSpeed = cur.wind_speed_10m;
         
-        // Настройка цветов темы
-        if (!env.isDay) {
-            env.theme = { top: '#0F0C29', bottom: '#24243E' }; // Ночь
-        } else if (env.code >= 51) {
-            env.theme = { top: '#4B79A1', bottom: '#283E51' }; // Дождь/Пасмурно
+        // Сброс частиц и инициализация под новую погоду
+        initGraphics(); 
+        
+        renderPag();
+        animateSlide(idx, direction);
+    }
+
+    function updateEnv(res) {
+        env.isDay = !!res.current.is_day;
+        env.code = res.current.weather_code;
+        env.wind = res.current.wind_direction_10m;
+        env.wSpeed = res.current.wind_speed_10m;
+        
+        const now = new Date(res.current.time);
+        const sr = new Date(res.daily.sunrise[0]);
+        const ss = new Date(res.daily.sunset[0]);
+        
+        // Определяем точную фазу для градиента
+        if (now < sr) {
+            env.phase = 'night';
+            if (sr - now < 3600000 * 1.5) env.phase = 'dawn';
+        } else if (now > ss) {
+            env.phase = 'night';
+            if (now - ss < 3600000 * 1.5) env.phase = 'dusk';
         } else {
-            env.theme = { top: '#00C6FF', bottom: '#007AFF' }; // Ясно
-        }
-
-        // Инициализация частиц
-        env.particles = [];
-        let count = (env.code >= 71) ? 100 : (env.code >= 51 ? 150 : 0);
-        for(let i=0; i<count; i++) {
-            env.particles.push({
-                x: Math.random() * canvas.width,
-                y: Math.random() * canvas.height,
-                v: (env.code >= 71 ? 1 : 10) + Math.random() * 5,
-                s: Math.random() * 2 + 1
-            });
-        }
-
-        // Облака
-        env.clouds = [];
-        let cCount = (env.code > 0) ? (env.code > 3 ? 8 : 4) : 0;
-        for(let i=0; i<cCount; i++) {
-            env.clouds.push({
-                x: Math.random() * canvas.width,
-                y: Math.random() * 300,
-                r: 100 + Math.random() * 150,
-                o: 0.2 + Math.random() * 0.3
-            });
+            env.phase = 'day';
+            // Ближе к закату?
+            if (ss - now < 3600000 * 2) env.phase = 'late_afternoon';
         }
     }
 
-    function loop() {
-        // Фон
-        const g = ctx.createLinearGradient(0, 0, 0, canvas.height);
-        g.addColorStop(0, env.theme.top);
-        g.addColorStop(1, env.theme.bottom);
-        ctx.fillStyle = g;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        // Солнце / Луна
-        if (env.code <= 3) {
-            ctx.save();
-            ctx.translate(canvas.width/2, 150);
-            if (env.isDay) {
-                const s = 1 + Math.sin(Date.now()/1000)*0.05;
-                ctx.scale(s, s);
-                ctx.fillStyle = 'rgba(255, 255, 100, 0.3)';
-                ctx.beginPath(); ctx.arc(0,0, 60, 0, Math.PI*2); ctx.fill();
-                ctx.fillStyle = '#FFF500';
-                ctx.beginPath(); ctx.arc(0,0, 40, 0, Math.PI*2); ctx.fill();
-            }
-            ctx.restore();
-        }
-
-        // Гроза
-        if (env.code >= 95 && Math.random() > 0.98) {
-            ctx.fillStyle = 'rgba(255,255,255,0.4)';
-            ctx.fillRect(0,0,canvas.width, canvas.height);
-        }
-
-        // Облака
-        env.clouds.forEach(c => {
-            c.x += env.wSpeed * 0.1;
-            if(c.x - c.r > canvas.width) c.x = -c.r;
-            ctx.fillStyle = `rgba(255,255,255,${c.o})`;
-            ctx.beginPath(); ctx.arc(c.x, c.y, c.r, 0, Math.PI*2); ctx.fill();
-        });
-
-        // Осадки
-        ctx.fillStyle = env.code >= 71 ? '#FFF' : '#AAb';
-        env.particles.forEach(p => {
-            p.y += p.v;
-            if(p.y > canvas.height) p.y = -10;
-            if(env.code >= 71) {
-                ctx.beginPath(); ctx.arc(p.x, p.y, p.s, 0, Math.PI*2); ctx.fill();
+    function animateSlide(idx, direction) {
+        const containers = document.querySelectorAll('.page-container');
+        containers.forEach((c, i) => {
+            c.className = 'page-container'; // reset
+            if (i === idx) {
+                c.classList.add('active');
+            } else if (i === curIdx - direction) {
+                // Предыдущий активный уходит
+                c.classList.add(direction > 0 ? 'prev' : 'next');
             } else {
-                ctx.fillRect(p.x, p.y, 1, 15);
+                // Остальные скрыты
+                c.style.opacity = 0;
             }
         });
-
-        requestAnimationFrame(loop);
     }
 
     function renderPageContent(idx, res, city) {
+        const desc = getWeatherDesc(res.current.weather_code);
+        
         let html = `
             <div class="city-header">
-                <div style="font-size:32px; font-weight:500">${city.name}</div>
-                <div class="temp-big">${Math.round(res.current.temperature_2m)}°</div>
-                <div style="font-size:20px; opacity:0.9">${getWeatherDesc(res.current.weather_code)}</div>
-                <div style="font-size:18px; margin-top:5px">Макс: ${Math.round(res.daily.temperature_2m_max[0])}°, мин: ${Math.round(res.daily.temperature_2m_min[0])}°</div>
+                <div class="city-name">${city.name}</div>
+                <div class="condition-text">${desc}</div>
+                <div class="temp-big">${toDisplayTemp(res.current.temperature_2m)}°</div>
+                <div class="hl-temp">Макс.: ${toDisplayTemp(res.daily.temperature_2m_max[0])}°  Мин.: ${toDisplayTemp(res.daily.temperature_2m_min[0])}°</div>
             </div>
 
             <div class="card">
-                <div class="card-label">Почасовой прогноз</div>
+                <div class="card-label"><span>🕓</span> Почасовой прогноз</div>
                 <div class="h-scroll">${res.hourly.time.slice(0,24).map((t,i)=>`
                     <div class="h-item">
-                        <span style="font-size:13px; opacity:0.7">${new Date(t).getHours()}:00</span>
-                        <span style="font-size:22px">${getWeatherIcon(res.hourly.weather_code[i])}</span>
-                        <span style="font-weight:600">${Math.round(res.hourly.temperature_2m[i])}°</span>
+                        <span style="font-size:13px; font-weight:600">${i===0?'Сейчас':new Date(t).getHours()}</span>
+                        <span style="font-size:24px; margin:5px 0">${getWeatherIcon(res.hourly.weather_code[i], res.hourly.is_day?res.hourly.is_day[i]:1)}</span>
+                        <span style="font-size:16px; font-weight:500">${toDisplayTemp(res.hourly.temperature_2m[i])}°</span>
+                        <div class="wind-icon" style="transform:rotate(${res.hourly.wind_direction_10m[i]}deg)">↑</div>
+                        <span style="font-size:11px; opacity:0.6">${Math.round(res.hourly.wind_speed_10m[i])}</span>
                     </div>
                 `).join('')}</div>
             </div>
 
             <div class="card">
-                <div class="card-label">Прогноз на 7 дней</div>
-                ${res.daily.time.map((t,i)=>`
+                <div class="card-label"><span>📅</span> 5 Дней</div>
+                ${res.daily.time.slice(0,5).map((t,i)=>`
                     <div class="day-row">
-                        <span>${i===0?'Сегодня':new Date(t).toLocaleDateString('ru',{weekday:'short'})}</span>
-                        <span style="text-align:center; font-size:20px">${getWeatherIcon(res.daily.weather_code[i])}</span>
-                        <span style="text-align:right">${Math.round(res.daily.temperature_2m_max[i])}° / ${Math.round(res.daily.temperature_2m_min[i])}°</span>
+                        <div>${i===0?'Сегодня':new Date(t).toLocaleDateString('ru',{weekday:'short'})}</div>
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <span>${getWeatherIcon(res.daily.weather_code[i])}</span>
+                            <span style="font-size:12px; opacity:0.6; width:30px;">${res.daily.precipitation_probability_max[i]}%</span>
+                        </div>
+                        <div style="text-align:right; display:flex; gap:10px; justify-content:flex-end;">
+                            <span style="opacity:0.5">${toDisplayTemp(res.daily.temperature_2m_min[i])}°</span>
+                            <span>${toDisplayTemp(res.daily.temperature_2m_max[i])}°</span>
+                        </div>
                     </div>
                 `).join('')}
+            </div>
+
+            <div class="extra-cards">
+                <div class="card extra-card">
+                    <div class="card-label">Ощущается</div>
+                    <div style="font-size: 32px; font-weight:500">${toDisplayTemp(res.current.apparent_temperature)}°</div>
+                    <div style="font-size:12px; opacity:0.7; margin-top:5px">По фактору ветра и влажности</div>
+                </div>
+                <div class="card extra-card">
+                    <div class="card-label">Влажность</div>
+                    <div style="font-size: 32px; font-weight:500">${res.current.relative_humidity_2m}%</div>
+                    <div style="font-size:12px; opacity:0.7; margin-top:5px">Точка росы: ${toDisplayTemp(res.current.dewpoint_2m)}°</div>
+                </div>
+            </div>
+
+            <div class="extra-cards">
+                 <div class="card extra-card">
+                    <div class="card-label">Давление</div>
+                    <div style="font-size: 24px; font-weight:500">${Math.round(res.current.pressure_msl * 0.75006)} <span style="font-size:14px">мм рт.ст.</span></div>
+                </div>
+                <div class="card extra-card">
+                    <div class="card-label">Ветер</div>
+                    <div style="font-size: 24px; font-weight:500">${Math.round(res.current.wind_speed_10m)} <span style="font-size:14px">м/с</span></div>
+                </div>
+            </div>
+
+             <div class="card" style="background:rgba(255,255,255,0.08); border-color:rgba(255,255,255,0.3)">
+                <div class="card-label">🤖 AI Рекомендация</div>
+                <div style="line-height:1.5; font-size:15px; font-weight:400">
+                    ${generateAIRecommendation(res.current.temperature_2m, env.code, res.current.relative_humidity_2m, env.wSpeed)}
+                </div>
             </div>
         `;
 
@@ -243,48 +360,307 @@
         if (!container) {
             container = document.createElement('div');
             container.id = `page-${idx}`;
-            container.className = 'page-container active';
+            container.className = 'page-container';
+            if (idx !== curIdx) container.classList.add('next'); 
             document.getElementById('stage').appendChild(container);
         }
         container.innerHTML = html;
     }
 
-    function getWeatherIcon(code) {
-        if(code === 0) return '☀️';
-        if(code <= 3) return '☁️';
-        if(code >= 51 && code <= 67) return '🌧️';
-        if(code >= 71 && code <= 77) return '❄️';
-        if(code >= 95) return '⛈️';
+    function getWeatherDesc(code) {
+        const m = {0:'Ясно',1:'Преимущественно ясно',2:'Переменная облачность',3:'Пасмурно',45:'Туман',48:'Туман с инеем',51:'Морось',53:'Умеренная морось',55:'Плотная морось',61:'Слабый дождь',63:'Дождь',65:'Сильный дождь',71:'Снег',73:'Снегопад',75:'Сильный снегопад',77:'Снежные зерна',80:'Ливень',81:'Сильный ливень',82:'Очень сильный ливень',85:'Снежный ливень',86:'Сильный снежный ливень',95:'Гроза',96:'Гроза с градом',99:'Сильная гроза с градом'};
+        return m[code] || 'Неизвестно';
+    }
+
+    function getWeatherIcon(code, isDay = true) {
+        if (code === 0) return isDay ? '☀️' : '🌙';
+        if (code <= 3) return isDay ? '⛅' : '☁️';
+        if (code === 45 || code === 48) return '🌫️';
+        if (code >= 51 && code <= 67) return '🌧️';
+        if (code >= 71 && code <= 77) return '❄️';
+        if (code >= 80 && code <= 82) return '🌧️';
+        if (code >= 85 && code <= 86) return '🌨️';
+        if (code >= 95) return '⛈️';
         return '🌥️';
     }
 
-    function getWeatherDesc(code) {
-        const map = { 0: 'Ясно', 1: 'Преимущественно ясно', 2: 'Переменная облачность', 3: 'Пасмурно', 45: 'Туман', 51: 'Морось', 61: 'Дождь', 71: 'Снег', 95: 'Гроза' };
-        return map[code] || 'Облачно';
+    function generateAIRecommendation(temp, code, humidity, wind) {
+        let recs = [];
+        if (code >= 95) recs.push('На улице гроза, лучше переждать непогоду внутри.');
+        else if (code >= 71 || code === 85 || code === 86) recs.push('Идет снег. Отличная погода для горячего чая, но на дорогах скользко.');
+        else if (code >= 51) recs.push('Дождливо. Зонт обязателен, непромокаемая обувь не помешает.');
+        else if (code === 45 || code === 48) recs.push('Туман снижает видимость, будьте внимательны за рулем.');
+        
+        if (temp < -10) recs.push('Очень холодно! Одевайтесь слоями, не забудьте шапку и шарф.');
+        else if (temp < 5) recs.push('Прохладно, нужно теплое пальто.');
+        else if (temp > 28) recs.push('Жара. Пейте больше воды и ищите тень.');
+        
+        if (wind > 12) recs.push('Сильный ветер, берегите прическу.');
+        if (recs.length === 0) recs.push('Погода отличная, наслаждайтесь днем!');
+        return recs.join(' ');
     }
 
+    // --- ГРАФИКА И АНИМАЦИЯ (Ultimate Edition) ---
+    function initGraphics() {
+        env.stars = []; env.clouds = []; env.particles = []; env.lightning = []; env.fog = [];
+
+        // 1. Stars (Clear Night)
+        if (env.phase === 'night' && env.code <= 2) {
+            for (let i = 0; i < 150; i++) {
+                env.stars.push({
+                    x: Math.random() * canvas.width, 
+                    y: Math.random() * canvas.height * 0.7, 
+                    s: Math.random() * 2, 
+                    alpha: Math.random(), 
+                    speed: 0.01 + Math.random()*0.02
+                });
+            }
+        }
+
+        // 2. Clouds (Procedural)
+        const cloudCount = (env.code === 0) ? 0 : (env.code <= 2 ? 4 : 12);
+        for (let i = 0; i < cloudCount; i++) {
+            env.clouds.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * 300 - 50,
+                w: 200 + Math.random() * 300,
+                h: 100 + Math.random() * 100,
+                speed: (env.wSpeed * 0.1 + 0.2) * (i%2==0?1:0.8),
+                opacity: (env.code >= 3) ? 0.6 : 0.3
+            });
+        }
+
+        // 3. Precipitation (Rain/Snow/Hail)
+        const isRain = (env.code >= 51 && env.code <= 67) || (env.code >= 80 && env.code <= 82) || env.code >= 95;
+        const isSnow = (env.code >= 71 && env.code <= 77) || (env.code >= 85 && env.code <= 86);
+        const isHail = env.code === 96 || env.code === 99;
+
+        let pCount = 0;
+        if (isRain) pCount = (env.code >= 65 || env.code >= 95) ? 500 : 200;
+        if (isSnow) pCount = (env.code >= 75) ? 300 : 100;
+        
+        for (let i = 0; i < pCount; i++) {
+            env.particles.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                z: Math.random() * 2 + 1, // depth
+                l: Math.random() * 20 + 10, // length for rain
+                v: 0
+            });
+        }
+
+        // 4. Fog
+        if (env.code === 45 || env.code === 48) {
+            for(let i=0; i<5; i++) {
+                env.fog.push({x:0, y: canvas.height - 200 - i*50, speed: (Math.random()-0.5)*0.5});
+            }
+        }
+        
+        // 5. Lightning
+        if (env.code >= 95) {
+            // will be added dynamically in loop
+        }
+    }
+
+    function loop() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // --- A. Dynamic Background ---
+        let grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        if (env.code >= 95 || (env.code >= 3 && env.phase !== 'night')) {
+             // Stormy or Overcast
+             grad.addColorStop(0, '#2c3e50'); grad.addColorStop(1, '#4ca1af');
+             if(env.phase === 'night') { grad.addColorStop(0, '#0f2027'); grad.addColorStop(1, '#203a43'); }
+        } else {
+            switch (env.phase) {
+                case 'dawn': grad.addColorStop(0, '#4b6cb7'); grad.addColorStop(0.5, '#FDC830'); grad.addColorStop(1, '#F37335'); break;
+                case 'day': grad.addColorStop(0, '#2980B9'); grad.addColorStop(1, '#6DD5FA'); break;
+                case 'late_afternoon': grad.addColorStop(0, '#3a7bd5'); grad.addColorStop(1, '#00d2ff'); break;
+                case 'dusk': grad.addColorStop(0, '#200122'); grad.addColorStop(0.6, '#6f0000'); grad.addColorStop(1, '#c94b4b'); break;
+                case 'night': grad.addColorStop(0, '#0f0c29'); grad.addColorStop(1, '#302b63'); break;
+            }
+        }
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // --- B. Stars (Twinkle) ---
+        env.stars.forEach(s => {
+            s.alpha += s.speed;
+            if (s.alpha > 1 || s.alpha < 0) s.speed *= -1;
+            ctx.fillStyle = `rgba(255,255,255,${Math.abs(s.alpha)})`;
+            ctx.beginPath(); ctx.arc(s.x, s.y, s.s, 0, Math.PI*2); ctx.fill();
+        });
+
+        // --- C. Clouds (Soft) ---
+        env.clouds.forEach(c => {
+            c.x += c.speed;
+            if (c.x > canvas.width + c.w) c.x = -c.w;
+            
+            // Draw simple puffy cloud using gradient
+            let cg = ctx.createRadialGradient(c.x, c.y, 10, c.x, c.y+20, c.w/2);
+            cg.addColorStop(0, `rgba(255,255,255,${c.opacity})`);
+            cg.addColorStop(1, 'rgba(255,255,255,0)');
+            ctx.fillStyle = cg;
+            ctx.beginPath();
+            ctx.ellipse(c.x, c.y, c.w/2, c.h/2, 0, 0, Math.PI*2);
+            ctx.fill();
+        });
+
+        // --- D. Precipitation ---
+        const isRain = (env.code >= 51 && env.code <= 67) || (env.code >= 80 && env.code <= 82) || env.code >= 95;
+        const isSnow = (env.code >= 71 && env.code <= 77) || (env.code >= 85 && env.code <= 86);
+        const isHail = env.code === 96 || env.code === 99;
+
+        ctx.beginPath();
+        if (isRain || isHail) ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+        if (isSnow) ctx.fillStyle = 'rgba(255,255,255,0.8)';
+
+        env.particles.forEach(p => {
+            if (isRain || isHail) {
+                p.y += (10 + Math.random()*5) * (isHail ? 1.5 : 1);
+                p.x += env.wind > 180 ? -1 : 1; // Slight wind tilt
+                if (p.y > canvas.height) p.y = -20;
+                if (p.x > canvas.width) p.x = 0; if(p.x < 0) p.x = canvas.width;
+
+                ctx.moveTo(p.x, p.y);
+                ctx.lineTo(p.x + (env.wind>180?-2:2), p.y + p.l);
+            } 
+            if (isSnow) {
+                p.y += 1 + Math.random();
+                p.x += Math.sin(p.y * 0.01) * 0.5;
+                if (p.y > canvas.height) p.y = -5;
+                
+                ctx.beginPath(); 
+                ctx.arc(p.x, p.y, p.z, 0, Math.PI*2); 
+                ctx.fill();
+            }
+        });
+        if (isRain || isHail) ctx.stroke();
+
+        // --- E. Thunder ---
+        if (env.code >= 95) {
+            if (Math.random() < 0.005) { // Flash chance
+                ctx.fillStyle = `rgba(255,255,255,${0.3 + Math.random()*0.5})`;
+                ctx.fillRect(0,0,canvas.width, canvas.height);
+            }
+        }
+
+        // --- F. Fog ---
+        if (env.fog.length > 0) {
+            env.fog.forEach(f => {
+                f.x += f.speed;
+                let fg = ctx.createLinearGradient(0, f.y, 0, canvas.height);
+                fg.addColorStop(0, 'rgba(200,200,200,0)');
+                fg.addColorStop(0.5, 'rgba(220,220,220,0.3)');
+                fg.addColorStop(1, 'rgba(200,200,200,0)');
+                ctx.fillStyle = fg;
+                ctx.fillRect(0, f.y, canvas.width, 200);
+            });
+        }
+
+        // --- G. Sun/Moon Glow ---
+        if (env.code <= 2) {
+             const isSun = env.phase.includes('day') || env.phase === 'dawn' || env.phase === 'late_afternoon';
+             const gx = isSun ? (env.phase==='dawn'?canvas.width*0.2 : canvas.width*0.8) : canvas.width*0.8;
+             const gy = isSun ? 100 : 80;
+             const color = isSun ? 'rgba(255,200,50,0.1)' : 'rgba(255,255,255,0.05)';
+             
+             let glow = ctx.createRadialGradient(gx, gy, 10, gx, gy, 300);
+             glow.addColorStop(0, color);
+             glow.addColorStop(1, 'transparent');
+             ctx.fillStyle = glow;
+             ctx.fillRect(0,0,canvas.width, canvas.height/2);
+        }
+
+        requestAnimationFrame(loop);
+    }
+
+    // --- Поиск и UI ---
     async function search(v) {
-        if (v.length < 2) return;
+        if (v.length < 2) return document.getElementById('results').style.display = 'none';
         const r = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${v}&count=5&language=ru`).then(res => res.json());
         if (r.results) {
             const box = document.getElementById('results');
-            box.innerHTML = r.results.map(g => `<div style="padding:15px; border-bottom:1px solid #444" onclick="addCity(${g.latitude},${g.longitude},'${g.name}')">${g.name}, ${g.country}</div>`).join('');
+            box.innerHTML = r.results.map(g => {
+                const details = `${g.name}, ${g.country}`;
+                const isFav = pages.some(p => p.lat === g.latitude && p.lon === g.longitude);
+                return `<div style="padding:15px; border-bottom:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center;" 
+                        onclick="addCity(${g.latitude},${g.longitude},'${g.name.replace(/'/g,"\\'")}')">
+                    <span style="font-size:16px">${details}</span>
+                    <span class="fav-star ${isFav ? 'active' : ''}" >${isFav ? '★' : '☆'}</span>
+                </div>`;
+            }).join('');
             box.style.display = 'block';
         }
     }
 
     function addCity(lat, lon, name) {
-        pages.push({lat, lon, name});
-        localStorage.setItem('favs', JSON.stringify(pages.filter(p=>!p.home)));
         document.getElementById('results').style.display = 'none';
+        document.getElementById('q').value = '';
+        const exists = pages.findIndex(p => p.lat === lat && p.lon === lon);
+        if (exists !== -1) {
+            loadWeather(exists);
+            return;
+        }
+        pages.push({lat, lon, name, home: false});
+        updateFavs();
         loadWeather(pages.length - 1);
+        renderFavoritesList();
+    }
+
+    function updateFavs() {
+        const favs = pages.filter(p => !p.home).map(p => ({lat: p.lat, lon: p.lon, name: p.name}));
+        localStorage.setItem('favs', JSON.stringify(favs));
+    }
+
+    function ts(e) { startX = e.touches[0].clientX; }
+    function te(e) {
+        const diff = startX - e.changedTouches[0].clientX;
+        if (Math.abs(diff) > 60) {
+            if (diff > 0 && curIdx < pages.length - 1) loadWeather(curIdx + 1, 1);
+            else if (diff < 0 && curIdx > 0) loadWeather(curIdx - 1, -1);
+        }
+    }
+
+    function toggleSet(show) {
+        document.getElementById('settings').style.display = show ? 'block' : 'none';
+        if (show) renderFavoritesList();
     }
 
     function renderPag() {
         document.getElementById('pag').innerHTML = pages.map((_, i) => `<div class="dot ${curIdx === i ? 'active' : ''}"></div>`).join('');
     }
 
-    function toggleSet(show) { document.getElementById('settings').style.display = show ? 'block' : 'none'; }
+    function renderFavoritesList() {
+        const list = document.getElementById('favList');
+        const favs = pages.filter(p => !p.home);
+        if(favs.length === 0) {
+            list.innerHTML = '<div style="padding:15px; text-align:center; opacity:0.5">Нет избранных городов</div>';
+            return;
+        }
+        list.innerHTML = favs.map((f, i) => `
+            <div class="settings-item">
+                <span>${f.name}</span>
+                <span class="delete-btn" onclick="removeFavorite(${i})">Удалить</span>
+            </div>
+        `).join('');
+    }
+
+    function removeFavorite(arrayIdx) {
+        const realIdx = arrayIdx + 1; // +1 because 0 is home
+        pages.splice(realIdx, 1);
+        updateFavs();
+        renderPag();
+        renderFavoritesList();
+        if (curIdx >= pages.length) loadWeather(pages.length - 1);
+        else loadWeather(curIdx);
+    }
+
+    function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+
+    window.onresize = resize;
+    document.getElementById('stage').ontouchstart = ts;
+    document.getElementById('stage').ontouchend = te;
 
     init();
 </script>
