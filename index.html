@@ -3,345 +3,290 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>iOS Weather Pro</title>
+    <title>Weather iOS Ultimate</title>
     <style>
-        :root { 
-            --glass: rgba(255, 255, 255, 0.1); 
-            --blur: blur(30px); 
-            --ios-font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", sans-serif;
-        }
-        * { box-sizing: border-box; font-family: var(--ios-font); -webkit-tap-highlight-color: transparent; }
+        :root { --glass: rgba(255, 255, 255, 0.1); --blur: blur(50px); --spring: cubic-bezier(0.165, 0.84, 0.44, 1); }
+        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro', sans-serif; -webkit-tap-highlight-color: transparent; }
         body { margin: 0; background: #000; color: #fff; overflow: hidden; height: 100vh; }
+        canvas#bg { position: fixed; inset: 0; z-index: -1; }
+
+        header { padding: 15px; max-width: 600px; margin: 0 auto; display: flex; gap: 10px; position: relative; z-index: 2000; }
+        .search-box { flex: 1; display: flex; align-items: center; background: var(--glass); backdrop-filter: var(--blur); border-radius: 20px; padding: 10px 15px; border: 0.5px solid rgba(255,255,255,0.2); position: relative; }
+        input { flex: 1; background: transparent; border: none; color: #fff; font-size: 16px; outline: none; margin-left: 10px; }
+        .icon-btn { background: var(--glass); border: 0.5px solid rgba(255,255,255,0.2); border-radius: 15px; width: 45px; height: 45px; cursor: pointer; display: flex; align-items: center; justify-content: center; backdrop-filter: var(--blur); }
+
+        #stage { height: 100vh; overflow: hidden; position: relative; }
+        .page-container {
+            position: absolute; inset: 0; padding: 20px 20px 180px;
+            transition: transform 0.6s var(--spring), opacity 0.6s var(--spring);
+            will-change: transform, opacity; overflow-y: auto;
+        }
+        .page-container.next { transform: translateX(100%); opacity: 0; }
+        .page-container.prev { transform: translateX(-100%); opacity: 0; }
+        .page-container.active { transform: translateX(0); opacity: 1; }
+
+        .city-header { text-align: center; margin: 40px 0; text-shadow: 0 2px 10px rgba(0,0,0,0.3); }
+        .temp-big { font-size: 110px; font-weight: 100; letter-spacing: -5px; margin: 5px 0; }
         
-        canvas#weather-bg { position: fixed; inset: 0; z-index: -1; transition: filter 1s; }
+        .card { background: var(--glass); backdrop-filter: var(--blur); border-radius: 28px; padding: 20px; border: 0.5px solid rgba(255,255,255,0.15); margin-bottom: 20px; }
+        .card-label { font-size: 11px; opacity: 0.5; text-transform: uppercase; font-weight: 700; margin-bottom: 15px; }
 
-        .app-wrapper { height: 100vh; display: flex; flex-direction: column; }
+        .h-scroll { display: flex; gap: 20px; overflow-x: auto; scrollbar-width: none; }
+        .h-scroll::-webkit-scrollbar { display: none; }
+        .h-item { text-align: center; min-width: 60px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
 
-        header { padding: 15px; z-index: 1000; display: flex; gap: 10px; align-items: center; }
-        .search-container { flex: 1; position: relative; }
-        .search-box { 
-            background: rgba(255,255,255,0.15); backdrop-filter: var(--blur);
-            border-radius: 12px; padding: 8px 12px; display: flex; align-items: center;
-        }
-        .search-box input { 
-            background: transparent; border: none; color: #fff; font-size: 17px; 
-            width: 100%; outline: none; margin-left: 8px;
-        }
+        .day-row { display: grid; grid-template-columns: 1fr 1fr 1fr; align-items: center; padding: 12px 0; border-bottom: 0.5px solid rgba(255,255,255,0.1); font-size: 14px; }
 
-        #search-results {
-            position: absolute; top: 50px; left: 0; right: 0;
-            background: rgba(30, 30, 30, 0.95); backdrop-filter: blur(40px);
-            border-radius: 14px; overflow: hidden; z-index: 2000; display: none;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-        }
-        .search-item { 
-            padding: 12px 15px; border-bottom: 0.5px solid rgba(255,255,255,0.1);
-            display: flex; justify-content: space-between; align-items: center; cursor: pointer;
-        }
-        .search-item .geo-info { font-size: 12px; opacity: 0.6; display: block; }
-
-        .main-scroll { 
-            flex: 1; overflow-y: auto; scroll-behavior: smooth;
-            -webkit-overflow-scrolling: touch; padding: 0 15px 120px;
-        }
-        .main-scroll::-webkit-scrollbar { width: 0; }
-
-        .hero { text-align: center; padding: 40px 0; }
-        .hero h1 { font-size: 34px; font-weight: 400; margin: 0; }
-        .hero .temp { font-size: 96px; font-weight: 100; margin: -5px 0; }
-        .hero .condition { font-size: 20px; font-weight: 500; opacity: 0.8; }
-
-        .card { 
-            background: var(--glass); backdrop-filter: var(--blur); 
-            border-radius: 20px; padding: 15px; margin-bottom: 15px;
-            border: 0.5px solid rgba(255,255,255,0.1);
-        }
-        .card-title { 
-            font-size: 13px; font-weight: 600; opacity: 0.5; 
-            text-transform: uppercase; margin-bottom: 12px; display: flex; align-items: center; gap: 5px;
-        }
-
-        /* Почасовая */
-        .hourly-box { display: flex; gap: 20px; overflow-x: auto; padding-bottom: 5px; }
-        .hourly-box::-webkit-scrollbar { display: none; }
-        .hour-item { text-align: center; min-width: 50px; }
-        .hour-item .time { font-size: 13px; font-weight: 600; margin-bottom: 8px; }
-        .hour-item .icon { font-size: 22px; margin-bottom: 8px; }
-
-        /* Прогноз 3 дня */
-        .day-row { 
-            display: flex; justify-content: space-between; align-items: center; 
-            padding: 12px 0; border-bottom: 0.5px solid rgba(255,255,255,0.1); 
-        }
-        .day-row:last-child { border: none; }
-
-        /* Сетка параметров */
-        .params-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-        .param-val { font-size: 28px; font-weight: 400; }
-
-        /* AI Помощник */
-        .ai-card { background: linear-gradient(135deg, rgba(120, 80, 255, 0.2), rgba(0, 200, 255, 0.2)); border: 0.5px solid rgba(255,255,255,0.3); }
-
-        .nav-dots { 
-            position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%);
-            display: flex; gap: 8px; background: rgba(0,0,0,0.3); padding: 8px 12px; border-radius: 20px;
-        }
-        .dot { width: 7px; height: 7px; background: rgba(255,255,255,0.4); border-radius: 50%; }
-        .dot.active { background: #fff; }
-
-        @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
+        #settings { position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(30px); z-index: 3000; display: none; padding: 40px 20px; }
+        .nav-dock { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.3); backdrop-filter: blur(20px); padding: 10px 20px; border-radius: 25px; display: flex; gap: 8px; border: 0.5px solid rgba(255,255,255,0.1); z-index: 2500; }
+        .dot { width: 6px; height: 6px; background: rgba(255,255,255,0.3); border-radius: 50%; }
+        .dot.active { background: #fff; width: 12px; border-radius: 3px; }
     </style>
 </head>
 <body>
 
-<canvas id="weather-bg"></canvas>
+<canvas id="bg"></canvas>
 
-<div class="app-wrapper">
-    <header>
-        <div class="search-container">
-            <div class="search-box">
-                <span>🔍</span>
-                <input type="text" id="citySearch" placeholder="Поиск города" oninput="handleSearch(this.value)">
-            </div>
-            <div id="search-results"></div>
-        </div>
-        <div style="font-size: 24px; cursor: pointer;" onclick="refreshLocation()">📍</div>
-    </header>
-
-    <div class="main-scroll" id="content">
-        <div style="text-align: center; margin-top: 100px;">
-            <p style="animation: pulse 1.5s infinite">Запрашиваем местоположение...</p>
-        </div>
+<header>
+    <div class="search-box">
+        🔍 <input id="q" placeholder="Поиск города..." oninput="search(this.value)">
     </div>
+    <div class="icon-btn" onclick="toggleSet(true)">⚙️</div>
+    <div id="results" style="position:absolute; top:75px; left:15px; right:15px; background:rgba(30,30,30,0.9); border-radius:20px; overflow:hidden; display:none; z-index:2500;"></div>
+</header>
+
+<div id="stage"></div>
+
+<div id="settings">
+    <div style="float:right; font-size:30px" onclick="toggleSet(false)">✕</div>
+    <h2>Настройки</h2>
+    <div id="favList"></div>
+    <p style="margin-top:20px; opacity:0.6">Единицы: °C</p>
 </div>
 
-<div class="nav-dots" id="dots">
-    <div class="dot active"></div>
-</div>
+<div class="nav-dock" id="pag"></div>
 
 <script>
-    const canvas = document.getElementById('weather-bg');
+    const canvas = document.getElementById('bg');
     const ctx = canvas.getContext('2d');
-    let W, H;
-    let particles = [];
-    let currentWeather = { code: 0, isDay: 1 };
+    let pages = [], curIdx = 0, startX = 0;
     
-    const WEATHER_MAP = {
-        0: { label: "Ясно", icon: "☀️" },
-        1: { label: "Преимущественно ясно", icon: "🌤️" },
-        2: { label: "Переменная облачность", icon: "⛅" },
-        3: { label: "Пасмурно", icon: "☁️" },
-        45: { label: "Туман", icon: "🌫️" },
-        51: { label: "Морось", icon: "🌦️" },
-        61: { label: "Небольшой дождь", icon: "🌧️" },
-        63: { label: "Дождь", icon: "🌧️" },
-        71: { label: "Снег", icon: "❄️" },
-        80: { label: "Ливень", icon: "🌦️" },
-        95: { label: "Гроза", icon: "⛈️" }
+    // Состояние окружения для анимаций
+    let env = { 
+        isDay: true, code: 0, wSpeed: 0, 
+        particles: [], clouds: [], stars: [], lightning: 0,
+        theme: { top: '#00C6FF', bottom: '#007AFF' }
     };
 
-    // --- Логика определения страны и единиц ---
-    function getUnitByLocation(countryCode) {
-        const fCountries = ['US', 'BS', 'KY', 'LR', 'PW', 'MH', 'FM'];
-        return fCountries.includes(countryCode) ? 'fahrenheit' : 'celsius';
-    }
-
-    // --- Инициализация ---
-    window.onload = () => {
+    async function init() {
         resize();
-        refreshLocation();
-        animate();
-    };
-
-    function resize() {
-        W = canvas.width = window.innerWidth;
-        H = canvas.height = window.innerHeight;
+        requestLocation();
+        loop();
     }
 
-    async function refreshLocation() {
-        navigator.geolocation.getCurrentPosition(
-            async (p) => {
-                const { latitude, longitude } = p.coords;
-                // Реверсивное геокодирование для названия города
-                const geo = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`).then(r => r.json());
-                const cityName = geo.address.city || geo.address.town || geo.address.village || "Ваш город";
-                const countryCode = geo.address.country_code.toUpperCase();
-                loadWeatherData(latitude, longitude, cityName, countryCode);
-            },
-            () => loadWeatherData(55.75, 37.61, "Москва", "RU")
-        );
+    function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+    window.onresize = resize;
+
+    async function requestLocation() {
+        navigator.geolocation.getCurrentPosition(async p => {
+            const { latitude: lat, longitude: lon } = p.coords;
+            // Получаем название города через Reverse Geocoding
+            const geo = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=ru`).then(r=>r.json());
+            const cityName = geo.address.city || geo.address.town || geo.address.village || "Мой город";
+            fetchMain(lat, lon, cityName, true);
+        }, () => fetchMain(55.75, 37.62, 'Москва', true));
     }
 
-    async function loadWeatherData(lat, lon, name, countryCode) {
-        const unit = getUnitByLocation(countryCode);
-        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,weather_code,wind_speed_10m&hourly=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset&timezone=auto&temperature_unit=${unit}`;
+    async function fetchMain(lat, lon, name, isHome = false) {
+        pages = [{lat, lon, name, home: isHome}];
+        const favs = JSON.parse(localStorage.getItem('favs') || '[]');
+        pages.push(...favs);
+        renderPag();
+        loadWeather(0);
+    }
+
+    async function loadWeather(idx) {
+        curIdx = idx;
+        const city = pages[idx];
+        const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${city.lat}&longitude=${city.lon}&current=temperature_2m,weather_code,is_day,wind_speed_10m,apparent_temperature&hourly=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset&timezone=auto`).then(r=>r.json());
         
-        const data = await fetch(url).then(r => r.json());
-        currentWeather = { code: data.current.weather_code, isDay: data.current.is_day };
-        renderWeather(data, name, unit === 'celsius' ? '°C' : '°F');
-        initBackgroundEffect();
+        updateEnv(res);
+        renderPageContent(idx, res, city);
+        renderPag();
     }
 
-    function renderWeather(data, name, unit) {
+    function updateEnv(data) {
         const cur = data.current;
-        const daily = data.daily;
-        const hourly = data.hourly;
-
-        const aiAdvice = getAIAdvice(cur.weather_code, cur.temperature_2m);
-
-        let html = `
-            <div class="hero">
-                <h1>${name}</h1>
-                <div class="temp">${Math.round(cur.temperature_2m)}${unit}</div>
-                <div class="condition">${WEATHER_MAP[cur.weather_code]?.label || 'Неизвестно'}</div>
-                <div style="font-weight:500; margin-top:5px">Макс: ${Math.round(daily.temperature_2m_max[0])}°, мин: ${Math.round(daily.temperature_2m_min[0])}°</div>
-            </div>
-
-            <div class="card">
-                <div class="card-title">🕒 Почасовой прогноз</div>
-                <div class="hourly-box">
-                    ${hourly.time.slice(0, 24).map((t, i) => {
-                        const date = new Date(t);
-                        const isSunset = date.getHours() === new Date(daily.sunset[0]).getHours();
-                        const isSunrise = date.getHours() === new Date(daily.sunrise[0]).getHours();
-                        return `
-                            <div class="hour-item">
-                                <div class="time">${date.getHours()}:00</div>
-                                <div class="icon">${isSunrise ? '🌅' : (isSunset ? '🌇' : (WEATHER_MAP[hourly.weather_code[i]]?.icon || '☀️'))}</div>
-                                <div style="font-weight:600">${Math.round(hourly.temperature_2m[i])}°</div>
-                            </div>
-                        `;
-                    }).join('')}
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-title">📅 Прогноз на 3 дня</div>
-                ${daily.time.slice(0, 3).map((t, i) => `
-                    <div class="day-row">
-                        <span style="width: 80px; font-weight: 500;">${i === 0 ? 'Сегодня' : new Date(t).toLocaleDateString('ru', {weekday: 'short'})}</span>
-                        <span style="font-size: 20px;">${WEATHER_MAP[daily.weather_code[i]].icon}</span>
-                        <span style="width: 100px; text-align: right; font-weight: 500;">
-                            ${Math.round(daily.temperature_2m_max[i])}° <span style="opacity:0.4; margin-left:8px">${Math.round(daily.temperature_2m_min[i])}°</span>
-                        </span>
-                    </div>
-                `).join('')}
-            </div>
-
-            <div class="params-grid">
-                <div class="card">
-                    <div class="card-title">🌡️ Ощущается как</div>
-                    <div class="param-val">${Math.round(cur.apparent_temperature)}°</div>
-                </div>
-                <div class="card">
-                    <div class="card-title">💧 Влажность</div>
-                    <div class="param-val">${cur.relative_humidity_2m}%</div>
-                </div>
-                <div class="card">
-                    <div class="card-title">💨 Ветер</div>
-                    <div class="param-val">${Math.round(cur.wind_speed_10m)} <span style="font-size:14px">км/ч</span></div>
-                </div>
-                <div class="card">
-                    <div class="card-title">☀️ Восход</div>
-                    <div class="param-val" style="font-size:20px">${daily.sunrise[0].split('T')[1]}</div>
-                </div>
-            </div>
-
-            <div class="card ai-card">
-                <div class="card-title">🤖 Помощник</div>
-                <div style="font-size: 15px; line-height: 1.4;">${aiAdvice}</div>
-            </div>
-        `;
-        document.getElementById('content').innerHTML = html;
-    }
-
-    function getAIAdvice(code, temp) {
-        if (code >= 95) return "Оставайтесь дома! Сильная гроза. Отключите электроприборы.";
-        if (code >= 71) return "На улице снег. Лучшее время для горячего какао и теплых ботинок.";
-        if (code >= 51) return "Возьмите зонтик — ожидаются осадки. Погода не располагает к прогулкам.";
-        if (temp > 25) return "Сегодня жарко! Не забудьте SPF и пейте больше воды.";
-        if (temp < 0) return "Одевайтесь многослойно, мороз может быть коварным.";
-        return "Отличный день для прогулки на свежем воздухе. Наслаждайтесь!";
-    }
-
-    // --- Поиск ---
-    async function handleSearch(query) {
-        const resultsBox = document.getElementById('search-results');
-        if (query.length < 2) { resultsBox.style.display = 'none'; return; }
-
-        const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=5&language=ru`).then(r => r.json());
+        env.isDay = !!cur.is_day;
+        env.code = cur.weather_code;
+        env.wSpeed = cur.wind_speed_10m;
         
-        if (res.results) {
-            resultsBox.innerHTML = res.results.map(g => `
-                <div class="search-item" onclick="selectCity(${g.latitude}, ${g.longitude}, '${g.name}', '${g.country_code}')">
-                    <div>
-                        <b>${g.name}</b>
-                        <span class="geo-info">${g.country}, ${g.admin1 || ''} ${g.admin2 || ''}</span>
-                    </div>
-                    <span style="color: #FFD700">☆</span>
-                </div>
-            `).join('');
-            resultsBox.style.display = 'block';
+        // Настройка цветов темы
+        if (!env.isDay) {
+            env.theme = { top: '#0F0C29', bottom: '#24243E' }; // Ночь
+        } else if (env.code >= 51) {
+            env.theme = { top: '#4B79A1', bottom: '#283E51' }; // Дождь/Пасмурно
+        } else {
+            env.theme = { top: '#00C6FF', bottom: '#007AFF' }; // Ясно
         }
-    }
 
-    function selectCity(lat, lon, name, countryCode) {
-        document.getElementById('search-results').style.display = 'none';
-        document.getElementById('citySearch').value = '';
-        loadWeatherData(lat, lon, name, countryCode);
-    }
-
-    // --- Визуальные эффекты (Background Engine) ---
-    function initBackgroundEffect() {
-        particles = [];
-        let count = 0;
-        if (currentWeather.code >= 71) count = 100; // Снег
-        else if (currentWeather.code >= 51) count = 150; // Дождь
-        
-        for (let i = 0; i < count; i++) {
-            particles.push({
-                x: Math.random() * W,
-                y: Math.random() * H,
-                v: (currentWeather.code >= 71 ? 1 : 10) + Math.random() * 5,
+        // Инициализация частиц
+        env.particles = [];
+        let count = (env.code >= 71) ? 100 : (env.code >= 51 ? 150 : 0);
+        for(let i=0; i<count; i++) {
+            env.particles.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                v: (env.code >= 71 ? 1 : 10) + Math.random() * 5,
                 s: Math.random() * 2 + 1
+            });
+        }
+
+        // Облака
+        env.clouds = [];
+        let cCount = (env.code > 0) ? (env.code > 3 ? 8 : 4) : 0;
+        for(let i=0; i<cCount; i++) {
+            env.clouds.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * 300,
+                r: 100 + Math.random() * 150,
+                o: 0.2 + Math.random() * 0.3
             });
         }
     }
 
-    function animate() {
-        // Отрисовка неба (Градиент)
-        let grad = ctx.createLinearGradient(0, 0, 0, H);
-        if (currentWeather.isDay) {
-            if (currentWeather.code >= 3) { // Пасмурно
-                grad.addColorStop(0, '#57606f'); grad.addColorStop(1, '#2f3542');
-            } else { // Ясно/Рассвет
-                grad.addColorStop(0, '#1e90ff'); grad.addColorStop(1, '#70a1ff');
-            }
-        } else { // Ночь
-            grad.addColorStop(0, '#000000'); grad.addColorStop(1, '#2f3542');
-        }
-        
-        ctx.fillStyle = grad;
-        ctx.fillRect(0, 0, W, H);
+    function loop() {
+        // Фон
+        const g = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        g.addColorStop(0, env.theme.top);
+        g.addColorStop(1, env.theme.bottom);
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // Отрисовка частиц
-        ctx.fillStyle = "rgba(255,255,255,0.8)";
-        particles.forEach(p => {
-            if (currentWeather.code >= 71) { // Снег
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, p.s, 0, Math.PI * 2);
-                ctx.fill();
-            } else { // Дождь
-                ctx.fillRect(p.x, p.y, 1, 15);
+        // Солнце / Луна
+        if (env.code <= 3) {
+            ctx.save();
+            ctx.translate(canvas.width/2, 150);
+            if (env.isDay) {
+                const s = 1 + Math.sin(Date.now()/1000)*0.05;
+                ctx.scale(s, s);
+                ctx.fillStyle = 'rgba(255, 255, 100, 0.3)';
+                ctx.beginPath(); ctx.arc(0,0, 60, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = '#FFF500';
+                ctx.beginPath(); ctx.arc(0,0, 40, 0, Math.PI*2); ctx.fill();
             }
-            p.y += p.v;
-            if (p.y > H) p.y = -20;
+            ctx.restore();
+        }
+
+        // Гроза
+        if (env.code >= 95 && Math.random() > 0.98) {
+            ctx.fillStyle = 'rgba(255,255,255,0.4)';
+            ctx.fillRect(0,0,canvas.width, canvas.height);
+        }
+
+        // Облака
+        env.clouds.forEach(c => {
+            c.x += env.wSpeed * 0.1;
+            if(c.x - c.r > canvas.width) c.x = -c.r;
+            ctx.fillStyle = `rgba(255,255,255,${c.o})`;
+            ctx.beginPath(); ctx.arc(c.x, c.y, c.r, 0, Math.PI*2); ctx.fill();
         });
 
-        requestAnimationFrame(animate);
+        // Осадки
+        ctx.fillStyle = env.code >= 71 ? '#FFF' : '#AAb';
+        env.particles.forEach(p => {
+            p.y += p.v;
+            if(p.y > canvas.height) p.y = -10;
+            if(env.code >= 71) {
+                ctx.beginPath(); ctx.arc(p.x, p.y, p.s, 0, Math.PI*2); ctx.fill();
+            } else {
+                ctx.fillRect(p.x, p.y, 1, 15);
+            }
+        });
+
+        requestAnimationFrame(loop);
     }
 
-    window.onresize = resize;
+    function renderPageContent(idx, res, city) {
+        let html = `
+            <div class="city-header">
+                <div style="font-size:32px; font-weight:500">${city.name}</div>
+                <div class="temp-big">${Math.round(res.current.temperature_2m)}°</div>
+                <div style="font-size:20px; opacity:0.9">${getWeatherDesc(res.current.weather_code)}</div>
+                <div style="font-size:18px; margin-top:5px">Макс: ${Math.round(res.daily.temperature_2m_max[0])}°, мин: ${Math.round(res.daily.temperature_2m_min[0])}°</div>
+            </div>
+
+            <div class="card">
+                <div class="card-label">Почасовой прогноз</div>
+                <div class="h-scroll">${res.hourly.time.slice(0,24).map((t,i)=>`
+                    <div class="h-item">
+                        <span style="font-size:13px; opacity:0.7">${new Date(t).getHours()}:00</span>
+                        <span style="font-size:22px">${getWeatherIcon(res.hourly.weather_code[i])}</span>
+                        <span style="font-weight:600">${Math.round(res.hourly.temperature_2m[i])}°</span>
+                    </div>
+                `).join('')}</div>
+            </div>
+
+            <div class="card">
+                <div class="card-label">Прогноз на 7 дней</div>
+                ${res.daily.time.map((t,i)=>`
+                    <div class="day-row">
+                        <span>${i===0?'Сегодня':new Date(t).toLocaleDateString('ru',{weekday:'short'})}</span>
+                        <span style="text-align:center; font-size:20px">${getWeatherIcon(res.daily.weather_code[i])}</span>
+                        <span style="text-align:right">${Math.round(res.daily.temperature_2m_max[i])}° / ${Math.round(res.daily.temperature_2m_min[i])}°</span>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+
+        let container = document.getElementById(`page-${idx}`);
+        if (!container) {
+            container = document.createElement('div');
+            container.id = `page-${idx}`;
+            container.className = 'page-container active';
+            document.getElementById('stage').appendChild(container);
+        }
+        container.innerHTML = html;
+    }
+
+    function getWeatherIcon(code) {
+        if(code === 0) return '☀️';
+        if(code <= 3) return '☁️';
+        if(code >= 51 && code <= 67) return '🌧️';
+        if(code >= 71 && code <= 77) return '❄️';
+        if(code >= 95) return '⛈️';
+        return '🌥️';
+    }
+
+    function getWeatherDesc(code) {
+        const map = { 0: 'Ясно', 1: 'Преимущественно ясно', 2: 'Переменная облачность', 3: 'Пасмурно', 45: 'Туман', 51: 'Морось', 61: 'Дождь', 71: 'Снег', 95: 'Гроза' };
+        return map[code] || 'Облачно';
+    }
+
+    async function search(v) {
+        if (v.length < 2) return;
+        const r = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${v}&count=5&language=ru`).then(res => res.json());
+        if (r.results) {
+            const box = document.getElementById('results');
+            box.innerHTML = r.results.map(g => `<div style="padding:15px; border-bottom:1px solid #444" onclick="addCity(${g.latitude},${g.longitude},'${g.name}')">${g.name}, ${g.country}</div>`).join('');
+            box.style.display = 'block';
+        }
+    }
+
+    function addCity(lat, lon, name) {
+        pages.push({lat, lon, name});
+        localStorage.setItem('favs', JSON.stringify(pages.filter(p=>!p.home)));
+        document.getElementById('results').style.display = 'none';
+        loadWeather(pages.length - 1);
+    }
+
+    function renderPag() {
+        document.getElementById('pag').innerHTML = pages.map((_, i) => `<div class="dot ${curIdx === i ? 'active' : ''}"></div>`).join('');
+    }
+
+    function toggleSet(show) { document.getElementById('settings').style.display = show ? 'block' : 'none'; }
+
+    init();
 </script>
 </body>
 </html>
