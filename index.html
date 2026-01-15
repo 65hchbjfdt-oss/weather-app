@@ -129,8 +129,10 @@
         .chart-tooltip {
             position: absolute; background: rgba(255,255,255,0.95); color: #000;
             padding: 6px 10px; border-radius: 10px; font-size: 13px; font-weight: 600;
-            pointer-events: none; opacity: 0; transition: opacity 0.2s; 
-            white-space: nowrap; z-index: 100; box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            pointer-events: none; opacity: 0; 
+            transition: opacity 0.2s; /* ТОЛЬКО прозрачность, без движения */
+            white-space: nowrap; z-index: 100;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
         }
         .chart-tooltip.pos-top::after { content: ''; position: absolute; left: 50%; bottom: -5px; transform: translateX(-50%); border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 5px solid rgba(255,255,255,0.95); }
         .chart-tooltip.pos-bottom::after { content: ''; position: absolute; left: 50%; top: -5px; transform: translateX(-50%); border-left: 5px solid transparent; border-right: 5px solid transparent; border-bottom: 5px solid rgba(255,255,255,0.95); }
@@ -326,7 +328,12 @@
 
     async function fetchWeather(lat, lon) {
         try {
-            return await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,is_day,wind_speed_10m,wind_direction_10m&hourly=temperature_2m,weather_code,wind_speed_10m,wind_direction_10m,precipitation_probability&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,daylight_duration,wind_speed_10m_max,wind_direction_10m_dominant&timezone=auto`).then(r=>r.json());
+            // Add timeout
+            const controller = new AbortController();
+            const id = setTimeout(() => controller.abort(), 5000);
+            const response = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,is_day,wind_speed_10m,wind_direction_10m&hourly=temperature_2m,weather_code,wind_speed_10m,wind_direction_10m,precipitation_probability&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,daylight_duration,wind_speed_10m_max,wind_direction_10m_dominant&timezone=auto`, { signal: controller.signal });
+            clearTimeout(id);
+            return await response.json();
         } catch(e) { return null; }
     }
 
@@ -421,7 +428,6 @@
         const voteMsg = checkLocation(city.lat, city.lon) ? 'Уточните прогноз:' : 'Голосование доступно только в текущей локации';
         const voteClass = checkLocation(city.lat, city.lon) ? '' : 'disabled';
 
-        // Данные для солнца передаем через data-атрибуты, чтобы избежать проблем с кавычками
         return `<div class="city-header"><div class="city-name">${city.name}</div><div class="condition-text">${getWDesc(cur.weather_code)}</div><div class="temp-big">${temp}°</div><div class="hl-temp">Макс.: ${max}° Мин.: ${min}°</div></div>
             <div class="card">
                 <div class="ai-header"><div class="card-label" style="margin:0">🤖 AI-ПРОГНОЗ</div><div style="font-size:10px; opacity:0.5; background:rgba(255,255,255,0.1); padding:2px 6px; border-radius:4px">LIVE</div></div>
@@ -456,37 +462,33 @@
             <div class="ai-box"><div class="ai-title">AI СОВЕТ</div><div class="ai-text">${getAIText(temp, cur.weather_code)}</div></div>`;
     }
 
-    // --- AI GRAPH & LOGIC ---
     const aiData = {};
+    function checkLocation(lat, lon) { return userGeo && Math.abs(userGeo.lat - lat) < 0.1 && Math.abs(userGeo.lon - lon) < 0.1; }
     
-    // Функция получения "Синхронизированного шума" (одинаковый для всех в одну минуту)
-    function getSyncedNoise(lat, lon, index) {
-        // Меняем паттерн каждые 10 минут, чтобы график "жил", но синхронно
-        const timeBlock = Math.floor(Date.now() / 600000); 
-        const seed = lat + lon + timeBlock + index;
+    // Синхронизация по времени (одинаковый шум у всех в одно время)
+    function getSyncedNoise(lat, lon, seedIndex) {
+        const timeBlock = Math.floor(Date.now() / 10000); 
+        const seed = lat + lon + timeBlock + seedIndex;
         const x = Math.sin(seed) * 10000;
-        return (x - Math.floor(x)) - 0.5; // от -0.5 до 0.5
+        return (x - Math.floor(x)) - 0.5; 
     }
 
     function initAIGraph(id, baseProbs, codes, geo) {
         let pts = []; const start = baseProbs[0]; const end = baseProbs[1];
         for(let i=0; i<5; i++) {
             let t = i / 4; let val = start + (end - start) * t;
-            val += getSyncedNoise(geo.lat, geo.lon, i) * 10; // Синхронный стартовый шум
+            val += getSyncedNoise(geo.lat, geo.lon, i) * 10; 
             pts.push(Math.max(0, Math.min(100, val)));
         }
         aiData[id] = { points: pts, base: [...pts], voted: false, codes: codes, geo: geo, timer: null, liveTimer: null, activeDot: -1 };
         renderGraph(id);
         if(aiData[id].liveTimer) clearInterval(aiData[id].liveTimer);
-        // Запускаем "жизнь" графика
+        // График "дышит" (без влияния голосов, но синхронно)
         aiData[id].liveTimer = setInterval(() => {
             aiData[id].points = aiData[id].points.map((val, idx) => {
                 let t = idx / 4; let baseVal = start + (end - start) * t;
-                // Анимация дышит, используя текущее время (Date.now)
-                // Это создает эффект, что данные меняются на сервере
-                const breath = Math.sin(Date.now() / 2000 + idx) * 5; 
-                let newVal = baseVal + getSyncedNoise(geo.lat, geo.lon, idx) * 10 + breath;
-                if(aiData[id].voteFactor) newVal += aiData[id].voteFactor;
+                const noise = getSyncedNoise(geo.lat, geo.lon, idx) * 15; 
+                let newVal = baseVal + noise;
                 return Math.max(0, Math.min(100, newVal));
             });
             renderGraph(id, true);
@@ -537,7 +539,6 @@
                     e.stopPropagation();
                     if(aiData[id].timer) clearTimeout(aiData[id].timer);
                     const currentVal = parseFloat(e.currentTarget.dataset.val);
-                    // Логика переключения всплывашек
                     if (aiData[id].activeDot === i && tooltip.style.opacity === '1') {
                         tooltip.style.opacity = 0; aiData[id].activeDot = -1; return;
                     }
@@ -568,15 +569,11 @@
         const thx = document.getElementById(`ai-thank-you-${id}`);
         box.style.display = 'none'; thx.style.display = 'block';
         
-        let factor = type === 0 ? -15 : (type === 1 ? 5 : 20);
-        aiData[id].voteFactor = factor; renderGraph(id); // Мгновенная реакция локально
-
-        // Возврат кнопок через 5 секунд
+        // Нет влияния на график (как просили), просто UI эффект
         setTimeout(() => {
             thx.style.display = 'none'; box.style.display = 'grid';
-            aiData[id].voted = false; aiData[id].voteFactor = 0; 
-            renderGraph(id);
-        }, 5000);
+            aiData[id].voted = false; 
+        }, 3000);
     }
 
     function openSunDetail(el) {
