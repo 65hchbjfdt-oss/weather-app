@@ -13,13 +13,16 @@
             --accent: #4cd964;
         }
         * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro', sans-serif; -webkit-tap-highlight-color: transparent; user-select: none; }
-        body { margin: 0; background: #000; color: #fff; overflow: hidden; height: 100vh; }
+        
+        /* Блокировка горизонтального скролла */
+        body { margin: 0; background: #000; color: #fff; overflow: hidden; height: 100vh; width: 100vw; overflow-x: hidden; }
         
         canvas#bg { position: fixed; inset: 0; z-index: -1; }
 
         .content-wrapper {
             max-width: 500px; margin: 0 auto; height: 100vh;
             position: relative; background: transparent;
+            overflow-x: hidden; /* Дополнительная защита */
         }
 
         /* --- HEADER (SEARCH & MENU) --- */
@@ -33,14 +36,9 @@
             pointer-events: none; 
         }
 
-        /* Стили для ПК и горизонтальных экранов */
         @media (min-width: 768px) {
-            header {
-                justify-content: center; /* Центруем контент */
-            }
-            .search-wrapper {
-                flex: 0 1 400px !important; /* Фиксированная ширина, не растягиваем */
-            }
+            header { justify-content: center; }
+            .search-wrapper { flex: 0 1 400px !important; }
         }
 
         .search-wrapper { flex: 1; pointer-events: auto; position: relative; }
@@ -107,28 +105,16 @@
 
         #ai-thank-you { font-size: 16px; color: #4cd964; text-align: center; margin-bottom: 10px; display: none; }
 
-        .ai-graph-container {
-            display: flex; height: 180px; margin-top: 15px; position: relative;
-        }
+        .ai-graph-container { display: flex; height: 180px; margin-top: 15px; position: relative; }
 
         .y-axis { 
             width: 30px; display: flex; flex-direction: column; justify-content: space-between; 
             font-size: 10px; opacity: 0.5; text-align: right; 
-            padding-right: 5px; 
-            padding-bottom: 25px; 
-            padding-top: 15px;
+            padding-right: 5px; padding-bottom: 25px; padding-top: 15px;
         }
-        .y-axis-label {
-            position: absolute; left: 0; top: -10px; font-size: 9px; opacity: 0.6; width: 100%; text-align: left;
-        }
+        .y-axis-label { position: absolute; left: 0; top: -10px; font-size: 9px; opacity: 0.6; width: 100%; text-align: left; }
 
-        .graph-area { 
-            flex: 1; 
-            position: relative; 
-            height: 140px; 
-            top: 10px; 
-            margin-bottom: 0; 
-        }
+        .graph-area { flex: 1; position: relative; height: 140px; top: 10px; margin-bottom: 0; }
         
         svg.ai-svg { width: 100%; height: 100%; overflow: visible; }
         
@@ -178,15 +164,10 @@
         .chart-tooltip.align-right::after { left: 80%; }
 
         .x-labels { 
-            position: absolute; 
-            bottom: -5px; 
-            left: 30px; right: 0; 
-            height: 20px; 
+            position: absolute; bottom: -5px; left: 30px; right: 0; height: 20px; 
             display: flex; justify-content: space-between; 
         }
-        .x-label { 
-            font-size: 10px; opacity: 0.5; text-align: center; width: 40px; transform: translateX(0); 
-        }
+        .x-label { font-size: 10px; opacity: 0.5; text-align: center; width: 40px; transform: translateX(0); }
         .x-label:first-child { text-align: left; transform: translateX(-10px); }
         .x-label:last-child { text-align: right; transform: translateX(10px); }
 
@@ -195,17 +176,26 @@
         .dot.active { background: #fff; transform: scale(1.2); }
         .btn-circle { width: 40px; height: 40px; border-radius: 50%; background: rgba(60,60,60,0.6); backdrop-filter: blur(20px); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.2); cursor: pointer; pointer-events: auto; }
 
-        .desktop-arrow {
+        /* --- ARROWS (Mobile & Desktop) --- */
+        .nav-arrow {
             position: fixed; top: 50%; transform: translateY(-50%);
-            width: 50px; height: 50px; border-radius: 50%;
+            width: 40px; height: 40px; border-radius: 50%;
             background: rgba(255,255,255,0.1); backdrop-filter: blur(10px);
-            display: none; align-items: center; justify-content: center;
-            font-size: 24px; cursor: pointer; z-index: 1500; transition: 0.3s;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 20px; cursor: pointer; z-index: 1500; transition: 0.3s;
         }
-        .desktop-arrow:hover { background: rgba(255,255,255,0.25); }
-        .arrow-left { left: 20px; }
-        .arrow-right { right: 20px; }
-        @media (min-width: 768px) { .desktop-arrow { display: flex; } }
+        .nav-arrow:active { background: rgba(255,255,255,0.3); transform: translateY(-50%) scale(0.9); }
+        /* Позиция */
+        .arrow-left { left: 10px; }
+        .arrow-right { right: 10px; }
+        
+        /* Для ПК увеличиваем стрелки и отодвигаем */
+        @media (min-width: 768px) {
+            .nav-arrow { width: 50px; height: 50px; font-size: 24px; background: rgba(255,255,255,0.15); }
+            .nav-arrow:hover { background: rgba(255,255,255,0.25); }
+            .arrow-left { left: 30px; }
+            .arrow-right { right: 30px; }
+        }
 
         .layer { 
             position: fixed; inset: 0; z-index: 3000; 
@@ -259,8 +249,9 @@
         <div class="nav-dock" id="pagination"></div>
     </div>
 
-    <div class="desktop-arrow arrow-left" onclick="movePage(-1)">‹</div>
-    <div class="desktop-arrow arrow-right" onclick="movePage(1)">›</div>
+    <!-- Обновленные стрелки (видны везде) -->
+    <div class="nav-arrow arrow-left" onclick="movePage(-1)">‹</div>
+    <div class="nav-arrow arrow-right" onclick="movePage(1)">›</div>
 
     <!-- НАСТРОЙКИ (Слой) -->
     <div id="settings-layer" class="layer">
@@ -357,12 +348,20 @@
             stage.appendChild(div);
         });
         updatePagination();
+        updateArrows();
     }
 
     // --- Navigation & Actions ---
     function movePage(dir) {
         let next = currentIndex + dir;
         if(next >= 0 && next < cities.length) loadWeather(next);
+    }
+
+    function updateArrows() {
+        const l = document.querySelector('.arrow-left');
+        const r = document.querySelector('.arrow-right');
+        if(l) l.style.display = currentIndex === 0 ? 'none' : 'flex';
+        if(r) r.style.display = currentIndex === cities.length - 1 ? 'none' : 'flex';
     }
     
     function toggleSettings(v) { 
@@ -395,13 +394,6 @@
         navigator.geolocation.getCurrentPosition(async (pos) => {
             const lat = pos.coords.latitude;
             const lon = pos.coords.longitude;
-            
-            // Получаем название города
-            // Используем тот же API геокодинга, но для реверса (по координатам) - API open-meteo не имеет прямого reverse,
-            // поэтому используем openstreetmap (бесплатно) или приближение.
-            // Для упрощения возьмем open-meteo forecast timezone/city logic или просто заглушку "Текущее место"
-            // Но лучше попробовать найти через reverse geocoding
-            
             try {
                 const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&accept-language=ru`);
                 const data = await res.json();
@@ -409,14 +401,11 @@
                 const country = data.address.country || '';
                 
                 const newCity = {lat, lon, name, country, isHome: true};
-                
-                // Проверяем, нет ли уже
                 const exists = cities.find(c => Math.abs(c.lat - lat) < 0.01 && Math.abs(c.lon - lon) < 0.01);
                 
                 if(!exists) {
-                    cities.unshift(newCity); // Добавляем в начало
+                    cities.unshift(newCity); 
                 } else {
-                    // Если есть, просто переходим к нему
                     const idx = cities.indexOf(exists);
                     loadWeather(idx);
                     return;
@@ -501,6 +490,7 @@
             if(i === idx) p.classList.add('active');
         });
         updatePagination();
+        updateArrows();
 
         if(el.innerHTML.length < 50 || el.dataset.unit !== unit || el.dataset.wunit !== windUnit) {
             el.innerHTML = '<div style="text-align:center; padding-top:100px;">Загрузка...</div>';
@@ -583,6 +573,9 @@
         const c1 = h.weather_code[startIdx+1] !== undefined ? h.weather_code[startIdx+1] : c0;
         const codes = [c0, c1];
 
+        // Передаем координаты для синхронизации
+        const cityData = JSON.stringify({lat: city.lat, lon: city.lon});
+
         const canVote = checkLocation(city.lat, city.lon);
         const voteClass = canVote ? '' : 'disabled';
         const voteMsg = canVote ? 'Уточните прогноз:' : 'Голосование доступно только в текущей локации';
@@ -663,11 +656,11 @@
             </div>
 
             <img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" 
-                 onload="initAIGraph('${aiId}', [${probs}], [${codes}])" style="display:none"/>
+                 onload='initAIGraph("${aiId}", [${probs}], [${codes}], ${cityData})' style="display:none"/>
         `;
     }
 
-    // --- AI GRAPH SYSTEM ---
+    // --- AI GRAPH SYSTEM (PSEUDO-SYNC) ---
     const aiData = {};
 
     function checkLocation(lat, lon) {
@@ -675,41 +668,63 @@
         return Math.abs(userGeo.lat - lat) < 0.1 && Math.abs(userGeo.lon - lon) < 0.1;
     }
 
-    function initAIGraph(id, baseProbs, codes) {
+    // Детерминированный рандом на основе времени и координат (чтобы у всех было одинаково)
+    function getSyncedNoise(lat, lon, seedIndex) {
+        const timeBlock = Math.floor(Date.now() / 10000); // меняется каждые 10 сек
+        const seed = lat + lon + timeBlock + seedIndex;
+        // Простой псевдо-рандом: sin(seed) -> дробная часть
+        const x = Math.sin(seed) * 10000;
+        return (x - Math.floor(x)) - 0.5; // от -0.5 до 0.5
+    }
+
+    function initAIGraph(id, baseProbs, codes, geo) {
         let pts = [];
         const start = baseProbs[0];
         const end = baseProbs[1];
         
+        // Генерация начальных точек (используем синхронизированный шум)
         for(let i=0; i<5; i++) {
             let t = i / 4; 
             let val = start + (end - start) * t;
-            val += (Math.random()-0.5) * 5; 
+            // Добавляем шум, зависящий от времени и координат
+            val += getSyncedNoise(geo.lat, geo.lon, i) * 10; 
             pts.push(Math.max(0, Math.min(100, val)));
         }
 
         aiData[id] = { 
             points: pts, 
-            base: [...pts], 
+            base: [...pts], // Базовая линия тоже должна быть синхронна, для простоты берем ту же
             voted: false, 
             codes: codes, 
+            geo: geo,
             timer: null,
             liveTimer: null,
-            activeDot: -1 // Track active dot to fix tooltip logic
+            activeDot: -1 
         };
         
         renderGraph(id);
 
         if(aiData[id].liveTimer) clearInterval(aiData[id].liveTimer);
+        // Запускаем цикл обновления (каждые 2 сек пересчет позиции для плавности CSS transition)
+        // Но сам "шум" меняется раз в 10 сек по формуле выше
         aiData[id].liveTimer = setInterval(() => {
+            // Пересчитываем точки на основе текущего времени
             aiData[id].points = aiData[id].points.map((val, idx) => {
-                const base = aiData[id].base[idx];
-                const noise = (Math.random() - 0.5) * 10; 
-                let newVal = val + noise;
-                newVal = (newVal + base) / 2;
+                // Базовая интерполяция
+                let t = idx / 4;
+                let baseVal = start + (end - start) * t;
+                
+                // Синхронный шум
+                const noise = getSyncedNoise(geo.lat, geo.lon, idx) * 15; 
+                let newVal = baseVal + noise;
+                
+                // Если голосовали - сдвигаем (это локально, так как нет бэкенда)
+                if(aiData[id].voteFactor) newVal += aiData[id].voteFactor;
+
                 return Math.max(0, Math.min(100, newVal));
             });
             renderGraph(id, true);
-        }, 10000);
+        }, 2000); // Чаще обновляем DOM, но значения зависят от 10-сек блоков
     }
 
     function getGraphIcon(val, hourlyCode) {
@@ -782,22 +797,16 @@
                         e.stopPropagation();
                         if(aiData[id].timer) clearTimeout(aiData[id].timer);
 
-                        // --- NEW LOGIC: Toggle & Switch ---
-                        
-                        // 1. If clicking the SAME active dot -> Close it
+                        // --- Logic Fixes ---
                         if (aiData[id].activeDot === i && tooltip.style.opacity === '1') {
                             tooltip.style.opacity = 0;
                             aiData[id].activeDot = -1;
                             return;
                         }
 
-                        // 2. Set new active dot
                         aiData[id].activeDot = i;
-
-                        // 3. Reset Classes completely to prevent lengthening bug
-                        tooltip.className = 'chart-tooltip';
+                        tooltip.className = 'chart-tooltip'; // Full reset
                         
-                        // 4. Calculate Position
                         if(val > 50) {
                             tooltip.classList.add('pos-bottom'); 
                             tooltip.style.top = cyPercent + '%';
@@ -810,7 +819,6 @@
                             tooltip.style.marginBottom = '15px'; 
                         }
 
-                        // 5. Horizontal Align
                         if(i === 0) {
                             tooltip.style.left = '0'; tooltip.classList.add('align-left');
                         } else if(i === 4) {
@@ -824,7 +832,7 @@
 
                         aiData[id].timer = setTimeout(() => {
                             tooltip.style.opacity = 0;
-                            aiData[id].activeDot = -1; // Reset active on timeout
+                            aiData[id].activeDot = -1;
                         }, 10000);
                     };
 
@@ -840,7 +848,6 @@
         if(document.querySelector(`#vote-box-${id} .vote-btn`).classList.contains('disabled')) return;
 
         aiData[id].voted = true;
-        
         const box = document.getElementById(`vote-box-${id}`);
         const thx = document.querySelector(`#page-${id} #ai-thank-you`) || document.getElementById('ai-thank-you');
         
@@ -854,9 +861,8 @@
             else if(type === 1) factor = 5; 
             else factor = 20; 
             
-            aiData[id].base = aiData[id].base.map(v => Math.max(0, Math.min(100, v + factor)));
-            aiData[id].points = [...aiData[id].base];
-            
+            // Сохраняем фактор локально (настоящая синхронизация голосов невозможна без сервера)
+            aiData[id].voteFactor = factor;
             renderGraph(id);
         }, 500);
     }
