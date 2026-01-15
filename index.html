@@ -111,14 +111,14 @@
         .graph-area { flex: 1; position: relative; height: 140px; top: 10px; margin-bottom: 0; width: 100%; }
         
         svg.ai-svg { width: 100%; height: 100%; overflow: visible; }
-        path.graph-line { fill: none; stroke: var(--accent); stroke-width: 2.5; stroke-linecap: round; transition: d 0.5s ease; }
-        path.graph-fill { fill: rgba(76, 217, 100, 0.15); stroke: none; transition: d 0.5s ease; }
+        path.graph-line { fill: none; stroke: var(--accent); stroke-width: 2.5; stroke-linecap: round; transition: d 2s ease-in-out; }
+        path.graph-fill { fill: rgba(76, 217, 100, 0.15); stroke: none; transition: d 2s ease-in-out; }
         
         .html-dot {
             position: absolute; width: 10px; height: 10px;
             background: #000; border: 2px solid var(--accent); border-radius: 50%;
             transform: translate(-50%, -50%); z-index: 5; pointer-events: none; 
-            transition: top 0.5s ease;
+            transition: top 2s ease-in-out; 
         }
         .click-zone { 
             position: absolute; width: 40px; height: 40px;
@@ -142,7 +142,6 @@
         .chart-tooltip.pos-top::after { content: ''; position: absolute; left: 50%; bottom: -5px; transform: translateX(-50%); border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 5px solid rgba(255,255,255,0.95); }
         .chart-tooltip.pos-bottom::after { content: ''; position: absolute; left: 50%; top: -5px; transform: translateX(-50%); border-left: 5px solid transparent; border-right: 5px solid transparent; border-bottom: 5px solid rgba(255,255,255,0.95); }
         
-        /* Логика чтобы не вылезало за края */
         .chart-tooltip.align-left::after { left: 15px; transform: none; }
         .chart-tooltip.align-right::after { left: auto; right: 15px; transform: none; }
 
@@ -354,7 +353,7 @@
             content.innerHTML = generateHTML(data, tempCity, true); updateEnv(data);
             const p1 = data.hourly.precipitation_probability[0] || 0; const p2 = data.hourly.precipitation_probability[1] || p1;
             const c0 = data.current.weather_code; const c1 = data.hourly.weather_code[1] || c0;
-            setTimeout(() => initAIGraph('preview', [p1, p2], [c0, c1]), 50);
+            setTimeout(() => initAIGraph('preview', [p1, p2], [c0, c1], {lat, lon}), 50);
         } else content.innerHTML = '<div style="text-align:center; padding-top:50px">Ошибка загрузки.</div>';
     }
 
@@ -399,7 +398,7 @@
             const p1 = h.precipitation_probability[startIdx] || 0; const p2 = h.precipitation_probability[startIdx+1] || p1;
             const c0 = h.weather_code[startIdx] !== undefined ? h.weather_code[startIdx] : data.current.weather_code;
             const c1 = h.weather_code[startIdx+1] !== undefined ? h.weather_code[startIdx+1] : c0;
-            setTimeout(() => initAIGraph(cities.indexOf(city), [p1, p2], [c0, c1]), 50);
+            setTimeout(() => initAIGraph(cities.indexOf(city), [p1, p2], [c0, c1], {lat: city.lat, lon: city.lon}), 50);
         } else { if(idx === currentIndex) { const data = await fetchWeather(city.lat, city.lon); if(data) updateEnv(data); } }
     }
 
@@ -473,30 +472,77 @@
     const aiData = {};
     function checkLocation(lat, lon) { return userGeo && Math.abs(userGeo.lat - lat) < 0.1 && Math.abs(userGeo.lon - lon) < 0.1; }
     
-    function initAIGraph(id, baseProbs, codes) {
+    // Взвешенная волатильность погоды с учетом снега
+    function getWeatherVolatility(code) {
+        if (code >= 95) return 0.4; // Гроза: высокая
+        if (code >= 70 && code <= 79) return 0.25; // Снег
+        if (code >= 85 && code <= 86) return 0.25; // Снежные ливни
+        if (code >= 50) return 0.25; // Дождь
+        if (code <= 3) return 0.05; // Ясно: низкая
+        return 0.15;
+    }
+
+    function initAIGraph(id, baseProbs, codes, geo) {
         let pts = []; 
         const start = baseProbs[0]; 
         const end = baseProbs[1];
         
-        // Strict Linear Interpolation
+        // Сложный математический расчет (кривые Безье + синус)
         for(let i=0; i<5; i++) {
             let t = i / 4; 
-            let val = start + (end - start) * t;
+            // Линейная интерполяция
+            let linear = start + (end - start) * t;
+            
+            // Получаем волатильность
+            let volatility = getWeatherVolatility(i <= 2 ? codes[0] : codes[1]);
+            
+            // "Дыхание" погоды: синусоида на основе времени и координат
+            // Используем Math.floor для стабилизации (меняется раз в 10 секунд)
+            const timeSeed = Math.floor(Date.now() / 10000); 
+            const seed = geo.lat + geo.lon + timeSeed + i;
+            const wave = Math.sin(seed) * 20 * volatility; 
+            
+            let val = linear + wave;
             pts.push(Math.max(0, Math.min(100, val)));
         }
         
         aiData[id] = { points: pts, voted: false, codes: codes, activeDot: -1, timer: null };
         renderGraph(id);
+        
+        // Живой цикл (обновляем раз в 2 секунды)
+        if(aiData[id].liveTimer) clearInterval(aiData[id].liveTimer);
+        
+        aiData[id].liveTimer = setInterval(() => {
+            aiData[id].points = aiData[id].points.map((val, idx) => {
+                let t = idx / 4; let baseVal = start + (end - start) * t;
+                let volatility = getWeatherVolatility(idx <= 2 ? codes[0] : codes[1]);
+                
+                // Временной сдвиг (Time Seed)
+                const timeSeed = Date.now() / 2000; // Плавная волна времени
+                const wave = Math.sin(timeSeed + idx + geo.lat) * 15 * volatility;
+                
+                let newVal = baseVal + wave;
+                return Math.max(0, Math.min(100, newVal));
+            });
+            renderGraph(id, true);
+        }, 2000);
     }
 
     function getGraphIcon(val, hourlyCode) {
+        // Логика иконок
         if(val <= 10) return getWIcon(hourlyCode);
+        
+        // Проверка снега
+        if ((hourlyCode >= 70 && hourlyCode <= 79) || (hourlyCode >= 85 && hourlyCode <= 86)) return '❄️';
+        
         if(val <= 24) return (hourlyCode >= 95) ? '🌩' : (hourlyCode <= 1 ? '⛅' : '☁️');
         if(val <= 59) return (hourlyCode <= 3) ? '🌦' : '🌧';
-        return (hourlyCode >= 71 && hourlyCode <= 79) ? '❄️' : '🌧';
+        
+        // Если не попали в снег выше, значит дождь
+        return '🌧';
     }
 
-    function renderGraph(id) {
+    function renderGraph(id, isUpdate = false) {
         if(!aiData[id]) return;
         const d = aiData[id].points; const codes = aiData[id].codes;
         const svgW = 300, svgH = 100; const stepX = svgW / 4;
@@ -510,6 +556,17 @@
         
         if(line && fill) {
             line.setAttribute('d', path); fill.setAttribute('d', path + ` L${svgW},${svgH} L0,${svgH} Z`);
+            
+            if (isUpdate && dotsContainer.children.length === 5) {
+                 Array.from(dotsContainer.children).forEach((group, i) => {
+                     const val = d[i]; const cyPercent = 100 - val;
+                     group.style.top = cyPercent + '%';
+                     const zone = group.querySelector('.click-zone');
+                     if(zone) zone.dataset.val = val; 
+                 });
+                 return;
+            }
+            
             dotsContainer.innerHTML = '';
             d.forEach((val, i) => {
                 const cxPercent = i * 25; const cyPercent = 100 - val;
@@ -517,95 +574,7 @@
                 const group = document.createElement('div');
                 group.style.position = 'absolute'; group.style.left = cxPercent + '%'; group.style.top = cyPercent + '%'; 
                 group.style.width = '0'; group.style.height = '0'; 
+                group.style.transition = 'top 2s ease-in-out'; // Синхрон с линией
+                
                 const dot = document.createElement('div'); dot.className = 'html-dot'; group.appendChild(dot);
-                const zone = document.createElement('div'); zone.className = 'click-zone'; zone.dataset.val = val; group.appendChild(zone);
-
-                zone.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    if(aiData[id].timer) clearTimeout(aiData[id].timer);
-                    const currentVal = parseFloat(e.currentTarget.dataset.val);
-                    if (aiData[id].activeDot === i && tooltip.style.opacity === '1') {
-                        tooltip.style.opacity = 0; aiData[id].activeDot = -1; return;
-                    }
-                    aiData[id].activeDot = i;
-                    tooltip.className = 'chart-tooltip';
-                    const currentCy = 100 - currentVal;
-                    if(currentVal > 50) {
-                        tooltip.classList.add('pos-bottom'); tooltip.style.top = currentCy + '%'; tooltip.style.bottom = 'auto'; tooltip.style.marginTop = '15px'; 
-                    } else {
-                        tooltip.classList.add('pos-top'); tooltip.style.top = 'auto'; tooltip.style.bottom = (100 - currentCy) + '%'; tooltip.style.marginBottom = '15px'; 
-                    }
-                    if(i === 0) { tooltip.style.left = '0'; tooltip.classList.add('align-left'); }
-                    else if(i === 4) { tooltip.style.left = 'auto'; tooltip.style.right = '0'; tooltip.classList.add('align-right'); }
-                    else { tooltip.style.left = cxPercent + '%'; tooltip.style.transform = 'translateX(-50%)'; }
-                    tooltip.innerHTML = `${icon} ${Math.round(currentVal)}%`; tooltip.style.opacity = 1;
-                    aiData[id].timer = setTimeout(() => { tooltip.style.opacity = 0; aiData[id].activeDot = -1; }, 5000);
-                });
-                dotsContainer.appendChild(group);
-            });
-        }
-    }
-
-    function submitVote(id, type) {
-        if(aiData[id].voted) return;
-        if(document.querySelector(`#vote-box-${id} .vote-btn`).classList.contains('disabled')) return;
-        aiData[id].voted = true;
-        const box = document.getElementById(`vote-box-${id}`);
-        const thx = document.getElementById(`ai-thank-you-${id}`);
-        box.style.display = 'none'; thx.style.display = 'block';
-        
-        // No graph change, just UI feedback
-        setTimeout(() => {
-            thx.style.display = 'none'; box.style.display = 'grid';
-            aiData[id].voted = false; 
-        }, 3000);
-    }
-
-    function openSunDetail(el) {
-        const rise = el.dataset.rise; const set = el.dataset.set; const dur = parseFloat(el.dataset.dur);
-        document.getElementById('sun-modal-content').innerHTML = `
-            <div style="text-align:center;padding:40px 0">
-                <div style="font-size:50px">${Math.floor(dur/3600)}ч ${Math.round((dur%3600)/60)}м</div>
-                <div style="opacity:0.6">Световой день</div>
-            </div>
-            <div style="background:rgba(255,255,255,0.1); border-radius:15px; padding:20px;">
-                <div style="display:flex;justify-content:space-between;margin-bottom:15px"><span>Восход</span><b>${rise.split('T')[1]}</b></div>
-                <div style="display:flex;justify-content:space-between"><span>Закат</span><b>${set.split('T')[1]}</b></div>
-            </div>`;
-        document.getElementById('sun-modal').classList.add('show');
-    }
-
-    function getWDesc(c) { const m={0:'Ясно',1:'Малообл.',2:'Облачно',3:'Пасмурно',45:'Туман',61:'Дождь',71:'Снег',95:'Гроза'}; return m[c]||'Осадки'; }
-    function getWIcon(c) { if(c===0)return'☀️'; if(c<=3)return'☁️'; if(c<=48)return'🌫'; if(c<=69)return'🌧'; if(c<=79)return'❄️'; if(c>=95)return'⚡️'; return'🌧'; }
-    function getAIText(t,c) { if(c>=95)return "Гроза! Не стойте под деревьями."; if(c>=60)return "Берите зонт, скоро польет."; if(t<0)return "Одевайтесь теплее."; return "Отличная погода для прогулки."; }
-    function renderFav() { document.getElementById('fav-list').innerHTML = cities.map((c,i)=>`<div class="list-item" onclick="loadWeather(${i}); toggleSettings(false)"><div><b>${c.name}</b><div style="font-size:12px;opacity:0.6">${c.country}</div></div>${!c.isHome ? `<div class="btn-circle" style="color:#ff453a;border-color:rgba(255,69,58,0.3)" onclick="event.stopPropagation(); removeCity(${i})">✕</div>` : ''}</div>`).join(''); }
-    function toggleUnit() { unit = unit==='C'?'F':'C'; localStorage.setItem('unit', unit); updateSettingsUI(); loadWeather(currentIndex); }
-    function toggleWindUnit() { const next = { 'kmh':'ms', 'ms':'mph', 'mph':'kmh' }; windUnit = next[windUnit]; localStorage.setItem('windUnit', windUnit); updateSettingsUI(); loadWeather(currentIndex); }
-    function updateSettingsUI() { document.getElementById('unit-disp').innerText = '°'+unit; const wLabels = {'kmh':'км/ч', 'ms':'м/с', 'mph':'миль/ч'}; document.getElementById('wind-disp').innerText = wLabels[windUnit]; }
-    function updatePagination() { const p = document.getElementById('pagination'); if(cities.length < 2) p.style.display='none'; else { p.style.display='flex'; p.innerHTML = cities.map((_,i)=>`<div class="dot ${i===currentIndex?'active':''}" onclick="loadWeather(${i})"></div>`).join(''); } }
-    
-    const ctx = document.getElementById('bg').getContext('2d'); let env = { w:0, h:0, code:0, day:1, items:[], clouds:[], stars:[] };
-    function initParticles() { env.stars = []; for(let i=0; i<100; i++) env.stars.push({x:Math.random(), y:Math.random(), a:Math.random()}); }
-    function updateEnv(data) { env.code = data.current.weather_code; env.day = data.current.is_day; env.items = []; env.clouds = []; if(env.code >= 1 && env.code <= 3 || env.code >= 45) { for(let i=0; i<6; i++) env.clouds.push({x:Math.random()*window.innerWidth, y:Math.random()*300, s:Math.random()*0.5+0.2}); } }
-    function resize() { env.w = window.innerWidth; env.h = window.innerHeight; ctx.canvas.width = env.w; ctx.canvas.height = env.h; }
-    function loop() {
-        ctx.clearRect(0,0,env.w,env.h);
-        let g = ctx.createLinearGradient(0,0,0,env.h); const c = env.code;
-        if(c >= 95) { g.addColorStop(0,'#232526'); g.addColorStop(1,'#414345'); }
-        else if(c >= 51 || c===45) { if(env.day) { g.addColorStop(0,'#5C6575'); g.addColorStop(1,'#8E9CAB'); } else { g.addColorStop(0,'#1e2329'); g.addColorStop(1,'#2c3e50'); } } 
-        else if(c <= 2) { if(env.day) { g.addColorStop(0,'#2980b9'); g.addColorStop(1,'#6dd5fa'); } else { g.addColorStop(0,'#0f2027'); g.addColorStop(1,'#203a43'); } } 
-        else { if(env.day) { g.addColorStop(0,'#757F9A'); g.addColorStop(1,'#D7DDE8'); } else { g.addColorStop(0,'#2c3e50'); g.addColorStop(1,'#4ca1af'); } }
-        ctx.fillStyle = g; ctx.fillRect(0,0,env.w,env.h);
-        if(!env.day && c <= 2) { ctx.fillStyle = '#fff'; env.stars.forEach(s => { ctx.globalAlpha = Math.abs(Math.sin(Date.now()/1000 + s.x*10)) * s.a; ctx.beginPath(); ctx.arc(s.x*env.w, s.y*env.h, 1.5, 0, Math.PI*2); ctx.fill(); }); ctx.globalAlpha = 1; }
-        if(c <= 2) { let sx = env.day ? env.w*0.8 : env.w*0.8; let sy = env.h*0.15; if(env.day) { let rg = ctx.createRadialGradient(sx,sy,10,sx,sy,60); rg.addColorStop(0,'rgba(255,255,200,0.9)'); rg.addColorStop(1,'rgba(255,255,255,0)'); ctx.fillStyle=rg; ctx.beginPath(); ctx.arc(sx,sy,80,0,Math.PI*2); ctx.fill(); ctx.fillStyle='#FFD700'; ctx.beginPath(); ctx.arc(sx,sy,20,0,Math.PI*2); ctx.fill(); } else { ctx.fillStyle='rgba(255,255,230,0.9)'; ctx.beginPath(); ctx.arc(sx,sy,25,0,Math.PI*2); ctx.fill(); } }
-        ctx.fillStyle = env.day ? 'rgba(255,255,255,0.3)' : 'rgba(200,200,200,0.1)'; env.clouds.forEach(cl => { cl.x += cl.s; if(cl.x > env.w + 100) cl.x = -100; ctx.beginPath(); ctx.arc(cl.x, cl.y, 60, 0, Math.PI*2); ctx.arc(cl.x+50, cl.y+20, 70, 0, Math.PI*2); ctx.fill(); });
-        const isRain = (c>=50 && c<=69) || c>=95; const isSnow = c>=70 && c<=79;
-        if(isRain || isSnow) { if(env.items.length < 150) env.items.push({x:Math.random()*env.w, y:-20, v:Math.random()*5+5, s:Math.random()*2}); ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.fillStyle = '#fff'; ctx.lineWidth = isSnow ? 0 : 1.5; env.items.forEach((p,i) => { p.y += p.v; if(p.y > env.h) env.items[i] = {x:Math.random()*env.w, y:-20, v:p.v, s:p.s}; if(isSnow) { p.x += Math.sin(p.y/50); ctx.beginPath(); ctx.arc(p.x, p.y, p.s, 0, Math.PI*2); ctx.fill(); } else { ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x, p.y+15); ctx.stroke(); } }); }
-        if(c >= 95 && Math.random() < 0.005) { ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.fillRect(0,0,env.w,env.h); }
-        requestAnimationFrame(loop);
-    }
-
-    init();
-</script>
-</body>
-</html>
+                const zone = document.createElement('div'); z
