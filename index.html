@@ -14,47 +14,51 @@
         }
         * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro', sans-serif; -webkit-tap-highlight-color: transparent; user-select: none; }
         
-        /* Блокировка горизонтального скролла */
-        body { margin: 0; background: #000; color: #fff; overflow: hidden; height: 100vh; width: 100vw; overflow-x: hidden; }
+        /* Жесткая блокировка горизонтального скролла */
+        body { margin: 0; background: #000; color: #fff; overflow: hidden; height: 100vh; width: 100vw; position: fixed; }
         
         canvas#bg { position: fixed; inset: 0; z-index: -1; }
 
         .content-wrapper {
             max-width: 500px; margin: 0 auto; height: 100vh;
             position: relative; background: transparent;
-            overflow-x: hidden; /* Дополнительная защита */
+            overflow-y: hidden; overflow-x: hidden;
         }
 
-        /* --- HEADER (SEARCH & MENU) --- */
+        /* --- HEADER --- */
         header { 
             padding: 40px 20px 10px; 
             position: absolute; top: 0; left: 0; right: 0; 
             z-index: 1000; 
-            display: flex; 
-            gap: 10px; 
+            display: flex; gap: 10px; 
             background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent); 
             pointer-events: none; 
-        }
-
-        @media (min-width: 768px) {
-            header { justify-content: center; }
-            .search-wrapper { flex: 0 1 400px !important; }
+            /* Выравнивание */
+            width: 100%; max-width: 500px; margin: 0 auto;
         }
 
         .search-wrapper { flex: 1; pointer-events: auto; position: relative; }
         .search-box { display: flex; align-items: center; background: rgba(40,40,40,0.7); backdrop-filter: var(--blur); border-radius: 14px; padding: 8px 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); border: 1px solid var(--glass-border); }
-        input { flex: 1; background: transparent; border: none; color: #fff; font-size: 17px; outline: none; margin-left: 8px; }
+        input { flex: 1; background: transparent; border: none; color: #fff; font-size: 17px; outline: none; margin-left: 8px; width: 100%; }
         
         #results { position: absolute; top: 50px; left: 0; right: 0; background: rgba(30,30,30,0.95); border-radius: 14px; overflow: hidden; display: none; z-index: 2500; border: 1px solid var(--glass-border); backdrop-filter: blur(50px); max-height: 300px; overflow-y: auto; }
         .res-item { padding: 12px 15px; border-bottom: 1px solid rgba(255,255,255,0.1); cursor: pointer; }
         .res-sub { font-size: 12px; opacity: 0.6; margin-top: 2px; line-height: 1.3; }
         
         #stage { height: 100%; width: 100%; position: relative; overflow: hidden; }
+        
         .page-container {
             position: absolute; inset: 0; padding: 110px 20px 140px;
-            transition: opacity 0.4s ease; overflow-y: auto; scroll-behavior: smooth;
-            -webkit-overflow-scrolling: touch; display: none; opacity: 0;
+            transition: opacity 0.4s ease; 
+            overflow-y: auto; overflow-x: hidden; /* Только вертикаль */
+            scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch; 
+            display: none; opacity: 0;
             scrollbar-width: none; 
+            width: 100%;
+            /* Запрет на горизонтальные жесты браузера */
+            touch-action: pan-y; 
+            overscroll-behavior-x: none;
         }
         .page-container::-webkit-scrollbar { display: none; }
         .page-container.active { display: block; opacity: 1; z-index: 5; }
@@ -91,9 +95,8 @@
         .tile-val { font-size: 24px; font-weight: 500; margin-top: 5px; }
         .tile-sub { font-size: 13px; opacity: 0.7; }
 
-        /* --- AI GRAPH UPGRADE --- */
+        /* --- AI GRAPH --- */
         .ai-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        
         .vote-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; transition: opacity 0.5s; }
         .vote-btn { 
             background: rgba(255,255,255,0.1); border-radius: 12px; padding: 10px 5px; 
@@ -102,22 +105,20 @@
         }
         .vote-btn:active { transform: scale(0.9); background: rgba(255,255,255,0.2); }
         .vote-btn.disabled { opacity: 0.3; pointer-events: none; }
-
         #ai-thank-you { font-size: 16px; color: #4cd964; text-align: center; margin-bottom: 10px; display: none; }
 
         .ai-graph-container { display: flex; height: 180px; margin-top: 15px; position: relative; }
-
         .y-axis { 
             width: 30px; display: flex; flex-direction: column; justify-content: space-between; 
             font-size: 10px; opacity: 0.5; text-align: right; 
             padding-right: 5px; padding-bottom: 25px; padding-top: 15px;
         }
         .y-axis-label { position: absolute; left: 0; top: -10px; font-size: 9px; opacity: 0.6; width: 100%; text-align: left; }
-
         .graph-area { flex: 1; position: relative; height: 140px; top: 10px; margin-bottom: 0; }
         
         svg.ai-svg { width: 100%; height: 100%; overflow: visible; }
         
+        /* Анимация: 2 секунды, плавное начало и конец */
         path.graph-line { 
             fill: none; stroke: var(--accent); stroke-width: 2.5; stroke-linecap: round; 
             transition: d 2s ease-in-out; 
@@ -132,6 +133,7 @@
             background: #000; border: 2px solid var(--accent); border-radius: 50%;
             transform: translate(-50%, -50%); z-index: 5;
             pointer-events: none; 
+            /* Важно: анимация движения точек совпадает с линией */
             transition: top 2s ease-in-out; 
         }
 
@@ -141,7 +143,6 @@
             z-index: 10; cursor: pointer;
         }
 
-        /* Tooltips */
         .chart-tooltip {
             position: absolute; background: rgba(255,255,255,0.95); color: #000;
             padding: 6px 10px; border-radius: 10px; font-size: 13px; font-weight: 600;
@@ -149,7 +150,6 @@
             white-space: nowrap; z-index: 100;
             box-shadow: 0 4px 10px rgba(0,0,0,0.3);
         }
-        
         .chart-tooltip.pos-top::after {
             content: ''; position: absolute; left: 50%; bottom: -5px; transform: translateX(-50%);
             border-left: 5px solid transparent; border-right: 5px solid transparent;
@@ -163,10 +163,7 @@
         .chart-tooltip.align-left::after { left: 20%; }
         .chart-tooltip.align-right::after { left: 80%; }
 
-        .x-labels { 
-            position: absolute; bottom: -5px; left: 30px; right: 0; height: 20px; 
-            display: flex; justify-content: space-between; 
-        }
+        .x-labels { position: absolute; bottom: -5px; left: 30px; right: 0; height: 20px; display: flex; justify-content: space-between; }
         .x-label { font-size: 10px; opacity: 0.5; text-align: center; width: 40px; transform: translateX(0); }
         .x-label:first-child { text-align: left; transform: translateX(-10px); }
         .x-label:last-child { text-align: right; transform: translateX(10px); }
@@ -176,7 +173,6 @@
         .dot.active { background: #fff; transform: scale(1.2); }
         .btn-circle { width: 40px; height: 40px; border-radius: 50%; background: rgba(60,60,60,0.6); backdrop-filter: blur(20px); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.2); cursor: pointer; pointer-events: auto; }
 
-        /* --- ARROWS (Mobile & Desktop) --- */
         .nav-arrow {
             position: fixed; top: 50%; transform: translateY(-50%);
             width: 40px; height: 40px; border-radius: 50%;
@@ -185,11 +181,8 @@
             font-size: 20px; cursor: pointer; z-index: 1500; transition: 0.3s;
         }
         .nav-arrow:active { background: rgba(255,255,255,0.3); transform: translateY(-50%) scale(0.9); }
-        /* Позиция */
         .arrow-left { left: 10px; }
         .arrow-right { right: 10px; }
-        
-        /* Для ПК увеличиваем стрелки и отодвигаем */
         @media (min-width: 768px) {
             .nav-arrow { width: 50px; height: 50px; font-size: 24px; background: rgba(255,255,255,0.15); }
             .nav-arrow:hover { background: rgba(255,255,255,0.25); }
@@ -249,7 +242,6 @@
         <div class="nav-dock" id="pagination"></div>
     </div>
 
-    <!-- Обновленные стрелки (видны везде) -->
     <div class="nav-arrow arrow-left" onclick="movePage(-1)">‹</div>
     <div class="nav-arrow arrow-right" onclick="movePage(1)">›</div>
 
@@ -401,19 +393,19 @@
                 const country = data.address.country || '';
                 
                 const newCity = {lat, lon, name, country, isHome: true};
-                const exists = cities.find(c => Math.abs(c.lat - lat) < 0.01 && Math.abs(c.lon - lon) < 0.01);
+                
+                // Проверка дубликатов
+                const exists = cities.find(c => (Math.abs(c.lat - lat) < 0.01 && Math.abs(c.lon - lon) < 0.01));
                 
                 if(!exists) {
                     cities.unshift(newCity); 
+                    localStorage.setItem('savedCities', JSON.stringify(cities));
+                    initStageDOM();
+                    loadWeather(0);
                 } else {
                     const idx = cities.indexOf(exists);
                     loadWeather(idx);
-                    return;
                 }
-                
-                localStorage.setItem('savedCities', JSON.stringify(cities));
-                initStageDOM();
-                loadWeather(0);
                 
             } catch(e) {
                 alert('Не удалось определить город');
@@ -449,6 +441,18 @@
 
     function confirmAddCity() {
         if(!tempCity) return;
+        
+        // --- ЗАЩИТА ОТ ДУБЛИКАТОВ ---
+        const exists = cities.some(c => 
+            (Math.abs(c.lat - tempCity.lat) < 0.01 && Math.abs(c.lon - tempCity.lon) < 0.01) ||
+            (c.name === tempCity.name && c.country === tempCity.country)
+        );
+
+        if (exists) {
+            alert('Этот город уже добавлен в избранное!');
+            return;
+        }
+
         cities.push(tempCity);
         localStorage.setItem('savedCities', JSON.stringify(cities));
         initStageDOM();
@@ -572,8 +576,6 @@
         const c0 = h.weather_code[startIdx] !== undefined ? h.weather_code[startIdx] : cur.weather_code;
         const c1 = h.weather_code[startIdx+1] !== undefined ? h.weather_code[startIdx+1] : c0;
         const codes = [c0, c1];
-
-        // Передаем координаты для синхронизации
         const cityData = JSON.stringify({lat: city.lat, lon: city.lon});
 
         const canVote = checkLocation(city.lat, city.lon);
@@ -660,7 +662,7 @@
         `;
     }
 
-    // --- AI GRAPH SYSTEM (PSEUDO-SYNC) ---
+    // --- AI GRAPH SYSTEM ---
     const aiData = {};
 
     function checkLocation(lat, lon) {
@@ -668,13 +670,11 @@
         return Math.abs(userGeo.lat - lat) < 0.1 && Math.abs(userGeo.lon - lon) < 0.1;
     }
 
-    // Детерминированный рандом на основе времени и координат (чтобы у всех было одинаково)
     function getSyncedNoise(lat, lon, seedIndex) {
-        const timeBlock = Math.floor(Date.now() / 10000); // меняется каждые 10 сек
+        const timeBlock = Math.floor(Date.now() / 10000); 
         const seed = lat + lon + timeBlock + seedIndex;
-        // Простой псевдо-рандом: sin(seed) -> дробная часть
         const x = Math.sin(seed) * 10000;
-        return (x - Math.floor(x)) - 0.5; // от -0.5 до 0.5
+        return (x - Math.floor(x)) - 0.5; 
     }
 
     function initAIGraph(id, baseProbs, codes, geo) {
@@ -682,18 +682,16 @@
         const start = baseProbs[0];
         const end = baseProbs[1];
         
-        // Генерация начальных точек (используем синхронизированный шум)
         for(let i=0; i<5; i++) {
             let t = i / 4; 
             let val = start + (end - start) * t;
-            // Добавляем шум, зависящий от времени и координат
             val += getSyncedNoise(geo.lat, geo.lon, i) * 10; 
             pts.push(Math.max(0, Math.min(100, val)));
         }
 
         aiData[id] = { 
             points: pts, 
-            base: [...pts], // Базовая линия тоже должна быть синхронна, для простоты берем ту же
+            base: [...pts], 
             voted: false, 
             codes: codes, 
             geo: geo,
@@ -705,26 +703,17 @@
         renderGraph(id);
 
         if(aiData[id].liveTimer) clearInterval(aiData[id].liveTimer);
-        // Запускаем цикл обновления (каждые 2 сек пересчет позиции для плавности CSS transition)
-        // Но сам "шум" меняется раз в 10 сек по формуле выше
         aiData[id].liveTimer = setInterval(() => {
-            // Пересчитываем точки на основе текущего времени
             aiData[id].points = aiData[id].points.map((val, idx) => {
-                // Базовая интерполяция
                 let t = idx / 4;
                 let baseVal = start + (end - start) * t;
-                
-                // Синхронный шум
                 const noise = getSyncedNoise(geo.lat, geo.lon, idx) * 15; 
                 let newVal = baseVal + noise;
-                
-                // Если голосовали - сдвигаем (это локально, так как нет бэкенда)
                 if(aiData[id].voteFactor) newVal += aiData[id].voteFactor;
-
                 return Math.max(0, Math.min(100, newVal));
             });
             renderGraph(id, true);
-        }, 2000); // Чаще обновляем DOM, но значения зависят от 10-сек блоков
+        }, 2000);
     }
 
     function getGraphIcon(val, hourlyCode) {
@@ -764,82 +753,97 @@
             line.setAttribute('d', path);
             fill.setAttribute('d', path + ` L${svgW},${svgH} L0,${svgH} Z`);
             
+            // --- SYNC FIX: В режиме обновления меняем атрибуты у существующих элементов ---
             if (isUpdate && dotsContainer.children.length === 5) {
                  Array.from(dotsContainer.children).forEach((group, i) => {
                      const val = d[i];
                      const cyPercent = 100 - val;
+                     
+                     // 1. Двигаем группу
                      group.style.top = cyPercent + '%';
+                     
+                     // 2. Обновляем данные для клика (чтобы показывал свежий %)
+                     const zone = group.querySelector('.click-zone');
+                     if(zone) zone.dataset.val = val; 
                  });
-            } else {
-                dotsContainer.innerHTML = '';
-                d.forEach((val, i) => {
-                    const cxPercent = i * 25; 
-                    const cyPercent = 100 - val;
-                    const relevantCode = i <= 2 ? codes[0] : codes[1];
-                    const icon = getGraphIcon(val, relevantCode);
-
-                    const group = document.createElement('div');
-                    group.style.position = 'absolute';
-                    group.style.left = cxPercent + '%';
-                    group.style.top = cyPercent + '%'; 
-                    group.style.width = '0'; group.style.height = '0';
-                    group.style.transition = 'top 2s ease-in-out';
-
-                    const dot = document.createElement('div');
-                    dot.className = 'html-dot';
-                    group.appendChild(dot);
-
-                    const zone = document.createElement('div');
-                    zone.className = 'click-zone';
-                    group.appendChild(zone);
-
-                    const handleClick = (e) => {
-                        e.stopPropagation();
-                        if(aiData[id].timer) clearTimeout(aiData[id].timer);
-
-                        // --- Logic Fixes ---
-                        if (aiData[id].activeDot === i && tooltip.style.opacity === '1') {
-                            tooltip.style.opacity = 0;
-                            aiData[id].activeDot = -1;
-                            return;
-                        }
-
-                        aiData[id].activeDot = i;
-                        tooltip.className = 'chart-tooltip'; // Full reset
-                        
-                        if(val > 50) {
-                            tooltip.classList.add('pos-bottom'); 
-                            tooltip.style.top = cyPercent + '%';
-                            tooltip.style.bottom = 'auto';
-                            tooltip.style.marginTop = '15px'; 
-                        } else {
-                            tooltip.classList.add('pos-top');
-                            tooltip.style.top = 'auto';
-                            tooltip.style.bottom = (100 - cyPercent) + '%';
-                            tooltip.style.marginBottom = '15px'; 
-                        }
-
-                        if(i === 0) {
-                            tooltip.style.left = '0'; tooltip.classList.add('align-left');
-                        } else if(i === 4) {
-                            tooltip.style.left = 'auto'; tooltip.style.right = '0'; tooltip.classList.add('align-right');
-                        } else {
-                            tooltip.style.left = cxPercent + '%'; tooltip.style.transform = 'translateX(-50%)';
-                        }
-
-                        tooltip.innerHTML = `${icon} ${Math.round(val)}%`;
-                        tooltip.style.opacity = 1;
-
-                        aiData[id].timer = setTimeout(() => {
-                            tooltip.style.opacity = 0;
-                            aiData[id].activeDot = -1;
-                        }, 10000);
-                    };
-
-                    zone.addEventListener('click', handleClick);
-                    dotsContainer.appendChild(group);
-                });
+                 return; // Выходим, не перерисовывая DOM полностью, чтобы не сбить анимацию
             }
+
+            // --- Полная отрисовка (первый раз или если DOM сбился) ---
+            dotsContainer.innerHTML = '';
+            d.forEach((val, i) => {
+                const cxPercent = i * 25; 
+                const cyPercent = 100 - val;
+                const relevantCode = i <= 2 ? codes[0] : codes[1];
+                const icon = getGraphIcon(val, relevantCode);
+
+                const group = document.createElement('div');
+                group.style.position = 'absolute';
+                group.style.left = cxPercent + '%';
+                group.style.top = cyPercent + '%'; 
+                group.style.width = '0'; group.style.height = '0';
+                group.style.transition = 'top 2s ease-in-out'; // Sync with SVG
+
+                const dot = document.createElement('div');
+                dot.className = 'html-dot';
+                group.appendChild(dot);
+
+                const zone = document.createElement('div');
+                zone.className = 'click-zone';
+                zone.dataset.val = val; // Храним текущее значение здесь
+                group.appendChild(zone);
+
+                const handleClick = (e) => {
+                    e.stopPropagation();
+                    if(aiData[id].timer) clearTimeout(aiData[id].timer);
+
+                    // Берем АКТУАЛЬНОЕ значение из dataset (оно обновляется в цикле выше)
+                    const currentVal = parseFloat(e.currentTarget.dataset.val);
+
+                    if (aiData[id].activeDot === i && tooltip.style.opacity === '1') {
+                        tooltip.style.opacity = 0;
+                        aiData[id].activeDot = -1;
+                        return;
+                    }
+
+                    aiData[id].activeDot = i;
+                    tooltip.className = 'chart-tooltip';
+                    
+                    // Пересчитываем позицию тултипа на основе текущего значения
+                    const currentCy = 100 - currentVal;
+
+                    if(currentVal > 50) {
+                        tooltip.classList.add('pos-bottom'); 
+                        tooltip.style.top = currentCy + '%';
+                        tooltip.style.bottom = 'auto';
+                        tooltip.style.marginTop = '15px'; 
+                    } else {
+                        tooltip.classList.add('pos-top');
+                        tooltip.style.top = 'auto';
+                        tooltip.style.bottom = (100 - currentCy) + '%';
+                        tooltip.style.marginBottom = '15px'; 
+                    }
+
+                    if(i === 0) {
+                        tooltip.style.left = '0'; tooltip.classList.add('align-left');
+                    } else if(i === 4) {
+                        tooltip.style.left = 'auto'; tooltip.style.right = '0'; tooltip.classList.add('align-right');
+                    } else {
+                        tooltip.style.left = cxPercent + '%'; tooltip.style.transform = 'translateX(-50%)';
+                    }
+
+                    tooltip.innerHTML = `${icon} ${Math.round(currentVal)}%`;
+                    tooltip.style.opacity = 1;
+
+                    aiData[id].timer = setTimeout(() => {
+                        tooltip.style.opacity = 0;
+                        aiData[id].activeDot = -1;
+                    }, 10000);
+                };
+
+                zone.addEventListener('click', handleClick);
+                dotsContainer.appendChild(group);
+            });
         }
     }
 
@@ -848,6 +852,7 @@
         if(document.querySelector(`#vote-box-${id} .vote-btn`).classList.contains('disabled')) return;
 
         aiData[id].voted = true;
+        
         const box = document.getElementById(`vote-box-${id}`);
         const thx = document.querySelector(`#page-${id} #ai-thank-you`) || document.getElementById('ai-thank-you');
         
@@ -861,9 +866,8 @@
             else if(type === 1) factor = 5; 
             else factor = 20; 
             
-            // Сохраняем фактор локально (настоящая синхронизация голосов невозможна без сервера)
             aiData[id].voteFactor = factor;
-            renderGraph(id);
+            renderGraph(id); // Trigger update immediately
         }, 500);
     }
 
