@@ -3,51 +3,56 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>Weather iOS Fixed</title>
+    <title>Weather iOS Ultimate AI</title>
     <style>
         :root { 
-            --glass: rgba(50, 50, 50, 0.45); 
+            --glass: rgba(30, 30, 30, 0.65); 
             --glass-border: rgba(255, 255, 255, 0.15);
-            --blur: blur(35px); 
-            --spring: cubic-bezier(0.25, 0.8, 0.25, 1); /* Плавная анимация iOS */
+            --blur: blur(40px); 
+            --spring: cubic-bezier(0.25, 0.8, 0.25, 1);
+            --accent: #4cd964;
         }
         * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro', sans-serif; -webkit-tap-highlight-color: transparent; user-select: none; }
         body { margin: 0; background: #000; color: #fff; overflow: hidden; height: 100vh; }
         
-        /* Фон-анимация */
-        canvas#bg { position: fixed; inset: 0; z-index: -1; transition: filter 1s ease; }
+        /* Фон-анимация (На весь экран) */
+        canvas#bg { position: fixed; inset: 0; z-index: -1; }
+
+        /* Ограничитель контента для ПК */
+        .content-wrapper {
+            max-width: 500px;
+            margin: 0 auto;
+            height: 100vh;
+            position: relative;
+        }
 
         /* Поиск */
-        header { padding: 40px 20px 10px; position: fixed; top: 0; left: 0; right: 0; z-index: 1000; display: flex; gap: 10px; background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent); pointer-events: none; }
+        header { 
+            padding: 40px 20px 10px; position: absolute; top: 0; left: 0; right: 0; z-index: 1000; 
+            display: flex; gap: 10px; background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent); 
+            pointer-events: none; 
+        }
         .search-wrapper { flex: 1; pointer-events: auto; position: relative; }
         .search-box { display: flex; align-items: center; background: rgba(40,40,40,0.7); backdrop-filter: var(--blur); border-radius: 14px; padding: 8px 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); border: 1px solid var(--glass-border); }
         input { flex: 1; background: transparent; border: none; color: #fff; font-size: 17px; outline: none; margin-left: 8px; }
         
-        /* Результаты поиска */
         #results { position: absolute; top: 50px; left: 0; right: 0; background: rgba(30,30,30,0.95); border-radius: 14px; overflow: hidden; display: none; z-index: 2500; border: 1px solid var(--glass-border); backdrop-filter: blur(50px); max-height: 300px; overflow-y: auto; }
         .res-item { padding: 12px 15px; border-bottom: 1px solid rgba(255,255,255,0.1); cursor: pointer; }
-        .res-item:last-child { border: none; }
-        .res-main { font-size: 16px; color: #fff; }
-        .res-sub { font-size: 13px; color: #aaa; margin-top: 2px; }
-
-        /* Контейнер страниц */
-        #stage { height: 100vh; width: 100vw; position: relative; overflow: hidden; }
         
-        /* Страница города */
+        /* Сцена */
+        #stage { height: 100%; width: 100%; position: relative; overflow: hidden; }
         .page-container {
-            position: absolute; inset: 0;
-            padding: 100px 20px 140px; /* Большой отступ снизу для скролла */
-            transition: transform 0.6s var(--spring), opacity 0.4s ease;
-            overflow-y: auto; scroll-behavior: smooth;
-            -webkit-overflow-scrolling: touch;
-            display: none; /* Скрываем неактивные для оптимизации */
+            position: absolute; inset: 0; padding: 110px 20px 140px;
+            transition: opacity 0.4s ease; overflow-y: auto; scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch; display: none; opacity: 0;
+            /* Скрываем скроллбар */
+            scrollbar-width: none; 
         }
-        .page-container.active { display: block; transform: translateX(0); opacity: 1; z-index: 5; }
-        .page-container.prev { display: block; transform: translateX(-40%); opacity: 0; z-index: 1; }
-        .page-container.next { display: block; transform: translateX(100%); opacity: 1; z-index: 6; }
+        .page-container::-webkit-scrollbar { display: none; }
+        .page-container.active { display: block; opacity: 1; z-index: 5; }
 
         /* Типографика */
-        .city-header { text-align: center; margin-bottom: 40px; text-shadow: 0 2px 10px rgba(0,0,0,0.3); }
+        .city-header { text-align: center; margin-bottom: 30px; text-shadow: 0 2px 10px rgba(0,0,0,0.3); }
         .city-name { font-size: 32px; font-weight: 600; }
         .temp-big { font-size: 90px; font-weight: 200; letter-spacing: -2px; line-height: 1.1; }
         .condition-text { font-size: 18px; font-weight: 500; opacity: 0.9; text-transform: capitalize; }
@@ -61,6 +66,711 @@
         }
         .card-label { font-size: 13px; opacity: 0.6; text-transform: uppercase; font-weight: 600; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
 
+        /* Элементы интерфейса */
+        .h-scroll { display: flex; gap: 15px; overflow-x: auto; padding-bottom: 5px; scrollbar-width: none; }
+        .h-scroll::-webkit-scrollbar { display: none; }
+        .h-item { text-align: center; min-width: 60px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+        .wind-sm { font-size: 11px; opacity: 0.7; display: flex; align-items: center; gap: 2px; margin-top: 2px; }
+
+        .day-row { display: grid; grid-template-columns: 1.5fr 0.5fr 1fr 1fr; align-items: center; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.1); font-size: 16px; font-weight: 500; }
+        .day-row:last-child { border: none; }
+        .day-date { display: flex; flex-direction: column; }
+        .day-sub { font-size: 12px; opacity: 0.5; font-weight: 400; }
+        .temp-range { display: flex; gap: 8px; justify-content: flex-end; }
+        .temp-night { opacity: 0.5; }
+
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+        .tile { aspect-ratio: 1; display: flex; flex-direction: column; justify-content: space-between; cursor: pointer; transition: transform 0.2s; }
+        .tile:active { transform: scale(0.97); }
+        .tile-val { font-size: 24px; font-weight: 500; margin-top: 5px; }
+        .tile-sub { font-size: 13px; opacity: 0.7; }
+
+        /* --- AI GRAPH UPGRADE --- */
+        .ai-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        
+        .vote-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; transition: opacity 0.5s; }
+        .vote-btn { 
+            background: rgba(255,255,255,0.1); border-radius: 12px; padding: 10px 5px; 
+            text-align: center; font-size: 12px; cursor: pointer; border: 1px solid transparent;
+            transition: 0.3s var(--spring);
+        }
+        .vote-btn:active { transform: scale(0.9); background: rgba(255,255,255,0.2); }
+        .vote-btn.disabled { opacity: 0.3; pointer-events: none; } /* Блокировка голосования */
+
+        #ai-thank-you { font-size: 16px; color: #4cd964; text-align: center; margin-bottom: 10px; display: none; }
+
+        .ai-chart-wrapper { display: flex; height: 120px; margin-top: 15px; position: relative; }
+        .y-axis { 
+            width: 30px; display: flex; flex-direction: column; justify-content: space-between; 
+            font-size: 10px; opacity: 0.5; text-align: right; padding-right: 5px; padding-bottom: 20px;
+        }
+        .graph-area { flex: 1; position: relative; }
+        
+        /* SVG и Точки */
+        svg.ai-svg { width: 100%; height: 100%; overflow: visible; }
+        path.graph-line { fill: none; stroke: var(--accent); stroke-width: 2.5; stroke-linecap: round; transition: d 0.5s ease; }
+        path.graph-fill { fill: rgba(76, 217, 100, 0.15); stroke: none; transition: d 0.5s ease; }
+        
+        .graph-dot { 
+            r: 4; fill: #000; stroke: var(--accent); stroke-width: 2; cursor: pointer; transition: cy 0.5s ease; 
+        }
+        .graph-dot:hover { r: 6; stroke-width: 3; }
+        
+        /* Тултип */
+        .chart-tooltip {
+            position: absolute; background: rgba(255,255,255,0.9); color: #000;
+            padding: 4px 8px; border-radius: 8px; font-size: 12px; font-weight: 600;
+            pointer-events: none; opacity: 0; transition: opacity 0.2s;
+            transform: translate(-50%, -100%); margin-top: -10px; white-space: nowrap; z-index: 10;
+        }
+
+        /* --- Навигация и Слои --- */
+        .nav-dock { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(30,30,30,0.7); backdrop-filter: blur(20px); padding: 8px 16px; border-radius: 20px; display: flex; gap: 8px; z-index: 2000; border: 1px solid rgba(255,255,255,0.1); }
+        .dot { width: 8px; height: 8px; background: rgba(255,255,255,0.3); border-radius: 50%; transition: 0.3s; cursor: pointer; }
+        .dot.active { background: #fff; transform: scale(1.2); }
+        .btn-circle { width: 40px; height: 40px; border-radius: 50%; background: rgba(60,60,60,0.6); backdrop-filter: blur(20px); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.2); cursor: pointer; pointer-events: auto; }
+
+        /* Стрелки для ПК */
+        .desktop-arrow {
+            position: fixed; top: 50%; transform: translateY(-50%);
+            width: 50px; height: 50px; border-radius: 50%;
+            background: rgba(255,255,255,0.1); backdrop-filter: blur(10px);
+            display: none; align-items: center; justify-content: center;
+            font-size: 24px; cursor: pointer; z-index: 1500;
+            transition: 0.3s;
+        }
+        .desktop-arrow:hover { background: rgba(255,255,255,0.25); }
+        .arrow-left { left: 20px; }
+        .arrow-right { right: 20px; }
+        @media (min-width: 768px) { .desktop-arrow { display: flex; } }
+
+        /* Слои (Settings, Preview, Modal) */
+        .layer { 
+            position: fixed; inset: 0; background: #000; z-index: 3000; 
+            transform: translateX(100%); transition: transform 0.4s var(--spring); 
+            display: flex; flex-direction: column;
+        }
+        .layer.show { transform: translateX(0); }
+        .layer.modal { background: rgba(0,0,0,0.85); backdrop-filter: blur(20px); transform: translateY(100%); }
+        .layer.modal.show { transform: translateY(0); }
+
+        .layer-header { padding: 50px 20px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .layer-content { flex: 1; overflow-y: auto; padding: 20px; }
+
+        /* AI Text */
+        .ai-box { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); border-radius: 20px; padding: 15px; margin-top: 20px; }
+        .ai-title { font-size: 14px; font-weight: 700; color: #FFD60A; margin-bottom: 8px; }
+        .ai-text { font-size: 15px; line-height: 1.4; opacity: 0.9; }
+
+        /* Settings List */
+        .list-item { background: rgba(255,255,255,0.1); padding: 15px; border-radius: 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <canvas id="bg"></canvas>
+
+    <div class="content-wrapper">
+        <header id="main-header">
+            <div class="btn-circle" onclick="toggleSettings(true)" style="margin-right: 10px;">☰</div>
+            <div class="search-wrapper">
+                <div class="search-box">
+                    <span style="opacity:0.6">🔍</span>
+                    <input id="q" placeholder="Поиск города..." oninput="doSearch(this.value)">
+                </div>
+                <div id="results"></div>
+            </div>
+        </header>
+
+        <div id="stage"></div>
+        <div class="nav-dock" id="pagination"></div>
+    </div>
+
+    <!-- Стрелки ПК -->
+    <div class="desktop-arrow arrow-left" onclick="movePage(-1)">‹</div>
+    <div class="desktop-arrow arrow-right" onclick="movePage(1)">›</div>
+
+    <!-- НАСТРОЙКИ -->
+    <div id="settings-layer" class="layer">
+        <div class="layer-header">
+            <h1 style="margin:0; font-size:28px;">Мои города</h1>
+            <div class="btn-circle" onclick="toggleSettings(false)">✕</div>
+        </div>
+        <div class="layer-content">
+            <div id="fav-list"></div>
+            <div style="margin-top: 40px; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 20px;">
+                <h3 style="opacity:0.5">Настройки</h3>
+                <div class="list-item" onclick="toggleUnit()">
+                    <span>Температура</span>
+                    <span id="unit-disp" style="color:#0a84ff">°C</span>
+                </div>
+                <div class="list-item" onclick="toggleWindUnit()">
+                    <span>Ветер</span>
+                    <span id="wind-disp" style="color:#0a84ff">км/ч</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ПРЕДПРОСМОТР -->
+    <div id="preview-layer" class="layer" style="background:rgba(20,20,20,0.95); backdrop-filter:blur(50px);">
+        <div class="layer-header">
+            <div class="btn-circle" onclick="closePreview()">✕</div>
+            <span style="font-weight:600">Предпросмотр</span>
+            <div style="width:40px"></div>
+        </div>
+        <div class="layer-content" id="preview-inner"></div>
+        <div style="padding:20px; text-align:center;">
+            <button onclick="confirmAddCity()" style="background:#fff; color:#000; padding:14px 40px; border-radius:30px; border:none; font-weight:600; font-size:16px; cursor:pointer">Добавить</button>
+        </div>
+    </div>
+
+    <!-- МОДАЛКА СОЛНЦА -->
+    <div id="sun-modal" class="layer modal">
+        <div class="layer-header" style="padding-top:20px">
+            <span style="font-size:18px; font-weight:600">Солнце и Луна</span>
+            <div class="btn-circle" onclick="document.getElementById('sun-modal').classList.remove('show')">✕</div>
+        </div>
+        <div class="layer-content" id="sun-modal-content"></div>
+    </div>
+
+<script>
+    // --- State ---
+    let cities = []; 
+    let currentIndex = 0;
+    let unit = localStorage.getItem('unit') || 'C';
+    let windUnit = localStorage.getItem('windUnit') || 'kmh'; // kmh, ms, mph
+    let tempCity = null;
+    let userGeo = null; // {lat, lon}
+
+    // --- Init ---
+    async function init() {
+        resize(); window.addEventListener('resize', resize);
+        
+        // Получаем гео
+        navigator.geolocation.getCurrentPosition(pos => {
+            userGeo = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+        }, err => console.log('Geo error'));
+
+        const saved = JSON.parse(localStorage.getItem('savedCities') || '[]');
+        if (saved.length > 0) cities = saved;
+        else cities = [{lat: 55.75, lon: 37.62, name: 'Москва', country: 'Россия', isHome: true}];
+
+        initStageDOM();
+        loadWeather(0);
+        updateSettingsUI();
+        
+        initParticles();
+        requestAnimationFrame(loop);
+    }
+
+    function initStageDOM() {
+        const stage = document.getElementById('stage');
+        stage.innerHTML = '';
+        cities.forEach((c, i) => {
+            const div = document.createElement('div');
+            div.className = 'page-container';
+            div.id = `page-${i}`;
+            stage.appendChild(div);
+        });
+        updatePagination();
+    }
+
+    // --- Navigation & Actions ---
+    function movePage(dir) {
+        let next = currentIndex + dir;
+        if(next >= 0 && next < cities.length) loadWeather(next);
+    }
+    
+    function toggleSettings(v) { 
+        document.getElementById('settings-layer').className = v ? 'layer show' : 'layer'; 
+        if(v) renderFav(); 
+    }
+
+    async function doSearch(q) {
+        if(q.length < 2) { document.getElementById('results').style.display='none'; return; }
+        const r = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${q}&count=5&language=ru`).then(x=>x.json());
+        if(!r.results) return;
+        const resBox = document.getElementById('results');
+        resBox.innerHTML = r.results.map(i => `
+            <div class="res-item" onclick="openPreview(${i.latitude}, ${i.longitude}, '${i.name}', '${i.country||''}')">
+                <div class="res-main">${i.name}</div>
+                <div class="res-sub">${i.country}</div>
+            </div>
+        `).join('');
+        resBox.style.display = 'block';
+    }
+
+    async function fetchWeather(lat, lon) {
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,is_day,wind_speed_10m,wind_direction_10m,pressure_msl&hourly=temperature_2m,weather_code,wind_speed_10m,wind_direction_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,daylight_duration&timezone=auto`;
+        return await fetch(url).then(r=>r.json());
+    }
+
+    // --- Preview & Management ---
+    async function openPreview(lat, lon, name, country) {
+        document.getElementById('results').style.display = 'none';
+        document.getElementById('q').value = '';
+        const layer = document.getElementById('preview-layer');
+        const content = document.getElementById('preview-inner');
+        
+        content.innerHTML = '<div style="text-align:center; padding-top:50px">Загрузка...</div>';
+        layer.classList.add('show');
+        tempCity = {lat, lon, name, country};
+        const data = await fetchWeather(lat, lon);
+        content.innerHTML = generateHTML(data, tempCity, true);
+        updateEnv(data); // Show preview weather background
+    }
+
+    function closePreview() {
+        document.getElementById('preview-layer').classList.remove('show');
+        tempCity = null;
+        loadWeather(currentIndex); // Restore current city bg
+    }
+
+    function confirmAddCity() {
+        if(!tempCity) return;
+        cities.push(tempCity);
+        localStorage.setItem('savedCities', JSON.stringify(cities));
+        initStageDOM();
+        closePreview();
+        loadWeather(cities.length-1);
+    }
+
+    function removeCity(i) {
+        cities.splice(i,1);
+        localStorage.setItem('savedCities', JSON.stringify(cities));
+        renderFav();
+        initStageDOM();
+        let next = Math.min(i, cities.length-1);
+        if(cities.length === 0) next = 0; // Should not happen with home city logic but safe
+        loadWeather(next);
+    }
+
+    // --- Rendering ---
+    async function loadWeather(idx) {
+        currentIndex = idx;
+        const city = cities[idx];
+        const el = document.getElementById(`page-${idx}`);
+        
+        // Обновляем классы страниц
+        document.querySelectorAll('.page-container').forEach((p, i) => {
+            p.classList.remove('active');
+            if(i === idx) p.classList.add('active');
+        });
+        updatePagination();
+
+        if(el.innerHTML.length < 50 || el.dataset.unit !== unit || el.dataset.wunit !== windUnit) {
+            el.innerHTML = '<div style="text-align:center; padding-top:100px;">Загрузка...</div>';
+            const data = await fetchWeather(city.lat, city.lon);
+            el.dataset.unit = unit;
+            el.dataset.wunit = windUnit;
+            el.innerHTML = generateHTML(data, city, false);
+            if(idx === currentIndex) updateEnv(data);
+        } else {
+             // Если уже загружено, просто обновим фон
+             // (В идеале надо хранить data в памяти, но для простоты запросим еще раз для фона)
+             const data = await fetchWeather(city.lat, city.lon); 
+             if(idx === currentIndex) updateEnv(data);
+        }
+    }
+
+    function generateHTML(data, city, isPreview) {
+        const cur = data.current;
+        const d = data.daily;
+        const h = data.hourly;
+        
+        // Conversions
+        const temp = unit==='F' ? Math.round(cur.temperature_2m*9/5+32) : Math.round(cur.temperature_2m);
+        const min = unit==='F' ? Math.round(d.temperature_2m_min[0]*9/5+32) : Math.round(d.temperature_2m_min[0]);
+        const max = unit==='F' ? Math.round(d.temperature_2m_max[0]*9/5+32) : Math.round(d.temperature_2m_max[0]);
+        
+        let ws = cur.wind_speed_10m;
+        let wLabel = 'км/ч';
+        if(windUnit === 'ms') { ws /= 3.6; wLabel='м/с'; }
+        else if(windUnit === 'mph') { ws /= 1.609; wLabel='миль/ч'; }
+        ws = Math.round(ws);
+
+        // Hourly
+        const nowStr = cur.time.substring(0, 13);
+        let startIdx = h.time.findIndex(t => t.startsWith(nowStr));
+        if(startIdx === -1) startIdx = 0;
+        
+        let hourlyHTML = '';
+        for(let i=0; i<12; i++) {
+            const idx = startIdx + i;
+            if(idx >= h.time.length) break;
+            const hour = h.time[idx].split('T')[1].split(':')[0];
+            const dispT = i===0 ? 'Сейчас' : hour;
+            const hTemp = unit==='F' ? Math.round(h.temperature_2m[idx]*9/5+32) : Math.round(h.temperature_2m[idx]);
+            const wDeg = h.wind_direction_10m[idx];
+            
+            hourlyHTML += `
+                <div class="h-item">
+                    <span style="font-weight:600; font-size:14px">${dispT}</span>
+                    <span style="font-size:22px">${getWIcon(h.weather_code[idx])}</span>
+                    <span style="font-size:16px; font-weight:500">${hTemp}°</span>
+                    <div class="wind-sm">
+                        <span style="transform:rotate(${wDeg}deg); display:inline-block">↓</span> ${Math.round(h.wind_speed_10m[idx])}
+                    </div>
+                </div>`;
+        }
+
+        // Daily
+        let dailyHTML = '';
+        for(let i=0; i<5; i++) {
+            const date = new Date(d.time[i]);
+            const dayName = i===0 ? 'Сегодня' : date.toLocaleDateString('ru-RU', {weekday:'short'});
+            const dateNum = date.toLocaleDateString('ru-RU', {day:'numeric', month:'short'});
+            const dMin = unit==='F' ? Math.round(d.temperature_2m_min[i]*9/5+32) : Math.round(d.temperature_2m_min[i]);
+            const dMax = unit==='F' ? Math.round(d.temperature_2m_max[i]*9/5+32) : Math.round(d.temperature_2m_max[i]);
+            dailyHTML += `
+                <div class="day-row">
+                    <div class="day-date"><span>${dayName}</span><span class="day-sub">${dateNum}</span></div>
+                    <div style="font-size:20px; text-align:center">${getWIcon(d.weather_code[i])}</div>
+                    <div class="temp-range"><span>${dMax}°</span><span class="temp-night">${dMin}°</span></div>
+                </div>`;
+        }
+
+        const sunJson = encodeURIComponent(JSON.stringify({rise:d.sunrise[0], set:d.sunset[0], dur:d.daylight_duration[0]}));
+        const aiId = isPreview ? 'preview' : cities.indexOf(city);
+        
+        // Проверка локации для голосования
+        const canVote = checkLocation(city.lat, city.lon);
+        const voteClass = canVote ? '' : 'disabled';
+        const voteMsg = canVote ? 'Уточните прогноз:' : 'Голосование доступно только в текущей локации';
+
+        return `
+            <div class="city-header">
+                <div class="city-name">${city.name}</div>
+                <div class="condition-text">${getWDesc(cur.weather_code)}</div>
+                <div class="temp-big">${temp}°</div>
+                <div class="hl-temp">Макс.: ${max}° Мин.: ${min}°</div>
+            </div>
+
+            <!-- AI FORECAST BLOCK -->
+            <div class="card">
+                <div class="ai-header">
+                    <div class="card-label" style="margin:0">🤖 AI-ПРОГНОЗ ОСАДКОВ</div>
+                    <div style="font-size:10px; opacity:0.5; background:rgba(255,255,255,0.1); padding:2px 6px; border-radius:4px">LIVE</div>
+                </div>
+                <div style="font-size:12px; opacity:0.7; margin-bottom:10px">${voteMsg}</div>
+                
+                <div class="vote-grid" id="vote-box-${aiId}">
+                    <div class="vote-btn ${voteClass}" onclick="submitVote('${aiId}', 0)">☀️ Ясно</div>
+                    <div class="vote-btn ${voteClass}" onclick="submitVote('${aiId}', 1)">☁️ Облачно</div>
+                    <div class="vote-btn ${voteClass}" onclick="submitVote('${aiId}', 2)">🌧 Дождь</div>
+                    <div class="vote-btn ${voteClass}" onclick="submitVote('${aiId}', 3)">❄️ Снег</div>
+                </div>
+                <div id="ai-thank-you">Спасибо! Ваш голос учтен.</div>
+
+                <div class="ai-chart-wrapper">
+                    <div class="y-axis">
+                        <span>100%</span><span>50%</span><span>0%</span>
+                    </div>
+                    <div class="graph-area" id="graph-area-${aiId}">
+                        <div class="chart-tooltip" id="tooltip-${aiId}"></div>
+                        <svg class="ai-svg" viewBox="0 0 300 100" preserveAspectRatio="none">
+                            <defs>
+                                <linearGradient id="grad-${aiId}" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stop-color="#4cd964" stop-opacity="0.3"/>
+                                    <stop offset="100%" stop-color="#4cd964" stop-opacity="0"/>
+                                </linearGradient>
+                            </defs>
+                            <path id="path-fill-${aiId}" class="graph-fill"></path>
+                            <path id="path-line-${aiId}" class="graph-line"></path>
+                            
+                            <!-- Dots (Group) -->
+                            <g id="dots-group-${aiId}"></g>
+                        </svg>
+                    </div>
+                </div>
+                <div style="display:flex; justify-content:space-between; font-size:10px; opacity:0.5; margin-left:35px">
+                    <span>Сейчас</span><span>15м</span><span>30м</span><span>45м</span><span>60м</span>
+                </div>
+            </div>
+
+            <div class="card"><div class="card-label">🕓 ПОЧАСОВОЙ</div><div class="h-scroll">${hourlyHTML}</div></div>
+            <div class="card"><div class="card-label">📅 5 ДНЕЙ</div>${dailyHTML}</div>
+            
+            <div class="grid-2">
+                <div class="card tile" onclick="openSunDetail('${sunJson}')">
+                    <div class="card-label">☀️ СОЛНЦЕ</div>
+                    <div class="tile-val">${d.sunset[0].split('T')[1]}</div>
+                    <div class="tile-sub">Закат</div>
+                </div>
+                <div class="card tile">
+                    <div class="card-label">💨 ВЕТЕР</div>
+                    <div class="tile-val">${ws} <span style="font-size:16px">${wLabel}</span></div>
+                    <div class="tile-sub">Направление: ${cur.wind_direction_10m}°</div>
+                </div>
+            </div>
+            
+            <div class="ai-box">
+                <div class="ai-title">AI СОВЕТ</div>
+                <div class="ai-text">${getAIText(temp, cur.weather_code)}</div>
+            </div>
+
+            <!-- Инициализация графика -->
+            <img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" 
+                 onload="initAIGraph('${aiId}')" style="display:none"/>
+        `;
+    }
+
+    // --- AI GRAPH SYSTEM ---
+    const aiData = {};
+
+    function checkLocation(lat, lon) {
+        if(!userGeo) return false;
+        // Простая проверка (в радиусе ~10км)
+        return Math.abs(userGeo.lat - lat) < 0.1 && Math.abs(userGeo.lon - lon) < 0.1;
+    }
+
+    function initAIGraph(id) {
+        // Симуляция данных (5 точек: 0, 15, 30, 45, 60 мин)
+        let pts = [];
+        let v = Math.random()*40;
+        for(let i=0; i<5; i++) {
+            v += (Math.random()-0.5)*30;
+            v = Math.max(0, Math.min(100, v));
+            pts.push(v);
+        }
+        aiData[id] = { points: pts, voted: false };
+        renderGraph(id);
+        
+        // Живая анимация (движение точек)
+        if(id !== 'preview') {
+            setInterval(() => {
+                if(!document.getElementById(`page-${id}`).classList.contains('active')) return;
+                // Легкое "дыхание" графика
+                aiData[id].points = aiData[id].points.map(p => {
+                    let np = p + (Math.random()-0.5)*2;
+                    return Math.max(0, Math.min(100, np));
+                });
+                renderGraph(id);
+            }, 2000);
+        }
+    }
+
+    function renderGraph(id) {
+        const d = aiData[id].points;
+        const svgW = 300, svgH = 100;
+        const stepX = svgW / 4; // 4 интервала по 15 мин
+        
+        // Генерация пути
+        let path = `M0,${svgH - (d[0]/100)*svgH}`;
+        for(let i=1; i<d.length; i++) {
+            path += ` L${i*stepX},${svgH - (d[i]/100)*svgH}`;
+        }
+
+        const line = document.getElementById(`path-line-${id}`);
+        const fill = document.getElementById(`path-fill-${id}`);
+        const dotsG = document.getElementById(`dots-group-${id}`);
+        const tooltip = document.getElementById(`tooltip-${id}`);
+        
+        if(line && fill) {
+            line.setAttribute('d', path);
+            fill.setAttribute('d', path + ` L${svgW},${svgH} L0,${svgH} Z`);
+            
+            // Точки
+            dotsG.innerHTML = '';
+            d.forEach((val, i) => {
+                const cx = i * stepX;
+                const cy = svgH - (val/100)*svgH;
+                const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                dot.setAttribute("class", "graph-dot");
+                dot.setAttribute("cx", cx);
+                dot.setAttribute("cy", cy);
+                
+                // Hover Events
+                dot.addEventListener('mouseenter', () => {
+                    tooltip.style.opacity = 1;
+                    tooltip.style.left = (cx / 300 * 100) + '%';
+                    tooltip.style.top = (cy / 100 * 100) + '%';
+                    let icon = val > 50 ? '🌧' : (val > 20 ? '☁️' : '☀️');
+                    tooltip.innerHTML = `${icon} ${Math.round(val)}%`;
+                });
+                dot.addEventListener('mouseleave', () => {
+                    tooltip.style.opacity = 0;
+                });
+                
+                dotsG.appendChild(dot);
+            });
+        }
+    }
+
+    function submitVote(id, type) {
+        if(aiData[id].voted) return;
+        // Проверка локации уже была в generateHTML (класс disabled), но проверим еще раз
+        if(document.querySelector(`#vote-box-${id} .vote-btn`).classList.contains('disabled')) return;
+
+        aiData[id].voted = true;
+        
+        // Анимация UI
+        const box = document.getElementById(`vote-box-${id}`);
+        const thx = document.querySelector(`#page-${id} #ai-thank-you`) || document.getElementById('ai-thank-you');
+        
+        box.style.opacity = 0;
+        setTimeout(() => {
+            box.style.display = 'none';
+            thx.style.display = 'block';
+            
+            // Коррекция графика
+            let factor = (type >= 2) ? 20 : -20;
+            aiData[id].points = aiData[id].points.map(v => Math.max(0, Math.min(100, v + factor)));
+            renderGraph(id);
+        }, 500);
+    }
+
+    // --- Helpers ---
+    function getWDesc(c) { const m={0:'Ясно',1:'Малообл.',2:'Облачно',3:'Пасмурно',45:'Туман',61:'Дождь',71:'Снег',95:'Гроза'}; return m[c]||'Осадки'; }
+    function getWIcon(c) { if(c===0)return'☀️'; if(c<=3)return'☁️'; if(c<=48)return'🌫'; if(c<=69)return'🌧'; if(c<=79)return'❄️'; if(c>=95)return'⚡️'; return'🌧'; }
+    function getAIText(t,c) { if(c>=95)return "Гроза! Не стойте под деревьями."; if(c>=60)return "Берите зонт, скоро польет."; if(t<0)return "Одевайтесь теплее."; return "Отличная погода для прогулки."; }
+
+    // --- Settings UI ---
+    function renderFav() {
+        document.getElementById('fav-list').innerHTML = cities.map((c,i)=>`
+            <div class="list-item" onclick="loadWeather(${i}); toggleSettings(false)">
+                <div><b>${c.name}</b><div style="font-size:12px;opacity:0.6">${c.country}</div></div>
+                ${!c.isHome ? `<div class="btn-circle" style="color:#ff453a;border-color:rgba(255,69,58,0.3)" onclick="event.stopPropagation(); removeCity(${i})">✕</div>` : ''}
+            </div>`).join('');
+    }
+    function toggleUnit() { unit = unit==='C'?'F':'C'; localStorage.setItem('unit', unit); updateSettingsUI(); loadWeather(currentIndex); }
+    function toggleWindUnit() { 
+        const next = { 'kmh':'ms', 'ms':'mph', 'mph':'kmh' };
+        windUnit = next[windUnit]; localStorage.setItem('windUnit', windUnit); updateSettingsUI(); loadWeather(currentIndex); 
+    }
+    function updateSettingsUI() {
+        document.getElementById('unit-disp').innerText = '°'+unit;
+        const wLabels = {'kmh':'км/ч', 'ms':'м/с', 'mph':'миль/ч'};
+        document.getElementById('wind-disp').innerText = wLabels[windUnit];
+    }
+    function updatePagination() {
+        const p = document.getElementById('pagination');
+        if(cities.length < 2) p.style.display='none';
+        else {
+            p.style.display='flex';
+            p.innerHTML = cities.map((_,i)=>`<div class="dot ${i===currentIndex?'active':''}" onclick="loadWeather(${i})"></div>`).join('');
+        }
+    }
+    function openSunDetail(j) {
+        const d = JSON.parse(decodeURIComponent(j));
+        document.getElementById('sun-modal-content').innerHTML = `
+            <div style="text-align:center;padding:40px 0">
+                <div style="font-size:50px">${Math.floor(d.dur/3600)}ч ${Math.round((d.dur%3600)/60)}м</div>
+                <div style="opacity:0.6">Световой день</div>
+            </div>
+            <div style="background:rgba(255,255,255,0.1); border-radius:15px; padding:20px;">
+                <div style="display:flex;justify-content:space-between;margin-bottom:15px"><span>Восход</span><b>${d.rise.split('T')[1]}</b></div>
+                <div style="display:flex;justify-content:space-between"><span>Закат</span><b>${d.set.split('T')[1]}</b></div>
+            </div>`;
+        document.getElementById('sun-modal').classList.add('show');
+    }
+
+    // --- ANIMATION ENGINE (Full iOS Style) ---
+    const ctx = document.getElementById('bg').getContext('2d');
+    let env = { w:0, h:0, code:0, day:1, items:[], clouds:[], stars:[] };
+
+    function initParticles() {
+        env.stars = [];
+        for(let i=0; i<100; i++) env.stars.push({x:Math.random(), y:Math.random(), a:Math.random()});
+    }
+
+    function updateEnv(data) {
+        env.code = data.current.weather_code;
+        env.day = data.current.is_day;
+        env.items = []; // Reset rain/snow
+        env.clouds = [];
+        // Add clouds if cloudy
+        if(env.code >= 1 && env.code <= 3 || env.code >= 45) {
+            for(let i=0; i<6; i++) env.clouds.push({x:Math.random()*window.innerWidth, y:Math.random()*300, s:Math.random()*0.5+0.2});
+        }
+    }
+
+    function resize() { env.w = window.innerWidth; env.h = window.innerHeight; ctx.canvas.width = env.w; ctx.canvas.height = env.h; }
+
+    function loop() {
+        ctx.clearRect(0,0,env.w,env.h);
+        
+        // 1. Background Gradient
+        let g = ctx.createLinearGradient(0,0,0,env.h);
+        const c = env.code;
+        if(c >= 95) { g.addColorStop(0,'#232526'); g.addColorStop(1,'#414345'); } // Storm
+        else if(c >= 51 || c===45) { // Rain/Fog
+             if(env.day) { g.addColorStop(0,'#5C6575'); g.addColorStop(1,'#8E9CAB'); }
+             else { g.addColorStop(0,'#1e2329'); g.addColorStop(1,'#2c3e50'); }
+        } else if(c <= 2) { // Clear/Partly
+             if(env.day) { g.addColorStop(0,'#2980b9'); g.addColorStop(1,'#6dd5fa'); }
+             else { g.addColorStop(0,'#0f2027'); g.addColorStop(1,'#203a43'); }
+        } else { // Cloudy
+             if(env.day) { g.addColorStop(0,'#757F9A'); g.addColorStop(1,'#D7DDE8'); }
+             else { g.addColorStop(0,'#2c3e50'); g.addColorStop(1,'#4ca1af'); }
+        }
+        ctx.fillStyle = g; ctx.fillRect(0,0,env.w,env.h);
+
+        // 2. Stars (Night)
+        if(!env.day && c <= 2) {
+            ctx.fillStyle = '#fff';
+            env.stars.forEach(s => {
+                ctx.globalAlpha = Math.abs(Math.sin(Date.now()/1000 + s.x*10)) * s.a;
+                ctx.beginPath(); ctx.arc(s.x*env.w, s.y*env.h, 1.5, 0, Math.PI*2); ctx.fill();
+            });
+            ctx.globalAlpha = 1;
+        }
+
+        // 3. Sun / Moon
+        if(c <= 2) {
+            let sx = env.day ? env.w*0.8 : env.w*0.8;
+            let sy = env.h*0.15;
+            if(env.day) { // Sun
+                let rg = ctx.createRadialGradient(sx,sy,10,sx,sy,60);
+                rg.addColorStop(0,'rgba(255,255,200,0.9)'); rg.addColorStop(1,'rgba(255,255,255,0)');
+                ctx.fillStyle=rg; ctx.beginPath(); ctx.arc(sx,sy,80,0,Math.PI*2); ctx.fill();
+                ctx.fillStyle='#FFD700'; ctx.beginPath(); ctx.arc(sx,sy,20,0,Math.PI*2); ctx.fill();
+            } else { // Moon
+                ctx.fillStyle='rgba(255,255,230,0.9)'; ctx.beginPath(); ctx.arc(sx,sy,25,0,Math.PI*2); ctx.fill();
+            }
+        }
+
+        // 4. Clouds
+        ctx.fillStyle = env.day ? 'rgba(255,255,255,0.3)' : 'rgba(200,200,200,0.1)';
+        env.clouds.forEach(cl => {
+            cl.x += cl.s; if(cl.x > env.w + 100) cl.x = -100;
+            ctx.beginPath(); ctx.arc(cl.x, cl.y, 60, 0, Math.PI*2); ctx.arc(cl.x+50, cl.y+20, 70, 0, Math.PI*2); ctx.fill();
+        });
+
+        // 5. Precip (Rain/Snow)
+        const isRain = (c>=50 && c<=69) || c>=95;
+        const isSnow = c>=70 && c<=79;
+        if(isRain || isSnow) {
+            if(env.items.length < 150) env.items.push({x:Math.random()*env.w, y:-20, v:Math.random()*5+5, s:Math.random()*2});
+            ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+            ctx.fillStyle = '#fff';
+            ctx.lineWidth = isSnow ? 0 : 1.5;
+            env.items.forEach((p,i) => {
+                p.y += p.v;
+                if(p.y > env.h) env.items[i] = {x:Math.random()*env.w, y:-20, v:p.v, s:p.s};
+                if(isSnow) {
+                    p.x += Math.sin(p.y/50); // Snow drift
+                    ctx.beginPath(); ctx.arc(p.x, p.y, p.s, 0, Math.PI*2); ctx.fill();
+                } else {
+                    ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x, p.y+15); ctx.stroke();
+                }
+            });
+        }
+        
+        // 6. Lightning
+        if(c >= 95 && Math.random() < 0.005) {
+            ctx.fillStyle = 'rgba(255,255,255,0.8)';
+            ctx.fillRect(0,0,env.w,env.h);
+        }
+
+        requestAnimationFrame(loop);
+    }
+
+    init();
+</script>
+</body>
+</html>
         /* Сетка плиток 2x2 */
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
         .tile { aspect-ratio: 1; display: flex; flex-direction: column; justify-content: space-between; }
