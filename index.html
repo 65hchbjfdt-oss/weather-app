@@ -6,9 +6,9 @@
     <title>Weather iOS Pro</title>
     <style>
         :root { 
-            --glass-bg: rgba(25, 25, 25, 0.75); 
+            --glass-bg: rgba(25, 25, 25, 0.7); 
             --glass-border: rgba(255, 255, 255, 0.15);
-            --blur-val: blur(35px) saturate(160%);
+            --blur-val: blur(30px) saturate(160%);
             --ios-spring: cubic-bezier(0.23, 1, 0.32, 1);
         }
         
@@ -19,23 +19,24 @@
             height: 100vh; width: 100vw; position: fixed;
         }
         
-        canvas#bg { position: fixed; inset: 0; z-index: -1; pointer-events: none; transition: opacity 1s; }
+        canvas#bg { position: fixed; inset: 0; z-index: -1; pointer-events: none; }
 
         /* HEADER */
         header { 
             position: fixed; top: 0; left: 0; right: 0; z-index: 1000; 
-            padding: calc(env(safe-area-inset-top) + 10px) 16px 10px;
+            padding: calc(env(safe-area-inset-top) + 10px) 20px 10px;
             display: flex; gap: 12px; align-items: center;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.5), transparent);
         }
         .search-wrapper { flex: 1; position: relative; }
         .search-box { 
             display: flex; align-items: center; 
             background: rgba(255,255,255,0.1); 
-            backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
             border-radius: 12px; padding: 8px 12px; 
             border: 1px solid var(--glass-border);
         }
-        input { flex: 1; background: transparent; border: none; color: #fff; font-size: 16px; margin-left: 8px; outline: none; }
+        input { flex: 1; background: transparent; border: none; color: #fff; font-size: 16px; margin-left: 8px; }
         
         #results { 
             position: absolute; top: 50px; left: 0; right: 0; 
@@ -43,10 +44,10 @@
             border-radius: 14px; overflow: hidden; display: none; 
             border: 1px solid var(--glass-border); box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
-        .res-item { padding: 14px; border-bottom: 1px solid rgba(255,255,255,0.1); cursor: pointer; }
+        .res-item { padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.1); }
 
         /* STAGE & PAGES */
-        #stage { height: 100vh; width: 100vw; position: relative; overflow: hidden; }
+        #stage { height: 100vh; width: 100vw; position: relative; }
         
         .page-container {
             position: absolute; inset: 0;
@@ -55,65 +56,59 @@
             -webkit-overflow-scrolling: touch;
             display: none; 
             opacity: 0;
-            transition: transform 0.5s var(--ios-spring), opacity 0.4s ease;
+            transition: transform 0.6s var(--ios-spring), opacity 0.4s ease;
         }
+        /* Только вертикальный скролл внутри страницы */
         .page-container::-webkit-scrollbar { display: none; }
         
         .page-container.active { display: block; opacity: 1; transform: translateX(0); z-index: 10; }
         .page-container.prev { display: block; transform: translateX(-100%); opacity: 0; }
         .page-container.next { display: block; transform: translateX(100%); opacity: 0; }
 
-        /* CONTENT */
-        .city-info { text-align: center; margin-bottom: 40px; }
-        .city-name { font-size: 34px; font-weight: 500; text-shadow: 0 2px 10px rgba(0,0,0,0.3); }
-        .temp-main { font-size: 96px; font-weight: 200; margin: 5px 0; letter-spacing: -3px; }
-        .condition { font-size: 20px; opacity: 0.9; font-weight: 500; }
+        /* CONTENT STYLING */
+        .city-info { text-align: center; margin-bottom: 30px; }
+        .city-name { font-size: 34px; font-weight: 500; }
+        .temp-main { font-size: 90px; font-weight: 200; margin: 0; }
+        .condition { font-size: 20px; opacity: 0.8; font-weight: 500; }
 
         .card { 
             background: var(--glass-bg); backdrop-filter: var(--blur-val); -webkit-backdrop-filter: var(--blur-val);
-            border-radius: 22px; padding: 18px; border: 1px solid var(--glass-border); margin-bottom: 14px;
+            border-radius: 20px; padding: 16px; border: 1px solid var(--glass-border); margin-bottom: 12px;
         }
-        .card-label { font-size: 12px; opacity: 0.6; font-weight: 700; text-transform: uppercase; margin-bottom: 12px; letter-spacing: 0.5px; display: flex; align-items: center; gap: 6px; }
+        .card-label { font-size: 12px; opacity: 0.5; font-weight: 600; text-transform: uppercase; margin-bottom: 12px; letter-spacing: 0.5px; }
 
-        .h-scroll { display: flex; gap: 24px; overflow-x: auto; padding-bottom: 10px; }
+        .h-scroll { display: flex; gap: 20px; overflow-x: auto; padding-bottom: 8px; }
         .h-scroll::-webkit-scrollbar { display: none; }
-        .h-item { text-align: center; min-width: 55px; display: flex; flex-direction: column; align-items: center; }
+        .h-item { text-align: center; min-width: 50px; }
 
-        .day-row { display: grid; grid-template-columns: 1fr 50px 1fr; align-items: center; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
-        .day-row:last-child { border: none; }
+        .day-row { display: grid; grid-template-columns: 1fr 40px 1fr; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
 
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        
         /* SUN GRAPH */
-        .sun-container { height: 110px; width: 100%; margin-top: 10px; }
+        .sun-container { height: 100px; position: relative; width: 100%; margin-top: 10px;}
 
-        /* DOTS */
+        /* DOTS NAVIGATION */
         .dots-nav { 
             position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%); 
             display: flex; gap: 8px; z-index: 1000; pointer-events: none;
-            background: rgba(0,0,0,0.2); padding: 8px 12px; border-radius: 20px;
         }
-        .dot { width: 6px; height: 6px; background: rgba(255,255,255,0.3); border-radius: 50%; transition: 0.3s; }
-        .dot.active { background: #fff; transform: scale(1.3); }
+        .dot { width: 7px; height: 7px; background: rgba(255,255,255,0.3); border-radius: 50%; transition: 0.3s; }
+        .dot.active { background: #fff; transform: scale(1.2); }
 
         .btn-circle { 
-            width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.15);
+            width: 36px; height: 36px; border-radius: 50%; background: rgba(255,255,255,0.1);
             display: flex; align-items: center; justify-content: center; backdrop-filter: blur(10px);
-            cursor: pointer;
         }
 
         /* SETTINGS */
         #settings-layer { 
-            position: fixed; inset: 0; background: #111; z-index: 2000; 
-            transform: translateY(100%); transition: transform 0.4s var(--ios-spring);
-            padding: calc(env(safe-area-inset-top) + 20px) 20px;
-            overflow-y: auto;
+            position: fixed; inset: 0; background: #000; z-index: 2000; 
+            transform: translateY(100%); transition: transform 0.5s var(--ios-spring);
+            padding: 60px 20px;
         }
         #settings-layer.open { transform: translateY(0); }
-        .fav-item { 
-            background: rgba(255,255,255,0.05); padding: 16px; border-radius: 16px; 
-            margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;
-        }
 
-        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
     </style>
 </head>
 <body>
@@ -124,8 +119,8 @@
         <div class="btn-circle" onclick="toggleSettings(true)">☰</div>
         <div class="search-wrapper">
             <div class="search-box">
-                <span style="opacity: 0.5;">🔍</span>
-                <input id="q" placeholder="Поиск города" oninput="doSearch(this.value)" autocomplete="off">
+                <span>🔍</span>
+                <input id="q" placeholder="Поиск города" oninput="doSearch(this.value)">
             </div>
             <div id="results"></div>
         </div>
@@ -136,113 +131,38 @@
 
     <div id="settings-layer">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:30px;">
-            <h1 style="margin:0; font-size: 32px;">Погода</h1>
+            <h1 style="margin:0;">Города</h1>
             <div class="btn-circle" onclick="toggleSettings(false)">✕</div>
         </div>
         <div id="fav-list"></div>
     </div>
 
 <script>
-    // --- STATE ---
     let cities = JSON.parse(localStorage.getItem('savedCities')) || [
         {lat: 55.75, lon: 37.62, name: 'Москва', country: 'Россия'}
     ];
     let currentIndex = 0;
     
-    // --- CANVAS ENGINE ---
+    // Canvas Background
     const canvas = document.getElementById('bg');
     const ctx = canvas.getContext('2d');
-    let env = { particles: [], clouds: [], stars: [], isDay: true, code: 0 };
+    let particles = [];
 
-    function initCanvas() {
+    // --- Инициализация ---
+    async function init() {
         resize();
         window.addEventListener('resize', resize);
-        // Генерируем звезды один раз
-        for(let i=0; i<80; i++) env.stars.push({ x: Math.random()*canvas.width, y: Math.random()*canvas.height, s: Math.random()*2, a: Math.random() });
-        animate();
-    }
-
-    function updateWeatherEnv(code, isDay) {
-        env.code = code;
-        env.isDay = !!isDay;
-        env.particles = [];
-        env.clouds = [];
-        
-        // Облака для пасмурной погоды
-        if(code >= 1 && code <= 3) {
-            for(let i=0; i<5; i++) env.clouds.push({ x: Math.random()*canvas.width, y: Math.random()*200, r: Math.random()*100+50, v: Math.random()*0.2+0.1 });
-        }
-        // Осадки
-        if(code >= 51) {
-            let count = code >= 65 ? 150 : 60;
-            for(let i=0; i<count; i++) env.particles.push({ 
-                x: Math.random()*canvas.width, y: Math.random()*canvas.height, 
-                v: code >= 71 && code <= 77 ? Math.random()*2+1 : Math.random()*10+10, 
-                l: code >= 71 && code <= 77 ? 2 : 15,
-                type: code >= 71 && code <= 77 ? 'snow' : 'rain'
-            });
-        }
-    }
-
-    function animate() {
-        ctx.clearRect(0,0,canvas.width, canvas.height);
-        
-        // Фон
-        let grad = ctx.createLinearGradient(0,0,0,canvas.height);
-        if(env.isDay) {
-            grad.addColorStop(0, env.code >= 51 ? '#5D6D7E' : '#4facfe');
-            grad.addColorStop(1, env.code >= 51 ? '#2C3E50' : '#00f2fe');
-        } else {
-            grad.addColorStop(0, '#0f2027');
-            grad.addColorStop(1, '#2c5364');
-        }
-        ctx.fillStyle = grad;
-        ctx.fillRect(0,0,canvas.width, canvas.height);
-
-        // Звезды ночью
-        if(!env.isDay) {
-            ctx.fillStyle = '#fff';
-            env.stars.forEach(s => {
-                ctx.globalAlpha = s.a;
-                ctx.beginPath(); ctx.arc(s.x, s.y, s.s, 0, Math.PI*2); ctx.fill();
-            });
-            ctx.globalAlpha = 1;
-        }
-
-        // Облака
-        ctx.fillStyle = 'rgba(255,255,255,0.1)';
-        env.clouds.forEach(c => {
-            c.x += c.v; if(c.x > canvas.width + c.r) c.x = -c.r;
-            ctx.beginPath(); ctx.arc(c.x, c.y, c.r, 0, Math.PI*2); ctx.fill();
-        });
-
-        // Частицы
-        ctx.strokeStyle = '#fff';
-        ctx.fillStyle = '#fff';
-        env.particles.forEach(p => {
-            p.y += p.v; if(p.y > canvas.height) p.y = -20;
-            if(p.type === 'rain') {
-                ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x, p.y+p.l); ctx.stroke();
-            } else {
-                ctx.beginPath(); ctx.arc(p.x, p.y, p.l, 0, Math.PI*2); ctx.fill();
-            }
-        });
-
-        requestAnimationFrame(animate);
-    }
-
-    // --- CORE LOGIC ---
-    async function init() {
-        initCanvas();
         renderStructure();
-        await loadCityData(currentIndex);
+        loadCityData(currentIndex);
         initGestures();
+        animateBackground();
     }
 
     function renderStructure() {
         const stage = document.getElementById('stage');
         const dots = document.getElementById('dots');
-        stage.innerHTML = ''; dots.innerHTML = '';
+        stage.innerHTML = '';
+        dots.innerHTML = '';
         
         cities.forEach((_, i) => {
             const page = document.createElement('div');
@@ -258,182 +178,267 @@
 
     async function loadCityData(idx) {
         const page = document.getElementById(`page-${idx}`);
-        if (!page) return;
+        if (!page || (page.dataset.loaded === "true" && idx !== currentIndex)) return;
 
         const c = cities[idx];
         try {
             const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${c.lat}&longitude=${c.lon}&current=temperature_2m,weather_code,is_day,wind_speed_10m&hourly=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset&timezone=auto`);
             const data = await res.json();
             
-            page.innerHTML = generateHTML(data, c, idx);
-            if (idx === currentIndex) updateWeatherEnv(data.current.weather_code, data.current.is_day);
+            page.innerHTML = renderCityHTML(data, c, idx);
+            page.dataset.loaded = "true";
             
-            setTimeout(() => drawSun(`sun-${idx}`, data.daily.sunrise[0], data.daily.sunset[0]), 50);
+            if (idx === currentIndex) {
+                updateBackgroundEffects(data.current.weather_code, data.current.is_day);
+            }
+            
+            // Рисуем солнце после рендера
+            setTimeout(() => drawSun(`sun-${idx}`, data.daily.sunrise[0], data.daily.sunset[0]), 100);
+            
         } catch (e) {
-            page.innerHTML = `<div style="padding-top:100px; text-align:center;">Ошибка соединения</div>`;
+            page.innerHTML = `<div style="padding:50px; text-align:center;">Ошибка загрузки данных</div>`;
         }
     }
 
-    function generateHTML(data, c, idx) {
+    function renderCityHTML(data, c, idx) {
         const cur = data.current;
-        const daily = data.daily;
+        const hours = data.hourly;
         
-        let hourly = '';
+        let hourlyHTML = '';
         const nowH = new Date().getHours();
         for(let i = nowH; i < nowH + 24; i++) {
-            hourly += `
+            hourlyHTML += `
                 <div class="h-item">
-                    <span style="font-size:13px; opacity:0.7; margin-bottom:8px;">${i % 24}:00</span>
-                    <span style="font-size:22px; margin-bottom:8px;">${getIcon(data.hourly.weather_code[i])}</span>
-                    <span style="font-weight:600;">${Math.round(data.hourly.temperature_2m[i])}°</span>
-                </div>`;
+                    <div style="font-size:13px; margin-bottom:8px;">${i % 24}:00</div>
+                    <div style="font-size:20px; margin-bottom:8px;">${getIcon(hours.weather_code[i])}</div>
+                    <div style="font-weight:600;">${Math.round(hours.temperature_2m[i])}°</div>
+                </div>
+            `;
         }
 
-        let week = '';
+        let dailyHTML = '';
         for(let i = 0; i < 7; i++) {
-            const day = new Date(daily.time[i]).toLocaleDateString('ru-RU', {weekday: 'short'});
-            week += `
+            const date = new Date(data.daily.time[i]).toLocaleDateString('ru-RU', {weekday: 'short'});
+            dailyHTML += `
                 <div class="day-row">
-                    <div style="text-transform: capitalize; font-weight:500;">${i === 0 ? 'Сегодня' : day}</div>
-                    <div style="font-size:20px; text-align:center;">${getIcon(daily.weather_code[i])}</div>
+                    <div style="text-transform: capitalize;">${i === 0 ? 'Сегодня' : date}</div>
+                    <div>${getIcon(data.daily.weather_code[i])}</div>
                     <div style="text-align:right;">
-                        <span style="opacity:0.5; margin-right:10px;">${Math.round(daily.temperature_2m_min[i])}°</span>
-                        <span style="font-weight:600;">${Math.round(daily.temperature_2m_max[i])}°</span>
+                        <span style="opacity:0.5; margin-right:8px;">${Math.round(data.daily.temperature_2m_min[i])}°</span>
+                        <span>${Math.round(data.daily.temperature_2m_max[i])}°</span>
                     </div>
-                </div>`;
+                </div>
+            `;
         }
 
         return `
             <div class="city-info">
                 <div class="city-name">${c.name}</div>
-                <div class="temp-main">${Math.round(cur.temperature_2m)}°</div>
+                <h1 class="temp-main">${Math.round(cur.temperature_2m)}°</h1>
                 <div class="condition">${getDesc(cur.weather_code)}</div>
-                <div style="margin-top:10px; font-weight:500;">Макс: ${Math.round(daily.temperature_2m_max[0])}°, мин: ${Math.round(daily.temperature_2m_min[0])}°</div>
+                <div style="font-weight:500; margin-top:5px;">Макс: ${Math.round(data.daily.temperature_2m_max[0])}°, мин: ${Math.round(data.daily.temperature_2m_min[0])}°</div>
             </div>
+
             <div class="card">
-                <div class="card-label">🕓 Почасовой прогноз</div>
-                <div class="h-scroll">${hourly}</div>
+                <div class="card-label">Прогноз на 24 часа</div>
+                <div class="h-scroll">${hourlyHTML}</div>
             </div>
+
             <div class="card">
-                <div class="card-label">📅 7 дней</div>
-                ${week}
+                <div class="card-label">Прогноз на 7 дней</div>
+                ${dailyHTML}
             </div>
+
             <div class="grid-2">
                 <div class="card">
-                    <div class="card-label">🌅 Солнце</div>
-                    <div class="sun-container"><canvas id="sun-${idx}" width="200" height="110" style="width:100%; height:100%"></canvas></div>
+                    <div class="card-label">Восход и закат</div>
+                    <div class="sun-container">
+                        <canvas id="sun-${idx}" width="200" height="100" style="width:100%; height:100%;"></canvas>
+                    </div>
                 </div>
                 <div class="card">
-                    <div class="card-label">💨 Ветер</div>
-                    <div style="font-size:28px; font-weight:600; margin-top:10px;">${cur.wind_speed_10m} <span style="font-size:16px; opacity:0.6;">км/ч</span></div>
+                    <div class="card-label">Ветер</div>
+                    <div style="font-size:24px; font-weight:600;">${cur.wind_speed_10m} <span style="font-size:14px;">км/ч</span></div>
                 </div>
             </div>
         `;
     }
 
-    // --- SUN GRAPH ---
-    function drawSun(id, riseStr, setStr) {
-        const c = document.getElementById(id);
-        if(!c) return;
-        const sctx = c.getContext('2d');
-        const w = c.width, h = c.height;
-        const now = new Date(), rise = new Date(riseStr), set = new Date(setStr);
+    // --- График Солнца ---
+    function drawSun(canvasId, sunriseStr, sunsetStr) {
+        const c = document.getElementById(canvasId);
+        if (!c) return;
+        const ctxS = c.getContext('2d');
+        const w = c.width;
+        const h = c.height;
         
-        sctx.clearRect(0,0,w,h);
-        sctx.strokeStyle = 'rgba(255,255,255,0.2)';
-        sctx.lineWidth = 2;
+        const now = new Date();
+        const sunrise = new Date(sunriseStr);
+        const sunset = new Date(sunsetStr);
         
-        // Горизонт
-        sctx.beginPath(); sctx.moveTo(0, h-20); sctx.lineTo(w, h-20); sctx.stroke();
+        // Линия горизонта
+        ctxS.strokeStyle = 'rgba(255,255,255,0.2)';
+        ctxS.lineWidth = 2;
+        ctxS.beginPath();
+        ctxS.moveTo(0, h - 20);
+        ctxS.lineTo(w, h - 20);
+        ctxS.stroke();
 
-        // Дуга
-        const r = w/2 - 10;
-        const cx = w/2, cy = h - 20;
-        sctx.beginPath(); sctx.setLineDash([5,5]);
-        sctx.arc(cx, cy, r, Math.PI, 0); sctx.stroke();
-        sctx.setLineDash([]);
+        // Дуга (путь солнца)
+        ctxS.strokeStyle = 'rgba(255,215,0,0.3)';
+        ctxS.setLineDash([5, 5]);
+        ctxS.beginPath();
+        ctxS.arc(w/2, h + 10, w/2, Math.PI, 0);
+        ctxS.stroke();
+        ctxS.setLineDash([]);
 
         // Положение солнца
-        const total = set - rise;
-        const current = now - rise;
-        const pct = Math.max(0, Math.min(1, current / total));
+        const totalDaylight = sunset - sunrise;
+        const currentProgress = now - sunrise;
+        const pct = currentProgress / totalDaylight;
 
-        if(now >= rise && now <= set) {
+        if (pct >= 0 && pct <= 1) {
             const angle = Math.PI + (Math.PI * pct);
-            const sx = cx + r * Math.cos(angle);
-            const sy = cy + r * Math.sin(angle);
-            
-            sctx.strokeStyle = '#FFD700'; sctx.lineWidth = 3;
-            sctx.beginPath(); sctx.arc(cx, cy, r, Math.PI, angle); sctx.stroke();
-            
-            sctx.fillStyle = '#FFD700'; sctx.shadowBlur = 10; sctx.shadowColor = '#FFD700';
-            sctx.beginPath(); sctx.arc(sx, sy, 6, 0, Math.PI*2); sctx.fill();
+            const r = w/2;
+            const sx = w/2 + r * Math.cos(angle);
+            const sy = (h + 10) + r * Math.sin(angle);
+
+            // Отрисовка заполненной части дуги
+            ctxS.strokeStyle = '#FFD700';
+            ctxS.lineWidth = 3;
+            ctxS.beginPath();
+            ctxS.arc(w/2, h + 10, r, Math.PI, angle);
+            ctxS.stroke();
+
+            // Точка солнца
+            ctxS.fillStyle = '#FFD700';
+            ctxS.shadowBlur = 10;
+            ctxS.shadowColor = '#FFD700';
+            ctxS.beginPath();
+            ctxS.arc(sx, sy, 5, 0, Math.PI*2);
+            ctxS.fill();
         }
     }
 
-    // --- GESTURES ---
+    // --- Управление жестами ---
     function initGestures() {
-        let startX = 0, startY = 0, isHorizontal = false;
-        
+        let startX = 0;
+        let startY = 0;
+        let isHorizontalMove = false;
+
         document.addEventListener('touchstart', e => {
             startX = e.touches[0].clientX;
             startY = e.touches[0].clientY;
-            isHorizontal = false;
+            isHorizontalMove = false;
         }, {passive: true});
 
         document.addEventListener('touchmove', e => {
             const dx = e.touches[0].clientX - startX;
             const dy = e.touches[0].clientY - startY;
-            if(!isHorizontal && Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 10) isHorizontal = true;
+            
+            if (!isHorizontalMove && Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 10) {
+                isHorizontalMove = true;
+            }
         }, {passive: true});
 
         document.addEventListener('touchend', e => {
             const dx = e.changedTouches[0].clientX - startX;
-            if(isHorizontal && Math.abs(dx) > 70) {
-                if(dx > 0 && currentIndex > 0) switchCity(currentIndex - 1);
-                else if(dx < 0 && currentIndex < cities.length - 1) switchCity(currentIndex + 1);
+            if (isHorizontalMove && Math.abs(dx) > 80) {
+                if (dx > 0 && currentIndex > 0) switchPage(currentIndex - 1);
+                else if (dx < 0 && currentIndex < cities.length - 1) switchPage(currentIndex + 1);
             }
         });
     }
 
-    function switchCity(idx) {
+    function switchPage(idx) {
         currentIndex = idx;
         const pages = document.querySelectorAll('.page-container');
         const dots = document.querySelectorAll('.dot');
         
         pages.forEach((p, i) => {
-            p.className = `page-container ${i === idx ? 'active' : (i < idx ? 'prev' : 'next')}`;
+            p.className = 'page-container';
+            if (i === idx) p.classList.add('active');
+            else if (i < idx) p.classList.add('prev');
+            else p.classList.add('next');
         });
+
         dots.forEach((d, i) => d.classList.toggle('active', i === idx));
         loadCityData(idx);
     }
 
-    // --- UTILS ---
-    function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+    // --- Фоновые эффекты ---
+    function updateBackgroundEffects(code, isDay) {
+        particles = [];
+        let color1 = isDay ? '#4a90e2' : '#1a2a6c';
+        let color2 = isDay ? '#87ceeb' : '#000000';
+        
+        if (code >= 51) { // Дождь/Снег
+            for(let i=0; i<100; i++) particles.push({
+                x: Math.random()*canvas.width, 
+                y: Math.random()*canvas.height, 
+                v: Math.random()*10+5,
+                l: Math.random()*20+10
+            });
+        }
+        canvas.style.background = `linear-gradient(to bottom, ${color1}, ${color2})`;
+    }
+
+    function animateBackground() {
+        ctx.clearRect(0,0,canvas.width, canvas.height);
+        ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+        ctx.lineWidth = 1;
+        particles.forEach(p => {
+            p.y += p.v;
+            if (p.y > canvas.height) p.y = -20;
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y);
+            ctx.lineTo(p.x, p.y + p.l);
+            ctx.stroke();
+        });
+        requestAnimationFrame(animateBackground);
+    }
+
+    // --- Вспомогательные функции ---
+    function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
 
     function toggleSettings(open) {
-        document.getElementById('settings-layer').classList.toggle('open', open);
-        if(open) renderFavList();
+        const layer = document.getElementById('settings-layer');
+        if (open) {
+            layer.classList.add('open');
+            renderFavList();
+        } else {
+            layer.classList.remove('open');
+        }
     }
 
     function renderFavList() {
         const list = document.getElementById('fav-list');
         list.innerHTML = cities.map((c, i) => `
-            <div class="fav-item" onclick="switchCity(${i}); toggleSettings(false);">
+            <div class="card" style="display:flex; justify-content:space-between; align-items:center;" onclick="switchPage(${i}); toggleSettings(false);">
                 <div>
                     <div style="font-size:18px; font-weight:600;">${c.name}</div>
                     <div style="font-size:12px; opacity:0.6;">${c.country}</div>
                 </div>
-                <div style="font-size:20px; opacity:0.5;">${i === currentIndex ? '📍' : '→'}</div>
-            </div>`).join('');
+                <div style="font-size:24px;">→</div>
+            </div>
+        `).join('');
     }
 
     async function doSearch(q) {
         const resBox = document.getElementById('results');
         if (q.length < 2) { resBox.style.display = 'none'; return; }
+        
         const r = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${q}&count=5&language=ru`).then(x => x.json());
         if (!r.results) return;
-        resBox.innerHTML = r.results.map(i => `<div class="res-item" onclick="addCity(${i.latitude}, ${i.longitude}, '${i.name}', '${i.country}')"><b>${i.name}</b>, ${i.country}</div>`).join('');
+
+        resBox.innerHTML = r.results.map(i => `
+            <div class="res-item" onclick="addCity(${i.latitude}, ${i.longitude}, '${i.name}', '${i.country}')">
+                <b>${i.name}</b>, <span style="opacity:0.6">${i.country}</span>
+            </div>
+        `).join('');
         resBox.style.display = 'block';
     }
 
@@ -443,19 +448,19 @@
         document.getElementById('results').style.display = 'none';
         document.getElementById('q').value = '';
         renderStructure();
-        switchCity(cities.length - 1);
+        switchPage(cities.length - 1);
     }
 
     function getIcon(code) {
-        if(code === 0) return '☀️';
-        if(code <= 3) return '☁️';
-        if(code <= 67) return '🌧️';
-        if(code <= 77) return '❄️';
+        if (code === 0) return '☀️';
+        if (code <= 3) return '☁️';
+        if (code <= 67) return '🌧️';
+        if (code <= 77) return '❄️';
         return '⛈️';
     }
 
     function getDesc(code) {
-        const d = {0:'Ясно', 1:'В осн. ясно', 2:'Облачно', 3:'Пасмурно', 45:'Туман', 51:'Морось', 61:'Дождь', 71:'Снег', 95:'Гроза'};
+        const d = {0:'Ясно', 1:'Ясно', 2:'Облачно', 3:'Пасмурно', 45:'Туман', 51:'Морось', 61:'Дождь', 71:'Снег', 95:'Гроза'};
         return d[code] || 'Осадки';
     }
 
