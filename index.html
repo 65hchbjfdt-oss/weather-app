@@ -4,43 +4,32 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>KiwiWay</title>
-
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 <style>
 body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display",sans-serif;background:black;color:white;overflow:hidden;}
-#map{height:100vh;width:100%;}
-
-/* Liquid Glass Bottom Panel */
-.glass{
-  position:absolute;bottom:16px;left:50%;transform:translateX(-50%);
-  width:92%;max-width:440px;padding:18px;border-radius:28px;
-  backdrop-filter:blur(25px);background:rgba(255,255,255,0.10);
-  box-shadow:0 0 35px rgba(0,0,0,0.9);z-index:999;
-}
-.glass h2{margin:0;font-size:18px;text-align:center;font-weight:600;letter-spacing:0.5px;}
-.btn{width:100%;margin-top:10px;padding:14px;border:none;border-radius:18px;font-size:16px;font-weight:600;cursor:pointer;background:rgba(120,0,255,0.80);color:white;transition:transform 0.15s ease, background 0.25s;}
-.btn:active{transform:scale(0.96);}
-.btn.secondary{background:rgba(255,255,255,0.12);}
-#scanBox{display:none;margin-top:14px;text-align:center;font-size:14px;opacity:0.8;}
-.pulse{width:22px;height:22px;margin:12px auto;border-radius:50%;background:violet;animation:pulse 1s infinite;}
-@keyframes pulse{0%{transform:scale(1);opacity:0.3;}50%{transform:scale(2.4);opacity:1;}100%{transform:scale(1);opacity:0.3;}}
+#map{position:absolute;top:0;bottom:0;width:100%;}
+.bottomPanel{position:absolute;bottom:0;width:100%;z-index:999;display:flex;flex-direction:column;align-items:center;padding:12px;pointer-events:none;}
+.bottomPanel .btn{pointer-events:auto; margin:6px; width:90%; max-width:400px;}
 .modal{position:absolute;left:50%;transform:translateX(-50%);width:92%;max-width:420px;padding:18px;border-radius:26px;backdrop-filter:blur(25px);background:rgba(20,20,20,0.75);box-shadow:0 0 30px rgba(0,0,0,0.9);z-index:2000;opacity:0;pointer-events:none;transition:0.35s ease;}
 .modal.show{opacity:1;pointer-events:auto;transform:translateX(-50%) translateY(0);}
-#settingsModal{top:15px;}#infoModal{top:25%;}
+#settingsModal{top:15px;}#infoModal{top:20%;}
 label{display:block;margin-top:12px;font-size:14px;opacity:0.85;}
 input[type=range]{width:100%;margin-top:6px;}
 #log{margin-top:12px;max-height:80px;overflow-y:auto;font-size:13px;opacity:0.85;}
-#log::-webkit-scrollbar{display:none;}
 .info-group{background:rgba(255,255,255,0.08);backdrop-filter:blur(20px);padding:12px;margin:6px 0;border-radius:18px;}
 .info-group h3{margin:0;font-size:15px;opacity:0.85;}
 .info-group p{margin:4px 0;font-size:13px;opacity:0.9;}
+.crosshair{position:absolute;top:50%;left:50%;width:24px;height:24px;margin:-12px 0 0 -12px;border:2px solid violet;border-radius:50%;pointer-events:none;z-index:900;}
+.radiusCircle{pointer-events:none;}
 </style>
 </head>
 <body>
-
 <div id="map"></div>
 
-<!-- SETTINGS -->
+<!-- Crosshair for selecting point -->
+<div class="crosshair" id="crosshair" style="display:none;"></div>
+
+<!-- SETTINGS MODAL -->
 <div class="modal" id="settingsModal">
 <h2>⚙ Настройки</h2>
 <label>Дальность поиска (км): <span id="radiusValue">5</span></label>
@@ -57,32 +46,31 @@ input[type=range]{width:100%;margin-top:6px;}
 <button class="btn secondary" onclick="toggleSettings(false)">Закрыть</button>
 </div>
 
-<!-- INFO -->
+<!-- INFO MODAL -->
 <div class="modal" id="infoModal"></div>
 
-<!-- PANEL -->
-<div class="glass">
-<h2>☢ KiwiWay</h2>
-<button class="btn secondary" onclick="toggleSettings(true)">⚙ Настройки</button>
-<button class="btn" onclick="scan()">🔍 Сканировать</button>
-<button class="btn" id="startJourneyBtn" style="display:none;" onclick="startNavigation()">🧭 Начать путешествие</button>
+<!-- BOTTOM PANEL -->
+<div class="bottomPanel" id="bottomPanel">
+<button class="btn" id="scanBtn" onclick="scan()">🔍 Сканировать</button>
+<button class="btn" id="choosePointBtn" onclick="activateSelectPoint()">📍 Выбрать точку</button>
 <button class="btn secondary" id="infoButton" style="display:none;" onclick="showInfoButton()">ℹ Показать информацию</button>
-<div id="scanBox"><div class="pulse"></div>Поиск аномалий...</div>
-<div id="log"></div>
+<button class="btn secondary" id="startJourneyBtn" style="display:none;" onclick="startNavigation()">🧭 Начать путешествие</button>
 </div>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-
 <script>
 const GEOAPIFY_KEY="7158879bd4b74d98b02d7ef417755239";
-let map,userMarker,anomalyMarker=null,anomalyData=null,lineLayer=null;
+let map,userMarker,anomalyMarker=null,anomalyData=null,lineLayer=null,selectPointMode=false,radiusCircle=null;
 
 const slider=document.getElementById("anomSlider");
 const sliderLabel=document.getElementById("anomValue");
 slider.oninput=()=>sliderLabel.innerText=slider.value;
 const radiusSlider=document.getElementById("radiusSlider");
 const radiusLabel=document.getElementById("radiusValue");
-radiusSlider.oninput=()=>radiusLabel.innerText=radiusSlider.value;
+radiusSlider.oninput=()=>{
+  radiusLabel.innerText=radiusSlider.value;
+  if(radiusCircle) radiusCircle.setRadius(radiusSlider.value*1000);
+};
 
 function log(msg){document.getElementById("log").innerHTML+="➤ "+msg+"<br>";}
 function toggleSettings(open){document.getElementById("settingsModal").classList.toggle("show",open);}
@@ -93,37 +81,76 @@ navigator.geolocation.getCurrentPosition(pos=>{
   map=L.map("map").setView([lat,lon],14);
   L.tileLayer(`https://maps.geoapify.com/v1/tile/osm-dark/{z}/{x}/{y}.png?apiKey=${GEOAPIFY_KEY}`,{maxZoom:19}).addTo(map);
   userMarker=L.circleMarker([lat,lon],{radius:10,color:"cyan",fillOpacity:1}).addTo(map);
-
-  // Long press to start search
-  let pressTimer;
-  userMarker.on('mousedown',()=>{pressTimer=setTimeout(()=>{startSearchFromMarker()},800);});
-  userMarker.on('mouseup mouseleave',()=>clearTimeout(pressTimer));
+  radiusCircle=L.circle([lat,lon],{radius:radiusSlider.value*1000,color:'violet',fillOpacity:0.1}).addTo(map);
   log("Система активирована. Ты в зоне.");
+
+  navigator.geolocation.watchPosition(pos=>{
+    const lat=pos.coords.latitude,lon=pos.coords.longitude;
+    userMarker.setLatLng([lat,lon]);
+    if(radiusCircle && !selectPointMode) radiusCircle.setLatLng([lat,lon]);
+  });
+});
+
+function activateSelectPoint(){
+  selectPointMode=true;
+  document.getElementById("bottomPanel").style.display="none";
+  document.getElementById("crosshair").style.display="block";
+  if(radiusCircle){map.removeLayer(radiusCircle);}
+  const center=map.getCenter();
+  radiusCircle=L.circle(center,{radius:radiusSlider.value*1000,color:'violet',fillOpacity:0.1}).addTo(map);
+  log("Режим выбора точки активирован. Передвиньте карту так, чтобы точка была в центре.");
+}
+
+function confirmSelectPoint(){
+  const center=map.getCenter();
+  selectPointMode=false;
+  document.getElementById("bottomPanel").style.display="flex";
+  document.getElementById("crosshair").style.display="none";
+  log(`Выбрана точка поиска: ${center.lat.toFixed(5)}, ${center.lng.toFixed(5)}`);
+  scan(center);
+}
+
+map.on('moveend',()=>{
+  if(selectPointMode && radiusCircle){
+    radiusCircle.setLatLng(map.getCenter());
+  }
+});
+
+map.on('click',()=>{
+  if(selectPointMode){
+    if(confirm("Подтвердить эту точку как центр поиска?")){
+      confirmSelectPoint();
+    }
+  }
 });
 
 async function getAddress(lat,lon){try{const res=await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);const data=await res.json();return data.display_name||"";}catch{return "";}}
 
-async function generateSafePoint(baseLat,baseLon,radius,category){
-  const maxAttempts=40;
+async function generateSafePoint(baseLat,baseLon,radius,category,power){
+  const maxAttempts=50;
   for(let i=0;i<maxAttempts;i++){
     const angle=Math.random()*2*Math.PI;
-    const dist=Math.random()*radius;
+    let dist=Math.random()*radius;
+    // Для Пустота/Квантовая делаем менее строгий поиск при высокой аномалии
+    if(category==="Пустота" || category==="Квантовая"){
+      dist*=Math.max(0.3,1-power/10);
+    }
     const lat=baseLat+(dist*Math.cos(angle))/111;
     const lon=baseLon+(dist*Math.sin(angle))/111;
     try{
       const resp=await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`);
       const data=await resp.json();
       if(!data||!data.address) continue;
-      if(category==="Пустота" && (data.address.city || data.address.road)) continue;
-      if(category==="Мощная" && !(data.address.road || data.address.building)) continue;
       if(data.address.water||data.address.private) continue;
+      // Более строгие проверки для Мощная/Псевдо
+      if(category==="Мощная" && !(data.address.road || data.address.building)) continue;
       return {lat,lon,address:data.display_name};
     }catch{}
   }
   return null;
 }
 
-async function scan(){
+async function scan(customCenter=null){
   if(!map) return;
   document.getElementById("scanBox").style.display="block";
   document.getElementById("infoButton").style.display="none";
@@ -131,14 +158,13 @@ async function scan(){
   if(anomalyMarker){map.removeLayer(anomalyMarker); anomalyMarker=null;}
   if(lineLayer){map.removeLayer(lineLayer); lineLayer=null;}
   anomalyData=null;
-  log("Сканирование...");
 
-  const base=userMarker.getLatLng();
+  const base=customCenter || userMarker.getLatLng();
   const degree=parseInt(slider.value);
   const category=document.getElementById("category").value;
   const radius=parseInt(radiusSlider.value);
 
-  const point=await generateSafePoint(base.lat,base.lng,radius,category);
+  const point=await generateSafePoint(base.lat,base.lng,radius,category,degree);
   if(!point){log("Не удалось найти безопасную точку.");document.getElementById("scanBox").style.display="none"; return;}
 
   anomalyData={...point,category,power:degree};
@@ -193,22 +219,6 @@ function showInfoButton(){
 <div class="info-group"><h3>Адрес</h3><p>${anomalyData.address}</p></div>
 <button class="btn secondary" onclick="toggleInfo(false)">Закрыть</button>`;
   toggleInfo(true);
-}
-
-function startSearchFromMarker(){
-  if(!userMarker) return;
-  const radius=parseInt(radiusSlider.value);
-  if(confirm(`Начать поиск в радиус ${radius} км от этой точки?`)){
-    scan();
-  }
-}
-
-if(navigator.geolocation){
-  navigator.geolocation.watchPosition(pos=>{
-    if(!userMarker) return;
-    const lat=pos.coords.latitude,lon=pos.coords.longitude;
-    userMarker.setLatLng([lat,lon]);
-  });
 }
 </script>
 </body>
