@@ -1,306 +1,160 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1.0">
-  <title>STALKER Explorer</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>STALKER Explorer</title>
 
-  <!-- Leaflet -->
-  <link rel="stylesheet"
-        href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+<!-- Leaflet & Routing -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.css"/>
 
-  <style>
-    /* ===== Dark Liquid Glass iOS Style ===== */
-    body {
-      margin: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
-      background: radial-gradient(circle at top, #111, #000);
-      color: white;
-      overflow: hidden;
-    }
+<style>
+  body, html {
+    margin: 0; padding: 0; width: 100%; height: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
+    background: #000;
+    color: white;
+  }
+  #map { width: 100%; height: 100%; }
 
-    #map {
-      height: 100vh;
-      width: 100%;
-      z-index: 1;
-    }
-
-    /* Glass UI Panel */
-    .glass-panel {
-      position: absolute;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 92%;
-      max-width: 420px;
-      padding: 15px;
-      border-radius: 25px;
-      backdrop-filter: blur(18px);
-      background: rgba(255, 255, 255, 0.08);
-      box-shadow: 0 0 25px rgba(0,0,0,0.7);
-      z-index: 999;
-    }
-
-    h2 {
-      font-size: 18px;
-      margin: 0 0 10px;
-      font-weight: 600;
-      text-align: center;
-    }
-
-    /* Buttons */
-    .btn {
-      width: 100%;
-      padding: 14px;
-      margin-top: 10px;
-      border: none;
-      border-radius: 18px;
-      font-size: 16px;
-      font-weight: 600;
-      cursor: pointer;
-      background: rgba(140, 0, 255, 0.65);
-      color: white;
-      transition: 0.3s;
-    }
-
-    .btn:hover {
-      background: rgba(180, 0, 255, 0.8);
-    }
-
-    /* Scan Animation Loader */
-    .scan {
-      display: none;
-      text-align: center;
-      margin-top: 12px;
-      font-size: 14px;
-      opacity: 0.8;
-    }
-
-    .pulse {
-      margin: 10px auto;
-      width: 18px;
-      height: 18px;
-      border-radius: 50%;
-      background: violet;
-      animation: pulseAnim 1s infinite;
-    }
-
-    @keyframes pulseAnim {
-      0% { transform: scale(1); opacity: 0.4; }
-      50% { transform: scale(2.2); opacity: 1; }
-      100% { transform: scale(1); opacity: 0.4; }
-    }
-
-    /* Log */
-    #log {
-      margin-top: 10px;
-      max-height: 90px;
-      overflow-y: auto;
-      font-size: 13px;
-      opacity: 0.85;
-    }
-
-    /* Mobile scroll fix */
-    #log::-webkit-scrollbar {
-      display: none;
-    }
-  </style>
+  /* iOS-style glass panel */
+  .panel {
+    position: absolute; bottom: 10px;
+    left: 50%; transform: translateX(-50%);
+    width: 90%; max-width: 400px;
+    backdrop-filter: blur(18px);
+    background: rgba(255,255,255,0.12);
+    border-radius: 20px;
+    padding: 14px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.7);
+    z-index: 999;
+  }
+  .btn {
+    width: 100%; padding: 14px;
+    margin-top: 8px;
+    border: none; border-radius: 18px;
+    background: #6200ea; color: #fff;
+    font-size: 15px; font-weight: 600;
+  }
+  .addressbox {
+    padding: 8px;
+    margin-top: 10px;
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 14px;
+  }
+</style>
 </head>
 
 <body>
-
 <div id="map"></div>
 
-<!-- Glass UI -->
-<div class="glass-panel">
-  <h2>☢ STALKER Explorer</h2>
+<div class="panel">
+  <button class="btn" onclick="openSettings()">⚙ Настройки поиска</button>
+  <button class="btn" onclick="doScan()">🔍 Сканировать аномалии</button>
+  <button class="btn" onclick="goToTarget()">🚶 Начать навигацию</button>
+</div>
 
-  <button class="btn" onclick="scanAnomalies()">
-    🔍 Сканировать зону
-  </button>
-
-  <button class="btn" onclick="startJourney()">
-    🚶 Экспедиция к цели
-  </button>
-
-  <!-- Scan animation -->
-  <div class="scan" id="scanBox">
-    <div class="pulse"></div>
-    Сканирование аномалий...
-  </div>
-
-  <div id="log"></div>
+<!-- Настройки -->
+<div id="settings" style="display:none; position:absolute; top:10px; left:50%; transform:translateX(-50%); width:90%; max-width:400px; backdrop-filter:blur(18px); background:rgba(0,0,0,0.7); padding:12px; border-radius:16px; z-index:999;">
+  <label>Радиус (км):
+    <input id="radius" type="number" value="8" min="1" max="30" style="width:60px;">
+  </label>
+  <br><br>
+  <label>Категория:
+    <select id="cat">
+      <option value="all">Все</option>
+      <option value="⚡ Электро">⚡ Электро</option>
+      <option value="🕳 Пространственный">🕳 Пространственный</option>
+      <option value="☢ Радиация">☢ Радиация</option>
+      <option value="🔮 Артефакт">🔮 Артефакт</option>
+      <option value="👁 Наблюдение">👁 Наблюдение</option>
+    </select>
+  </label>
+  <br><br>
+  <button class="btn" onclick="closeSettings()">Закрыть</button>
 </div>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.js"></script>
 
 <script>
-let map;
-let userMarker;
-let anomalies = [];
-let target = null;
-let routeLine = null;
+let map, userLoc, anomalies = [], chosen = null, routerControl;
 
-const anomalyTypes = [
-  "⚡ Электро-аномалия",
-  "🕳 Пространственный разлом",
-  "☢ Радиационный выброс",
-  "🔮 Артефактный след",
-  "👁 Зона наблюдения"
-];
+const types = ["⚡ Электро","🕳 Пространственный","☢ Радиация","🔮 Артефакт","👁 Наблюдение"];
 
-/* ===== Log System ===== */
-function log(text) {
-  const box = document.getElementById("log");
-  box.innerHTML += "➤ " + text + "<br>";
-  box.scrollTop = box.scrollHeight;
+function log(msg) { console.log(msg); }
+
+/* === I18n Reverse Geocoding для адресов === */
+async function getAddress(lat,lon) {
+  try {
+    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
+    const data = await res.json();
+    return data.display_name;
+  } catch { return ""; }
 }
 
-/* ===== Init Map ===== */
-navigator.geolocation.getCurrentPosition(pos => {
-  const lat = pos.coords.latitude;
-  const lon = pos.coords.longitude;
+/* === Инициализация карты (Dark tiles) === */
+navigator.geolocation.getCurrentPosition(p => {
+  map = L.map('map').setView([p.coords.latitude,p.coords.longitude], 14);
 
-  map = L.map("map", { zoomControl: false })
-    .setView([lat, lon], 14);
-
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png")
-    .addTo(map);
-
-  userMarker = L.circleMarker([lat, lon], {
-    radius: 10,
-    color: "cyan",
-    fillOpacity: 0.9
-  })
-    .addTo(map)
-    .bindPopup("📍 Ты — сталкер")
-    .openPopup();
-
-  log("Сканер активирован. Координаты получены.");
-});
-
-/* ===== Random Point Radius ===== */
-function randomPoint(lat, lon, radiusKm) {
-  const radiusDeg = radiusKm / 111;
-  const u = Math.random();
-  const v = Math.random();
-  const w = radiusDeg * Math.sqrt(u);
-  const t = 2 * Math.PI * v;
-
-  return [
-    lat + w * Math.cos(t),
-    lon + w * Math.sin(t)
-  ];
-}
-
-/* ===== Scan Animation + Generate ===== */
-function scanAnomalies() {
-  if (!map) return;
-
-  document.getElementById("scanBox").style.display = "block";
-
-  anomalies.forEach(a => map.removeLayer(a.marker));
-  anomalies = [];
-  target = null;
-
-  log("Запущено сканирование сектора...");
-
-  setTimeout(() => {
-    document.getElementById("scanBox").style.display = "none";
-
-    const base = userMarker.getLatLng();
-
-    for (let i = 0; i < 6; i++) {
-      const coords = randomPoint(base.lat, base.lng, 8);
-      const danger = Math.floor(Math.random() * 5) + 1;
-      const type = anomalyTypes[Math.floor(Math.random() * anomalyTypes.length)];
-
-      const marker = L.circleMarker(coords, {
-        radius: 9,
-        color: danger >= 4 ? "red" : "orange",
-        fillOpacity: 0.75
-      })
-      .addTo(map)
-      .bindPopup(`
-        <b>${type}</b><br>
-        Опасность: ${danger}/5<br>
-        <i>Нажми чтобы выбрать</i>
-      `)
-      .on("click", () => {
-        target = { coords, danger, type };
-        log("🎯 Цель выбрана: " + type);
-        animateRoute();
-      });
-
-      anomalies.push({ marker });
-    }
-
-    log("Обнаружено 6 аномальных сигналов.");
-  }, 2200);
-}
-
-/* ===== Animated Route Build ===== */
-function animateRoute() {
-  if (!target) return;
-
-  if (routeLine) map.removeLayer(routeLine);
-
-  const start = userMarker.getLatLng();
-  const end = target.coords;
-
-  let step = 0;
-  let points = [];
-
-  routeLine = L.polyline([], {
-    color: "cyan",
-    weight: 4
+  L.tileLayer('https://api.maptiler.com/tiles/darkmatter/{z}/{x}/{y}.png?key=YOUR_MAPTILER_KEY', {
+    attribution: '&copy; OSM & MapTiler'
   }).addTo(map);
 
-  log("Построение маршрута...");
+  userLoc = L.marker([p.coords.latitude,p.coords.longitude]).addTo(map);
+});
 
-  const interval = setInterval(() => {
-    step += 0.05;
+function openSettings(){ document.getElementById("settings").style.display = "block"; }
+function closeSettings(){ document.getElementById("settings").style.display = "none"; }
 
-    const lat = start.lat + (end[0] - start.lat) * step;
-    const lon = start.lng + (end[1] - start.lng) * step;
+/* === Сканируем аномалии === */
+function doScan() {
+  anomalies.forEach(a=>map.removeLayer(a.marker));
+  anomalies = []; chosen = null;
 
-    points.push([lat, lon]);
-    routeLine.setLatLngs(points);
+  const r = parseFloat(document.getElementById("radius").value)||8;
+  const cat = document.getElementById("cat").value;
 
-    if (step >= 1) {
-      clearInterval(interval);
-      log("Маршрут построен. Можно выдвигаться.");
-    }
-  }, 60);
+  const base = map.getCenter();
+  for (let i=0;i<7;i++){
+    const dx = r*Math.random(), ang = Math.random()*Math.PI*2;
+    const lat = base.lat + dx*Math.cos(ang)/111;
+    const lon = base.lng + dx*Math.sin(ang)/111;
+
+    const tp = types[Math.floor(Math.random()*types.length)];
+    if (cat!="all" && tp.indexOf(cat)!=0) continue;
+
+    const danger = Math.ceil(Math.random()*5);
+    const m = L.circleMarker([lat,lon],{radius:9,color:danger>=4?"red":"orange"}).addTo(map);
+
+    m.bindPopup(`${tp}<br>Уровень: ${danger}<br><button onclick="showInfo(${lat},${lon},'${tp}',${danger})">Инфо</button>`);
+
+    anomalies.push({lat,lon,tp,danger,marker:m});
+  }
 }
 
-/* ===== Journey Simulation ===== */
-function startJourney() {
-  if (!target) {
-    log("❗ Нет выбранной цели.");
-    return;
-  }
+/* === Показ информации === */
+async function showInfo(lat,lon,tp,danger){
+  const addr = await getAddress(lat,lon);
+  alert(`Тип: ${tp}\nУровень: ${danger}\nКоординаты: ${lat.toFixed(5)},${lon.toFixed(5)}\nАдрес: ${addr}`);
+  chosen = {lat,lon};
+}
 
-  log("🚶 Сталкер выходит в зону...");
+/* === Маршрут по дорогам === */
+function goToTarget(){
+  if(!chosen){ alert("Выберите аномалию"); return; }
+  if(routerControl) map.removeControl(routerControl);
 
-  let progress = 0;
-  const interval = setInterval(() => {
-    progress += 20;
-
-    if (Math.random() < target.danger * 0.12) {
-      log("⚠ Аномальный эффект рядом... будь осторожен.");
-    }
-
-    log("Продвижение: " + progress + "%");
-
-    if (progress >= 100) {
-      clearInterval(interval);
-      log("✅ Экспедиция завершена.");
-      log("🎁 Возможный артефакт найден...");
-    }
-  }, 1300);
+  routerControl = L.Routing.control({
+    waypoints: [
+      L.latLng(userLoc.getLatLng()),
+      L.latLng(chosen.lat,chosen.lon)
+    ],
+    showAlternatives: false,
+    lineOptions: { styles: [{color:'cyan',weight:5}] }
+  }).addTo(map);
 }
 </script>
-
 </body>
 </html>
