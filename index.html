@@ -1,503 +1,259 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>ПВЗ · Имитация</title>
-  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/qr-scanner@1.4.2/qr-scanner.min.js"></script>
+  <meta charset="UTF-8">
+  <title>Аномальная Экспедиция</title>
+
+  <link rel="stylesheet"
+        href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+
   <style>
-    :root {
-      --bg: #f2f2f7;
-      --card: #ffffff;
-      --text: #000000;
-      --gray: #8e8e93;
-      --accent: #007aff;
-      --red: #ff3b30;
-    }
-    [data-theme="dark"] {
-      --bg: #000000;
-      --card: #1c1c1e;
-      --text: #ffffff;
-      --gray: #8e8e93;
-      --accent: #0a84ff;
-      --red: #ff453a;
-    }
     body {
-      margin:0; font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-      background: var(--bg); color: var(--text); min-height:100vh;
-      transition: background 0.4s;
+      margin: 0;
+      font-family: Arial;
+      background: #050010;
+      color: white;
+      text-align: center;
     }
-    header, footer {display:none;}
-    .container {max-width:420px; margin:0 auto; padding:16px;}
-    .card {
-      background: var(--card);
-      border-radius: 18px;
-      padding: 16px;
-      margin: 12px 0;
-      box-shadow: 0 4px 30px rgba(0,0,0,0.08);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-    }
-    .btn {
-      display: block;
+
+    #map {
+      height: 70vh;
       width: 100%;
-      padding: 14px;
-      margin: 10px 0;
+    }
+
+    button {
+      padding: 10px 15px;
+      margin: 5px;
       border: none;
-      border-radius: 12px;
-      font-size: 17px;
-      font-weight: 600;
+      border-radius: 10px;
+      background: purple;
+      color: white;
       cursor: pointer;
+      font-size: 15px;
     }
-    .btn-primary  { background: var(--accent); color:white; }
-    .btn-outline  { background: transparent; border:1px solid var(--accent); color:var(--accent); }
-    .btn-danger   { background: var(--red); color:white; }
-    .flex {display:flex; gap:12px; align-items:center;}
-    .emoji {font-size:2.4rem; line-height:1;}
-    input, select {
-      width:100%; padding:12px; border-radius:10px; border:1px solid #c7c7cc;
-      background:#f2f2f7; font-size:17px; margin:8px 0;
+
+    button:hover {
+      background: darkviolet;
     }
-    [data-theme="dark"] input, [data-theme="dark"] select {
-      background:#2c2c2e; color:white; border-color:#3a3a3c;
+
+    #panel {
+      padding: 10px;
+      background: rgba(255,255,255,0.05);
     }
-    .tab-bar {
-      position: fixed; bottom:0; left:0; right:0;
-      display: flex; background: rgba(255,255,255,0.8);
-      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-      border-top:1px solid #c7c7cc; padding:8px 0;
+
+    #log {
+      height: 120px;
+      overflow-y: auto;
+      background: black;
+      margin: 10px;
+      padding: 10px;
+      border-radius: 10px;
+      text-align: left;
+      font-size: 14px;
     }
-    [data-theme="dark"] .tab-bar { background: rgba(28,28,30,0.8); border-top-color:#3a3a3c; }
-    .tab {flex:1; text-align:center; padding:6px; color:var(--gray); font-size:11px;}
-    .tab.active {color:var(--accent); font-weight:600;}
-    .hidden {display:none;}
-    #scanner-container {position:relative; width:100%; aspect-ratio:1;}
-    #scanner-video {width:100%; border-radius:12px;}
   </style>
 </head>
-<body data-mode="buyer" data-theme="light">
+<body>
 
-<div class="container">
+<h2>🌀 Аномальная Экспедиция</h2>
 
-  <!-- Экран выбора роли -->
-  <div id="role-screen">
-    <h1 style="text-align:center; margin:80px 0 40px;">ПВЗ Имитация</h1>
-    <div class="card">
-      <button class="btn btn-primary" onclick="setRole('buyer')">Я покупатель</button>
-      <button class="btn btn-primary" onclick="setRole('staff')">Я сотрудник ПВЗ</button>
-    </div>
-  </div>
-
-  <!-- ─── ПОКУПАТЕЛЬ ─────────────────────────────────────── -->
-  <div id="buyer-app" class="hidden">
-
-    <!-- Главная – товары -->
-    <div id="buyer-home">
-      <h2>Товары</h2>
-      <div id="goods-list"></div>
-      <button class="btn btn-primary" onclick="showAddGood()">+ Добавить товар</button>
-    </div>
-
-    <!-- Корзина -->
-    <div id="buyer-cart" class="hidden">
-      <h2>Корзина</h2>
-      <div id="cart-list"></div>
-      <div class="card">
-        <label>Способ оплаты</label>
-        <select id="payment-type">
-          <option value="paid">Уже оплачено</option>
-          <option value="cod">Оплата при получении</option>
-        </select>
-        <button class="btn btn-primary" onclick="createOrder()">Оформить заказ</button>
-      </div>
-    </div>
-
-    <!-- Мои заказы -->
-    <div id="buyer-orders" class="hidden">
-      <h2>Мои заказы</h2>
-      <div id="orders-list"></div>
-    </div>
-
-    <!-- Профиль -->
-    <div id="buyer-profile" class="hidden">
-      <h2>Профиль</h2>
-      <div class="card">
-        <label>Имя</label>
-        <input id="profile-name" placeholder="Как вас зовут?"/>
-        <button class="btn btn-primary" onclick="saveProfile()">Сохранить</button>
-      </div>
-      <div class="card">
-        <label>Тема</label>
-        <select id="theme-select" onchange="setTheme(this.value)">
-          <option value="light">Светлая</option>
-          <option value="dark">Тёмная</option>
-        </select>
-      </div>
-    </div>
-
-  </div>
-
-  <!-- ─── СОТРУДНИК ─────────────────────────────────────── -->
-  <div id="staff-app" class="hidden">
-
-    <div id="staff-home">
-      <h2>Пункт выдачи</h2>
-      <button class="btn btn-primary" onclick="startScan()">Сканировать QR заказа</button>
-      <div id="scanner-container" class="hidden">
-        <video id="scanner-video" autoplay playsinline></video>
-        <button class="btn btn-danger" onclick="stopScan()" style="margin-top:12px;">Отмена</button>
-      </div>
-    </div>
-
-    <div id="staff-order-screen" class="hidden">
-      <h2>Заказ #<span id="staff-order-id"></span></h2>
-      <div class="card">
-        <p><b>Полка:</b> <span id="staff-shelf"></span></p>
-        <p><b>Оплата:</b> <span id="staff-payment"></span></p>
-        <h3>Товары</h3>
-        <div id="staff-items-list"></div>
-        <button class="btn btn-primary" id="btn-check" onclick="checkOrder()" disabled>Проверить</button>
-      </div>
-    </div>
-
-    <div id="staff-profile" class="hidden">
-      <h2>Сотрудник</h2>
-      <div class="card">
-        <p>Сегодня выдано заказов: <b id="today-count">0</b></p>
-      </div>
-      <div class="card">
-        <label>Тема</label>
-        <select onchange="setTheme(this.value)">
-          <option value="light">Светлая</option>
-          <option value="dark">Тёмная</option>
-        </select>
-      </div>
-    </div>
-
-  </div>
-
+<div id="panel">
+  <button onclick="scanAnomalies()">🔍 Сканировать аномалии</button>
+  <button onclick="startJourney()">🚶 Начать экспедицию</button>
 </div>
 
-<!-- Нижнее меню -->
-<div class="tab-bar" id="tabbar" style="display:none;">
-  <div class="tab active" onclick="showScreen('home')">Главная</div>
-  <div class="tab" id="tab-cart" onclick="showScreen('cart')">Корзина</div>
-  <div class="tab" onclick="showScreen('orders')">Заказы</div>
-  <div class="tab" onclick="showScreen('profile')">Профиль</div>
-</div>
+<div id="map"></div>
+
+<div id="log"></div>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
 <script>
-// ────────────────────────────────────────────────
-// Глобальные данные
-// ────────────────────────────────────────────────
-let role = null;
-let goods = JSON.parse(localStorage.getItem("goods") || "[]");
-let cart = JSON.parse(localStorage.getItem("cart") || "[]");
-let orders = JSON.parse(localStorage.getItem("orders") || "[]");
-let profile = JSON.parse(localStorage.getItem("profile") || "{}");
-let issuedToday = Number(localStorage.getItem("issuedToday") || "0");
-let currentOrderBeingIssued = null;
+let map;
+let userMarker;
+let anomalies = [];
+let selectedTarget = null;
+let routeLine = null;
 
-// ─── Утилиты ───────────────────────────────────────
-function $(id) { return document.getElementById(id); }
-function hideAll() {
-  document.querySelectorAll('#buyer-app > div, #staff-app > div, #role-screen').forEach(el=>el.classList.add('hidden'));
+const anomalyTypes = [
+  "⚡ Электросигнал",
+  "🕳 Портал",
+  "☢ Радиационная зона",
+  "🔮 Артефакт",
+  "👁 Наблюдение"
+];
+
+// Лог событий
+function addLog(text) {
+  const log = document.getElementById("log");
+  log.innerHTML += "➤ " + text + "<br>";
+  log.scrollTop = log.scrollHeight;
 }
-function showScreen(name) {
-  hideAll();
-  if (role === 'buyer') {
-    $('buyer-app').classList.remove('hidden');
-    $('tabbar').style.display = 'flex';
-    $(`buyer-${name}`).classList.remove('hidden');
-    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-    if (name==='cart') $('tab-cart').classList.add('active');
-    else document.querySelector(`.tab[onclick*=" '${name}'"]`)?.classList.add('active');
-  } else {
-    $('staff-app').classList.remove('hidden');
-    $('tabbar').style.display = 'none';
-    $(`staff-${name}`).classList.remove('hidden');
+
+// Геолокация
+navigator.geolocation.getCurrentPosition(pos => {
+  const lat = pos.coords.latitude;
+  const lon = pos.coords.longitude;
+
+  map = L.map("map").setView([lat, lon], 13);
+
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png")
+    .addTo(map);
+
+  userMarker = L.marker([lat, lon])
+    .addTo(map)
+    .bindPopup("📍 Ты здесь")
+    .openPopup();
+
+  addLog("Система активирована. Местоположение определено.");
+});
+
+// Генерация случайной точки в радиусе
+function randomPoint(lat, lon, radiusKm) {
+  const radiusDeg = radiusKm / 111;
+  const u = Math.random();
+  const v = Math.random();
+  const w = radiusDeg * Math.sqrt(u);
+  const t = 2 * Math.PI * v;
+
+  return [
+    lat + w * Math.cos(t),
+    lon + w * Math.sin(t)
+  ];
+}
+
+// Сканирование аномалий
+function scanAnomalies() {
+  if (!map) return;
+
+  anomalies.forEach(a => map.removeLayer(a.marker));
+  anomalies = [];
+  selectedTarget = null;
+
+  addLog("🔍 Сканирование запущено...");
+
+  const baseLat = userMarker.getLatLng().lat;
+  const baseLon = userMarker.getLatLng().lng;
+
+  for (let i = 0; i < 7; i++) {
+    const coords = randomPoint(baseLat, baseLon, 10);
+
+    const danger = Math.floor(Math.random() * 5) + 1;
+    const type = anomalyTypes[Math.floor(Math.random() * anomalyTypes.length)];
+
+    const anomaly = {
+      coords,
+      danger,
+      type,
+      marker: null
+    };
+
+    const marker = L.circleMarker(coords, {
+      radius: 10,
+      color: danger >= 4 ? "red" : danger >= 2 ? "orange" : "lime",
+      fillOpacity: 0.8
+    })
+      .addTo(map)
+      .bindPopup(
+        `<b>${type}</b><br>
+         Опасность: ${danger}/5<br>
+         <i>Нажми чтобы выбрать</i>`
+      )
+      .on("click", () => {
+        selectedTarget = anomaly;
+        addLog("🎯 Цель выбрана: " + type + " (опасность " + danger + ")");
+        buildRoute();
+      });
+
+    anomaly.marker = marker;
+    anomalies.push(anomaly);
   }
-  renderAll();
+
+  addLog("Найдено 7 аномальных точек.");
 }
-function setRole(r) {
-  role = r;
-  localStorage.setItem("role", r);
-  hideAll();
-  if (r==='buyer') {
-    showScreen('home');
-    loadProfile();
-  } else {
-    showScreen('home');
+
+// Построение маршрута
+function buildRoute() {
+  if (!selectedTarget) return;
+
+  if (routeLine) map.removeLayer(routeLine);
+
+  const start = userMarker.getLatLng();
+  const end = selectedTarget.coords;
+
+  routeLine = L.polyline([start, end], {
+    color: "cyan"
+  }).addTo(map);
+
+  const dist = map.distance(start, end) / 1000;
+  addLog("📍 Расстояние до цели: " + dist.toFixed(2) + " км");
+}
+
+// Экспедиция
+function startJourney() {
+  if (!selectedTarget) {
+    addLog("❗ Сначала выбери аномальную точку.");
+    return;
   }
-}
-function setTheme(t) {
-  document.body.dataset.theme = t;
-  localStorage.setItem("theme", t);
-}
 
-// ─── ПОКУПАТЕЛЬ ───────────────────────────────────────
-function renderGoods() {
-  const list = $('goods-list');
-  list.innerHTML = "";
-  goods.forEach((g,i)=>{
-    const div = document.createElement('div');
-    div.className = 'card flex';
-    div.innerHTML = `
-      <div class="emoji">${g.emoji}</div>
-      <div style="flex:1">
-        <div>${g.name}</div>
-        <div style="color:var(--accent)">${g.price} ₽</div>
-      </div>
-      <button onclick="editGood(${i})">✏️</button>
-      <button onclick="addToCart(${i})">➕</button>
-    `;
-    list.appendChild(div);
-  });
-}
+  addLog("🚶 Экспедиция началась...");
 
-function showAddGood() {
-  const name  = prompt("Название товара");
-  const price = Number(prompt("Цена (≥100 ₽)", "200"));
-  const emoji = prompt("Эмодзи", "📦");
-  if (!name || isNaN(price) || price < 100) return;
-  goods.push({name, price, emoji});
-  saveGoods();
-  renderGoods();
-}
+  let progress = 0;
+  const danger = selectedTarget.danger;
 
-function editGood(i) {
-  const g = goods[i];
-  const name  = prompt("Новое название", g.name);
-  const price = Number(prompt("Новая цена", g.price));
-  const emoji = prompt("Новый эмодзи", g.emoji);
-  if (name) g.name = name;
-  if (!isNaN(price) && price >=100) g.price = price;
-  if (emoji) g.emoji = emoji;
-  saveGoods();
-  renderGoods();
-}
+  const interval = setInterval(() => {
+    progress += 20;
 
-function addToCart(i) {
-  cart.push({...goods[i], checked:true});
-  saveCart();
-  alert("Добавлено в корзину");
-}
-
-function renderCart() {
-  const list = $('cart-list');
-  list.innerHTML = "";
-  cart.forEach((item,i)=>{
-    const div = document.createElement('div');
-    div.className = 'card flex';
-    div.innerHTML = `
-      <input type="checkbox" ${item.checked?'checked':''} onchange="cart[${i}].checked=this.checked; saveCart();"/>
-      <div class="emoji">${item.emoji}</div>
-      <div style="flex:1">${item.name} – ${item.price} ₽</div>
-    `;
-    list.appendChild(div);
-  });
-}
-
-function createOrder() {
-  const selected = cart.filter(it=>it.checked);
-  if (!selected.length) return alert("Выберите хотя бы один товар");
-
-  const id = orders.length + 1;
-  const payment = $('payment-type').value;
-  const order = {
-    id,
-    items: selected,
-    payment,
-    status: "new",
-    created: Date.now(),
-    shelf: Math.floor(Math.random()*100)+1
-  };
-
-  orders.push(order);
-  saveOrders();
-
-  // очищаем выбранные
-  cart = cart.filter(it=>!it.checked);
-  saveCart();
-
-  alert(`Заказ #${id} создан!\nЧерез 30 секунд покажите QR-код сотруднику.`);
-  showScreen('orders');
-}
-
-function renderOrders() {
-  const list = $('orders-list');
-  list.innerHTML = "";
-  orders.forEach(o=>{
-    const div = document.createElement('div');
-    div.className = 'card';
-    const isReceived = o.status === "received";
-    const timeLeft = Math.max(0, 30 - Math.floor((Date.now() - o.created)/1000));
-    div.innerHTML = `
-      <div>Заказ #${o.id}</div>
-      <div style="color:var(--gray)">${o.items.map(i=>i.name).join(", ")}</div>
-      ${isReceived ? '<div style="color:green">Получен ✓</div>' : `
-        <div>Осталось: ${timeLeft} сек</div>
-        <div>Полка: ${o.shelf}</div>
-        ${timeLeft===0 ? `<button class="btn btn-primary" onclick="showQR(${o.id})">Показать QR</button>` : ''}
-      `}
-    `;
-    list.appendChild(div);
-  });
-}
-
-function showQR(orderId) {
-  const order = orders.find(o=>o.id===orderId);
-  if (!order) return;
-
-  const data = JSON.stringify({
-    id: order.id,
-    items: order.items.map(i=>({name:i.name, price:i.price})),
-    payment: order.payment,
-    shelf: order.shelf
-  });
-
-  const win = window.open("","_blank");
-  win.document.write(`
-    <html><body style="margin:0;padding:20px;background:#000;color:#fff;text-align:center;">
-      <h2>Заказ #${order.id}</h2>
-      <div id="qrcode"></div>
-      <p>Покажите этот код сотруднику</p>
-      <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
-      <script>QRCode.toCanvas(document.getElementById('qrcode'), '${data}', {width:280});</script>
-    </body></html>
-  `);
-}
-
-// ─── СОТРУДНИК ───────────────────────────────────────
-let qrScanner = null;
-
-async function startScan() {
-  $('scanner-container').classList.remove('hidden');
-  const video = $('scanner-video');
-
-  try {
-    qrScanner = new QrScanner(video, result => {
-      try {
-        const data = JSON.parse(result.data);
-        handleScannedOrder(data);
-        stopScan();
-      } catch(e){}
-    }, { /* your options */ });
-    await qrScanner.start();
-  } catch(e) {
-    alert("Не удалось открыть камеру\n"+e);
-  }
-}
-
-function stopScan() {
-  if (qrScanner) {
-    qrScanner.stop();
-    qrScanner.destroy();
-    qrScanner = null;
-  }
-  $('scanner-container').classList.add('hidden');
-}
-
-function handleScannedOrder(data) {
-  currentOrderBeingIssued = data;
-  $('staff-order-id').textContent = data.id;
-  $('staff-shelf').textContent = data.shelf;
-  $('staff-payment').textContent = data.payment === 'paid' ? "Оплачено" : "При получении";
-
-  const list = $('staff-items-list');
-  list.innerHTML = "";
-  data.items.forEach((it,i)=>{
-    const div = document.createElement('div');
-    div.className = 'card flex';
-    div.innerHTML = `
-      <div class="emoji">📦</div>
-      <div style="flex:1">${it.name} – ${it.price} ₽</div>
-      <button onclick="markScanned(${i})">Сканировать</button>
-    `;
-    list.appendChild(div);
-  });
-
-  $('btn-check').disabled = true;
-  showScreen('order-screen');
-
-  speak(`Полка ${data.shelf}, товаров ${data.items.length}, ${data.payment==='paid'?'оплачено':'оплата при получении'}`);
-}
-
-window.markScanned = function(i) {
-  // просто имитация
-  alert(`Товар ${currentOrderBeingIssued.items[i].name} отмечен`);
-  // в реальной версии можно считать сколько отсканировано
-  // здесь просто разрешаем завершить
-  $('btn-check').disabled = false;
-}
-
-function checkOrder() {
-  speak("Проверьте товар под камерой");
-  setTimeout(()=>{
-    if (confirm("Всё в порядке? Выдать заказ?")) {
-      finishOrder();
+    // Случайные события
+    if (Math.random() < danger * 0.15) {
+      randomEvent(danger);
     }
-  }, 1800);
+
+    addLog("⏳ Продвижение: " + progress + "%");
+
+    if (progress >= 100) {
+      clearInterval(interval);
+      finishJourney();
+    }
+
+  }, 1200);
 }
 
-function finishOrder() {
-  speak("Спасибо за заказ, оцените наш пункт выдачи в приложении");
-  issuedToday++;
-  localStorage.setItem("issuedToday", issuedToday);
-  currentOrderBeingIssued = null;
-  showScreen('home');
-  alert("Заказ выдан!");
-  // В реальном проекте здесь можно было бы отправить сигнал покупателю (но нет связи)
-}
+// События по пути
+function randomEvent(danger) {
+  const events = [
+    "Ты услышал странный шёпот в лесу...",
+    "Компас начал вращаться!",
+    "Появился силуэт вдали...",
+    "Ты нашёл обломок неизвестного устройства.",
+    "Связь пропала на несколько секунд..."
+  ];
 
-function speak(text) {
-  if ('speechSynthesis' in window) {
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = 'ru-RU';
-    speechSynthesis.speak(u);
+  const event = events[Math.floor(Math.random() * events.length)];
+  addLog("⚠ Событие: " + event);
+
+  if (danger >= 4 && Math.random() < 0.3) {
+    addLog("☢ Ты получил аномальный эффект! Экспедиция опасна...");
   }
 }
 
-// ─── Сохранение / загрузка ────────────────────────────────
-function saveGoods()  { localStorage.setItem("goods",  JSON.stringify(goods)); }
-function saveCart()   { localStorage.setItem("cart",   JSON.stringify(cart)); }
-function saveOrders() { localStorage.setItem("orders", JSON.stringify(orders)); }
+// Финал
+function finishJourney() {
+  addLog("✅ Экспедиция завершена!");
 
-function loadProfile() {
-  if (profile.name) $('profile-name').value = profile.name;
-  const th = localStorage.getItem("theme") || "light";
-  $('theme-select').value = th;
-  setTheme(th);
-}
+  const rewardChance = Math.random();
 
-function saveProfile() {
-  profile.name = $('profile-name').value.trim();
-  localStorage.setItem("profile", JSON.stringify(profile));
-  alert("Сохранено");
-}
-
-// ─── Инициализация ────────────────────────────────────────
-function renderAll() {
-  renderGoods();
-  renderCart();
-  renderOrders();
-  $('today-count').textContent = issuedToday;
-}
-
-(function init() {
-  const savedRole = localStorage.getItem("role");
-  if (savedRole) {
-    setRole(savedRole);
+  if (rewardChance > 0.6) {
+    addLog("🎁 Ты нашёл артефакт!");
+  } else if (rewardChance > 0.3) {
+    addLog("📡 Ты записал странный сигнал.");
   } else {
-    hideAll();
-    $('role-screen').classList.remove('hidden');
+    addLog("👁 Ты почувствовал, что за тобой наблюдают...");
   }
-  const th = localStorage.getItem("theme") || "light";
-  setTheme(th);
 
-  renderAll();
-})();
+  addLog("🌀 Возвращайся и запускай новый поиск.");
+}
 </script>
+
 </body>
 </html>
