@@ -4,66 +4,42 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>KiwiWay</title>
-
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 <style>
 body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display",sans-serif;background:black;color:white;overflow:hidden;}
 #map{height:100vh;width:100%;}
 
-/* Liquid Glass Bottom Panel */
-.glass{
-  position:absolute;bottom:16px;left:50%;transform:translateX(-50%);
-  width:92%;max-width:440px;padding:18px;border-radius:28px;
-  backdrop-filter:blur(25px);background:rgba(255,255,255,0.10);
-  box-shadow:0 0 35px rgba(0,0,0,0.9);z-index:999;
-}
+/* Liquid Glass Panel */
+.glass{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);width:92%;max-width:440px;padding:18px;border-radius:28px;backdrop-filter:blur(25px);background:rgba(255,255,255,0.10);box-shadow:0 0 35px rgba(0,0,0,0.9);z-index:999;}
 .glass h2{margin:0;font-size:18px;text-align:center;font-weight:600;letter-spacing:0.5px;}
-
-/* Buttons */
 .btn{width:100%;margin-top:10px;padding:14px;border:none;border-radius:18px;font-size:16px;font-weight:600;cursor:pointer;background:rgba(120,0,255,0.80);color:white;transition:transform 0.15s ease, background 0.25s;}
 .btn:active{transform:scale(0.96);}
 .btn.secondary{background:rgba(255,255,255,0.12);}
-
-/* Scan animation */
 #scanBox{display:none;margin-top:14px;text-align:center;font-size:14px;opacity:0.8;}
 .pulse{width:22px;height:22px;margin:12px auto;border-radius:50%;background:violet;animation:pulse 1s infinite;}
 @keyframes pulse{0%{transform:scale(1);opacity:0.3;}50%{transform:scale(2.4);opacity:1;}100%{transform:scale(1);opacity:0.3;}}
-
-/* Modals */
-.modal{position:absolute;left:50%;transform:translateX(-50%);width:92%;max-width:420px;padding:18px;border-radius:26px;
-backdrop-filter:blur(25px);background:rgba(20,20,20,0.75);box-shadow:0 0 30px rgba(0,0,0,0.9);
-z-index:2000;opacity:0;pointer-events:none;transition:0.35s ease;}
+.modal{position:absolute;left:50%;transform:translateX(-50%);width:92%;max-width:420px;padding:18px;border-radius:26px;backdrop-filter:blur(25px);background:rgba(20,20,20,0.75);box-shadow:0 0 30px rgba(0,0,0,0.9);z-index:2000;opacity:0;pointer-events:none;transition:0.35s ease;}
 .modal.show{opacity:1;pointer-events:auto;transform:translateX(-50%) translateY(0);}
-#settingsModal{top:15px;}
-#infoModal{top:25%;}
+#settingsModal{top:15px;}#infoModal{top:25%;}
 label{display:block;margin-top:12px;font-size:14px;opacity:0.85;}
 input[type=range]{width:100%;margin-top:6px;}
 #log{margin-top:12px;max-height:80px;overflow-y:auto;font-size:13px;opacity:0.85;}
 #log::-webkit-scrollbar{display:none;}
-
-/* Info groups */
-.info-group{
-  background:rgba(255,255,255,0.08);backdrop-filter:blur(20px);
-  padding:12px;margin:6px 0;border-radius:18px;
-}
+.info-group{background:rgba(255,255,255,0.08);backdrop-filter:blur(20px);padding:12px;margin:6px 0;border-radius:18px;}
 .info-group h3{margin:0;font-size:15px;opacity:0.85;}
 .info-group p{margin:4px 0;font-size:13px;opacity:0.9;}
 </style>
 </head>
 <body>
-
 <div id="map"></div>
 
 <!-- SETTINGS -->
 <div class="modal" id="settingsModal">
 <h2>⚙ Настройки</h2>
-
 <label>Дальность поиска (км): <span id="radiusValue">5</span></label>
 <input type="range" min="1" max="10" value="5" id="radiusSlider">
-
 <label>Степень аномалии: <span id="anomValue">5</span></label>
 <input type="range" min="1" max="10" value="5" id="anomSlider">
-
 <label>Категория:</label>
 <select id="category">
   <option value="Пустота">Пустота</option>
@@ -71,7 +47,6 @@ input[type=range]{width:100%;margin-top:6px;}
   <option value="Мощная">Мощная</option>
   <option value="Псевдо">Псевдо</option>
 </select>
-
 <button class="btn secondary" onclick="toggleSettings(false)">Закрыть</button>
 </div>
 
@@ -91,49 +66,40 @@ input[type=range]{width:100%;margin-top:6px;}
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
 <script>
+const GEOAPIFY_KEY="7158879bd4b74d98b02d7ef417755239";
+
 let map,userMarker,anomalyMarker=null,anomalyData=null,lineLayer=null;
 
-/* Slider updates */
 const slider=document.getElementById("anomSlider");
 const sliderLabel=document.getElementById("anomValue");
 slider.oninput=()=>sliderLabel.innerText=slider.value;
-
 const radiusSlider=document.getElementById("radiusSlider");
 const radiusLabel=document.getElementById("radiusValue");
 radiusSlider.oninput=()=>radiusLabel.innerText=radiusSlider.value;
 
-/* Log */
 function log(msg){document.getElementById("log").innerHTML+="➤ "+msg+"<br>";}
-
-/* Modals */
 function toggleSettings(open){document.getElementById("settingsModal").classList.toggle("show",open);}
 function toggleInfo(open){document.getElementById("infoModal").classList.toggle("show",open);}
 
-/* Init Map - custom dark Russian map */
 navigator.geolocation.getCurrentPosition(pos=>{
   const lat=pos.coords.latitude,lon=pos.coords.longitude;
   map=L.map("map").setView([lat,lon],14);
-
-  L.tileLayer('https://tile.openstreetmap.ru/{z}/{x}/{y}.png',{
-    attribution:'OSM',
-    maxZoom:19
-  }).addTo(map);
-
+  // Dark tiles
+  L.tileLayer(`https://maps.geoapify.com/v1/tile/osm-bright/{z}/{x}/{y}.png?apiKey=${GEOAPIFY_KEY}`,{maxZoom:19}).addTo(map);
   userMarker=L.circleMarker([lat,lon],{radius:10,color:"cyan",fillOpacity:1}).addTo(map);
   log("Система активирована. Ты в зоне.");
+
+  // Long press to start search
+  let pressTimer;
+  userMarker.on('mousedown',()=>{
+    pressTimer=setTimeout(()=>{startSearchFromMarker()},800);
+  });
+  userMarker.on('mouseup mouseleave',()=>clearTimeout(pressTimer));
 });
 
-/* Reverse geocode */
-async function getAddress(lat,lon){
-  try{
-    const res=await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
-    const data=await res.json();
-    return data.display_name||"";
-  }catch{return "";}
-}
+async function getAddress(lat,lon){try{const res=await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);const data=await res.json();return data.display_name||"";}catch{return "";}}
 
-/* Safe point generator */
-async function generateSafePoint(baseLat,baseLon,radius){
+async function generateSafePoint(baseLat,baseLon,radius,category){
   const maxAttempts=40;
   for(let i=0;i<maxAttempts;i++){
     const angle=Math.random()*2*Math.PI;
@@ -144,14 +110,15 @@ async function generateSafePoint(baseLat,baseLon,radius){
       const resp=await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`);
       const data=await resp.json();
       if(!data||!data.address) continue;
-      if(data.address.water||data.address.forest||data.address.private) continue;
+      if(category==="Пустота" && (data.address.city || data.address.road)) continue;
+      if(category==="Мощная" && !(data.address.road || data.address.building)) continue;
+      if(data.address.water||data.address.private) continue;
       return {lat,lon,address:data.display_name};
     }catch{}
   }
   return null;
 }
 
-/* Scan */
 async function scan(){
   if(!map) return;
   document.getElementById("scanBox").style.display="block";
@@ -166,22 +133,47 @@ async function scan(){
   const category=document.getElementById("category").value;
   const radius=parseInt(radiusSlider.value);
 
-  const point=await generateSafePoint(base.lat,base.lng,radius);
+  const point=await generateSafePoint(base.lat,base.lng,radius,category);
   if(!point){log("Не удалось найти безопасную точку.");document.getElementById("scanBox").style.display="none"; return;}
 
   anomalyData={...point,category,power:degree};
   anomalyMarker=L.circleMarker([point.lat,point.lon],{radius:12,color:degree>=7?"red":"orange",fillOpacity:0.85}).addTo(map);
 
-  // Focus with animation
   map.flyTo([point.lat,point.lon],16,{duration:1.5});
-
-  document.getElementById("scanBox").style.display="none";
   document.getElementById("infoButton").style.display="block";
   log(`Аномалия ${category} обнаружена!`);
+
+  buildRoute(base,point);
 }
 
-/* Info Button with groups */
-async function showInfoButton(){
+async function buildRoute(start,end){
+  if(lineLayer){map.removeLayer(lineLayer); lineLayer=null;}
+  const url=`https://api.geoapify.com/v1/routing?waypoints=${start.lat},${start.lng}|${end.lat},${end.lng}&mode=walk&apiKey=${GEOAPIFY_KEY}`;
+  const resp=await fetch(url);
+  const data=await resp.json();
+  if(!data.features) return;
+  const coords=data.features[0].geometry.coordinates.map(c=>[c[1],c[0]]);
+
+  // color based on road type
+  lineLayer=L.polyline([],{weight:5}).addTo(map);
+  let i=0;
+  function animateLine(){
+    if(i>=coords.length) return;
+    const segment=coords[i];
+    const roadType=data.features[0].properties.segments?.[i]?.road_class||"road";
+    let color="green";
+    if(roadType.includes("service")||roadType.includes("track")) color="orange";
+    if(roadType.includes("unclassified")) color="brown";
+    if(roadType.includes("path")) color="gray";
+    lineLayer.addLatLng(segment);
+    lineLayer.setStyle({color});
+    i++;
+    requestAnimationFrame(animateLine);
+  }
+  animateLine();
+}
+
+function showInfoButton(){
   if(!anomalyData){log("Сначала сканируй!"); return;}
   const modal=document.getElementById("infoModal");
   modal.innerHTML=`<div class="info-group"><h3>Категория</h3><p>${anomalyData.category}</p></div>
@@ -192,30 +184,14 @@ async function showInfoButton(){
   toggleInfo(true);
 }
 
-/* Animated line to point */
-function startNavigation(){
-  if(!anomalyData){log("Нет цели."); return;}
-  if(lineLayer){map.removeLayer(lineLayer); lineLayer=null;}
-  log("Построение маршрута...");
-
-  const start=userMarker.getLatLng();
-  const end=L.latLng(anomalyData.lat,anomalyData.lon);
-  lineLayer=L.polyline([],{color:'cyan',weight:4}).addTo(map);
-
-  const steps=100; let step=0;
-  function animateLine(){
-    if(step>steps) return;
-    const lat=start.lat+(end.lat-start.lat)*(step/steps);
-    const lng=start.lng+(end.lng-start.lng)*(step/steps);
-    lineLayer.addLatLng([lat,lng]);
-    step++;
-    requestAnimationFrame(animateLine);
+function startSearchFromMarker(){
+  if(!userMarker) return;
+  const radius=parseInt(radiusSlider.value);
+  if(confirm(`Начать поиск в радиус ${radius} км от этой точки?`)){
+    scan();
   }
-  animateLine();
-  log("Маршрут построен. Твоя точка следует за тобой.");
 }
 
-/* Follow user */
 if(navigator.geolocation){
   navigator.geolocation.watchPosition(pos=>{
     if(!userMarker) return;
