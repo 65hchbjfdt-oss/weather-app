@@ -4,13 +4,19 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>KiwiWay</title>
+
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 <style>
 body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display",sans-serif;background:black;color:white;overflow:hidden;}
 #map{height:100vh;width:100%;}
 
-/* Liquid Glass Panel */
-.glass{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);width:92%;max-width:440px;padding:18px;border-radius:28px;backdrop-filter:blur(25px);background:rgba(255,255,255,0.10);box-shadow:0 0 35px rgba(0,0,0,0.9);z-index:999;}
+/* Liquid Glass Bottom Panel */
+.glass{
+  position:absolute;bottom:16px;left:50%;transform:translateX(-50%);
+  width:92%;max-width:440px;padding:18px;border-radius:28px;
+  backdrop-filter:blur(25px);background:rgba(255,255,255,0.10);
+  box-shadow:0 0 35px rgba(0,0,0,0.9);z-index:999;
+}
 .glass h2{margin:0;font-size:18px;text-align:center;font-weight:600;letter-spacing:0.5px;}
 .btn{width:100%;margin-top:10px;padding:14px;border:none;border-radius:18px;font-size:16px;font-weight:600;cursor:pointer;background:rgba(120,0,255,0.80);color:white;transition:transform 0.15s ease, background 0.25s;}
 .btn:active{transform:scale(0.96);}
@@ -31,6 +37,7 @@ input[type=range]{width:100%;margin-top:6px;}
 </style>
 </head>
 <body>
+
 <div id="map"></div>
 
 <!-- SETTINGS -->
@@ -58,6 +65,7 @@ input[type=range]{width:100%;margin-top:6px;}
 <h2>☢ KiwiWay</h2>
 <button class="btn secondary" onclick="toggleSettings(true)">⚙ Настройки</button>
 <button class="btn" onclick="scan()">🔍 Сканировать</button>
+<button class="btn" id="startJourneyBtn" style="display:none;" onclick="startNavigation()">🧭 Начать путешествие</button>
 <button class="btn secondary" id="infoButton" style="display:none;" onclick="showInfoButton()">ℹ Показать информацию</button>
 <div id="scanBox"><div class="pulse"></div>Поиск аномалий...</div>
 <div id="log"></div>
@@ -67,7 +75,6 @@ input[type=range]{width:100%;margin-top:6px;}
 
 <script>
 const GEOAPIFY_KEY="7158879bd4b74d98b02d7ef417755239";
-
 let map,userMarker,anomalyMarker=null,anomalyData=null,lineLayer=null;
 
 const slider=document.getElementById("anomSlider");
@@ -84,17 +91,14 @@ function toggleInfo(open){document.getElementById("infoModal").classList.toggle(
 navigator.geolocation.getCurrentPosition(pos=>{
   const lat=pos.coords.latitude,lon=pos.coords.longitude;
   map=L.map("map").setView([lat,lon],14);
-  // Dark tiles
-  L.tileLayer(`https://maps.geoapify.com/v1/tile/osm-bright/{z}/{x}/{y}.png?apiKey=${GEOAPIFY_KEY}`,{maxZoom:19}).addTo(map);
+  L.tileLayer(`https://maps.geoapify.com/v1/tile/osm-dark/{z}/{x}/{y}.png?apiKey=${GEOAPIFY_KEY}`,{maxZoom:19}).addTo(map);
   userMarker=L.circleMarker([lat,lon],{radius:10,color:"cyan",fillOpacity:1}).addTo(map);
-  log("Система активирована. Ты в зоне.");
 
   // Long press to start search
   let pressTimer;
-  userMarker.on('mousedown',()=>{
-    pressTimer=setTimeout(()=>{startSearchFromMarker()},800);
-  });
+  userMarker.on('mousedown',()=>{pressTimer=setTimeout(()=>{startSearchFromMarker()},800);});
   userMarker.on('mouseup mouseleave',()=>clearTimeout(pressTimer));
+  log("Система активирована. Ты в зоне.");
 });
 
 async function getAddress(lat,lon){try{const res=await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);const data=await res.json();return data.display_name||"";}catch{return "";}}
@@ -123,6 +127,7 @@ async function scan(){
   if(!map) return;
   document.getElementById("scanBox").style.display="block";
   document.getElementById("infoButton").style.display="none";
+  document.getElementById("startJourneyBtn").style.display="none";
   if(anomalyMarker){map.removeLayer(anomalyMarker); anomalyMarker=null;}
   if(lineLayer){map.removeLayer(lineLayer); lineLayer=null;}
   anomalyData=null;
@@ -140,10 +145,10 @@ async function scan(){
   anomalyMarker=L.circleMarker([point.lat,point.lon],{radius:12,color:degree>=7?"red":"orange",fillOpacity:0.85}).addTo(map);
 
   map.flyTo([point.lat,point.lon],16,{duration:1.5});
+  document.getElementById("scanBox").style.display="none";
   document.getElementById("infoButton").style.display="block";
+  document.getElementById("startJourneyBtn").style.display="block";
   log(`Аномалия ${category} обнаружена!`);
-
-  buildRoute(base,point);
 }
 
 async function buildRoute(start,end){
@@ -153,8 +158,6 @@ async function buildRoute(start,end){
   const data=await resp.json();
   if(!data.features) return;
   const coords=data.features[0].geometry.coordinates.map(c=>[c[1],c[0]]);
-
-  // color based on road type
   lineLayer=L.polyline([],{weight:5}).addTo(map);
   let i=0;
   function animateLine(){
@@ -171,6 +174,14 @@ async function buildRoute(start,end){
     requestAnimationFrame(animateLine);
   }
   animateLine();
+}
+
+function startNavigation(){
+  if(!anomalyData){log("Нет цели."); return;}
+  const start=userMarker.getLatLng();
+  const end=L.latLng(anomalyData.lat,anomalyData.lon);
+  buildRoute(start,end);
+  log("Маршрут построен. Твоя точка следует за тобой.");
 }
 
 function showInfoButton(){
