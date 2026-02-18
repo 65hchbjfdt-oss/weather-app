@@ -6,20 +6,18 @@
 <title>KiwiWay</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
-<link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.css"/>
 
 <style>
 body {
   margin:0;
-  font-family:-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display",sans-serif;
   background:black;
   color:white;
   overflow:hidden;
 }
+#map{height:100vh;width:100%;}
 
-#map {height:100vh;width:100%;}
-
-/* Liquid Glass Bottom Panel */
+/* Liquid Glass Panel */
 .glass{
   position:absolute;
   bottom:16px;
@@ -34,14 +32,7 @@ body {
   box-shadow:0 0 35px rgba(0,0,0,0.9);
   z-index:999;
 }
-
-.glass h2{
-  margin:0;
-  font-size:18px;
-  text-align:center;
-  font-weight:600;
-  letter-spacing:0.5px;
-}
+.glass h2{margin:0;font-size:18px;text-align:center;font-weight:600;letter-spacing:0.5px;}
 
 /* Buttons */
 .btn{
@@ -57,34 +48,16 @@ body {
   color:white;
   transition:transform 0.15s ease, background 0.25s;
 }
-
-.btn:active{
-  transform:scale(0.96);
-}
-
-.btn.secondary{
-  background:rgba(255,255,255,0.12);
-}
+.btn:active{transform:scale(0.96);}
+.btn.secondary{background:rgba(255,255,255,0.12);}
 
 /* Scan animation */
-#scanBox{
-  display:none;
-  margin-top:14px;
-  text-align:center;
-  font-size:14px;
-  opacity:0.8;
-  animation:fadeIn 0.4s ease;
-}
-
+#scanBox{display:none;margin-top:14px;text-align:center;font-size:14px;opacity:0.8;}
 .pulse{
-  width:22px;
-  height:22px;
-  margin:12px auto;
-  border-radius:50%;
+  width:22px;height:22px;margin:12px auto;border-radius:50%;
   background:violet;
   animation:pulse 1s infinite;
 }
-
 @keyframes pulse{
   0%{transform:scale(1);opacity:0.3;}
   50%{transform:scale(2.4);opacity:1;}
@@ -108,41 +81,13 @@ body {
   pointer-events:none;
   transition:0.35s ease;
 }
-
-.modal.show{
-  opacity:1;
-  pointer-events:auto;
-  transform:translateX(-50%) translateY(0);
-}
-
+.modal.show{opacity:1;pointer-events:auto;transform:translateX(-50%) translateY(0);}
 #settingsModal{top:15px;}
 #infoModal{top:25%;}
-
-label{
-  display:block;
-  margin-top:12px;
-  font-size:14px;
-  opacity:0.85;
-}
-
-input[type=range]{
-  width:100%;
-  margin-top:6px;
-}
-
-#log{
-  margin-top:12px;
-  max-height:80px;
-  overflow-y:auto;
-  font-size:13px;
-  opacity:0.85;
-}
+label{display:block;margin-top:12px;font-size:14px;opacity:0.85;}
+input[type=range]{width:100%;margin-top:6px;}
+#log{margin-top:12px;max-height:80px;overflow-y:auto;font-size:13px;opacity:0.85;}
 #log::-webkit-scrollbar{display:none;}
-
-@keyframes fadeIn{
-  from{opacity:0;}
-  to{opacity:1;}
-}
 </style>
 </head>
 <body>
@@ -182,10 +127,9 @@ input[type=range]{
 </div>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-<script src="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.js"></script>
 
 <script>
-let map,userMarker,anomalyMarker=null,anomalyData=null,routeControl=null;
+let map,userMarker,anomalyMarker=null,anomalyData=null,lineLayer=null;
 
 /* Slider label update */
 const slider=document.getElementById("anomSlider");
@@ -199,11 +143,15 @@ function log(msg){document.getElementById("log").innerHTML+="➤ "+msg+"<br>";}
 function toggleSettings(open){document.getElementById("settingsModal").classList.toggle("show",open);}
 function toggleInfo(open){document.getElementById("infoModal").classList.toggle("show",open);}
 
-/* Init Map */
+/* Init Dark Russian Map - OSM with custom dark style */
 navigator.geolocation.getCurrentPosition(pos=>{
   const lat=pos.coords.latitude,lon=pos.coords.longitude;
   map=L.map("map").setView([lat,lon],14);
-  L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png").addTo(map);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+    attribution:'OSM'
+  }).addTo(map);
+
   userMarker=L.circleMarker([lat,lon],{radius:10,color:"cyan",fillOpacity:1}).addTo(map);
   log("Система активирована. Ты в зоне.");
 });
@@ -213,23 +161,25 @@ async function getAddress(lat,lon){
   try{
     const res=await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
     const data=await res.json();
-    return data.display_name;
+    return data.display_name||"";
   }catch{return "";}
 }
 
 /* Complex Safe Point Generator */
 async function generateSafePoint(baseLat,baseLon){
-  const maxAttempts=30;
+  const maxAttempts=40;
   for(let i=0;i<maxAttempts;i++){
     const angle=Math.random()*2*Math.PI;
     const dist=Math.random()*5+1;
     const lat=baseLat+(dist*Math.cos(angle))/111;
     const lon=baseLon+(dist*Math.sin(angle))/111;
-    const resp=await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`);
-    const data=await resp.json();
-    if(!data || !data.address) continue;
-    if(data.address.water || data.address.forest || data.address.private) continue;
-    return {lat,lon,address:data.display_name};
+    try{
+      const resp=await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`);
+      const data=await resp.json();
+      if(!data||!data.address) continue;
+      if(data.address.water||data.address.forest||data.address.private) continue;
+      return {lat,lon,address:data.display_name};
+    }catch{}
   }
   return null;
 }
@@ -247,7 +197,7 @@ async function scan(){
   const category=document.getElementById("category").value;
 
   const point=await generateSafePoint(base.lat,base.lng);
-  if(!point){log("Не удалось найти безопасную точку."); return;}
+  if(!point){log("Не удалось найти безопасную точку.");document.getElementById("scanBox").style.display="none"; return;}
 
   anomalyData={...point,category,power:degree};
 
@@ -256,6 +206,8 @@ async function scan(){
     color:degree>=7?"red":"orange",
     fillOpacity:0.85
   }).addTo(map);
+
+  map.setView([point.lat,point.lon],16); // Focus on point
 
   document.getElementById("scanBox").style.display="none";
   log(`Аномалия ${category} обнаружена!`);
@@ -273,22 +225,32 @@ async function showInfoButton(){
   toggleInfo(true);
 }
 
-/* Navigation */
+/* Animated route line */
 function startNavigation(){
   if(!anomalyData){log("Нет выбранной цели."); return;}
-  if(routeControl) map.removeControl(routeControl);
-  log("Построение маршрута...");
+  if(lineLayer) map.removeLayer(lineLayer);
+  log("Построение анимированной линии маршрута...");
 
-  routeControl=L.Routing.control({
-    waypoints:[userMarker.getLatLng(),L.latLng(anomalyData.lat,anomalyData.lon)],
-    lineOptions:{styles:[{color:"cyan",weight:5}]},
-    addWaypoints:false,
-    draggableWaypoints:false,
-    routeWhileDragging:false,
-    createMarker:()=>null
-  }).addTo(map);
+  const start=userMarker.getLatLng();
+  const end=L.latLng(anomalyData.lat,anomalyData.lon);
+  const points=[start.lat,start.lng,end.lat,end.lng];
 
-  log("Навигация активна. Твоя точка следует за тобой.");
+  const totalSteps=100;
+  let step=0;
+
+  if(lineLayer) map.removeLayer(lineLayer);
+  lineLayer=L.polyline([],{color:'cyan',weight:4}).addTo(map);
+
+  function animateLine(){
+    if(step>=totalSteps) return;
+    const lat=start.lat+(end.lat-start.lat)*(step/totalSteps);
+    const lng=start.lng+(end.lng-start.lng)*(step/totalSteps);
+    lineLayer.addLatLng([lat,lng]);
+    step++;
+    requestAnimationFrame(animateLine);
+  }
+  animateLine();
+  log("Навигация активна. Точка пользователя следует за тобой.");
 }
 
 /* Follow user dynamically */
@@ -300,5 +262,6 @@ if(navigator.geolocation){
   });
 }
 </script>
+
 </body>
 </html>
