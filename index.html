@@ -25,11 +25,9 @@ input[type=range]{width:100%;margin-top:6px;}
 </head>
 <body>
 <div id="map"></div>
-
-<!-- Crosshair for selecting point -->
 <div class="crosshair" id="crosshair" style="display:none;"></div>
 
-<!-- SETTINGS MODAL -->
+<!-- SETTINGS -->
 <div class="modal" id="settingsModal">
 <h2>⚙ Настройки</h2>
 <label>Дальность поиска (км): <span id="radiusValue">5</span></label>
@@ -46,7 +44,7 @@ input[type=range]{width:100%;margin-top:6px;}
 <button class="btn secondary" onclick="toggleSettings(false)">Закрыть</button>
 </div>
 
-<!-- INFO MODAL -->
+<!-- INFO -->
 <div class="modal" id="infoModal"></div>
 
 <!-- BOTTOM PANEL -->
@@ -55,16 +53,19 @@ input[type=range]{width:100%;margin-top:6px;}
 <button class="btn" id="choosePointBtn" onclick="activateSelectPoint()">📍 Выбрать точку</button>
 <button class="btn secondary" id="infoButton" style="display:none;" onclick="showInfoButton()">ℹ Показать информацию</button>
 <button class="btn secondary" id="startJourneyBtn" style="display:none;" onclick="startNavigation()">🧭 Начать путешествие</button>
+<div id="log"></div>
+<div id="scanBox" style="display:none;text-align:center;font-size:14px;opacity:0.8;"><div class="pulse" style="width:22px;height:22px;margin:12px auto;border-radius:50%;background:violet;animation:pulse 1s infinite;"></div>Поиск аномалий...</div>
 </div>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script>
 const GEOAPIFY_KEY="7158879bd4b74d98b02d7ef417755239";
-let map,userMarker,anomalyMarker=null,anomalyData=null,lineLayer=null,selectPointMode=false,radiusCircle=null;
+let map,userMarker,anomalyMarker=null,anomalyData=null,lineLayer=null,radiusCircle=null,selectPointMode=false;
 
 const slider=document.getElementById("anomSlider");
 const sliderLabel=document.getElementById("anomValue");
 slider.oninput=()=>sliderLabel.innerText=slider.value;
+
 const radiusSlider=document.getElementById("radiusSlider");
 const radiusLabel=document.getElementById("radiusValue");
 radiusSlider.oninput=()=>{
@@ -95,9 +96,8 @@ function activateSelectPoint(){
   selectPointMode=true;
   document.getElementById("bottomPanel").style.display="none";
   document.getElementById("crosshair").style.display="block";
-  if(radiusCircle){map.removeLayer(radiusCircle);}
   const center=map.getCenter();
-  radiusCircle=L.circle(center,{radius:radiusSlider.value*1000,color:'violet',fillOpacity:0.1}).addTo(map);
+  if(radiusCircle) radiusCircle.setLatLng(center);
   log("Режим выбора точки активирован. Передвиньте карту так, чтобы точка была в центре.");
 }
 
@@ -118,7 +118,7 @@ map.on('moveend',()=>{
 
 map.on('click',()=>{
   if(selectPointMode){
-    if(confirm("Подтвердить эту точку как центр поиска?")){
+    if(confirm(`Начать поиск в радиус ${radiusSlider.value} км с этой точки?`)){
       confirmSelectPoint();
     }
   }
@@ -131,10 +131,7 @@ async function generateSafePoint(baseLat,baseLon,radius,category,power){
   for(let i=0;i<maxAttempts;i++){
     const angle=Math.random()*2*Math.PI;
     let dist=Math.random()*radius;
-    // Для Пустота/Квантовая делаем менее строгий поиск при высокой аномалии
-    if(category==="Пустота" || category==="Квантовая"){
-      dist*=Math.max(0.3,1-power/10);
-    }
+    if(category==="Пустота" || category==="Квантовая") dist*=Math.max(0.3,1-power/10);
     const lat=baseLat+(dist*Math.cos(angle))/111;
     const lon=baseLon+(dist*Math.sin(angle))/111;
     try{
@@ -142,7 +139,6 @@ async function generateSafePoint(baseLat,baseLon,radius,category,power){
       const data=await resp.json();
       if(!data||!data.address) continue;
       if(data.address.water||data.address.private) continue;
-      // Более строгие проверки для Мощная/Псевдо
       if(category==="Мощная" && !(data.address.road || data.address.building)) continue;
       return {lat,lon,address:data.display_name};
     }catch{}
@@ -168,7 +164,7 @@ async function scan(customCenter=null){
   if(!point){log("Не удалось найти безопасную точку.");document.getElementById("scanBox").style.display="none"; return;}
 
   anomalyData={...point,category,power:degree};
-  anomalyMarker=L.circleMarker([point.lat,point.lon],{radius:12,color:degree>=7?"red":"orange",fillOpacity:0.85}).addTo(map);
+  anomalyMarker=L.circleMarker([point.lat,point.lon],{radius:12,color:degree>=7?"red":"green",fillOpacity:0.85}).addTo(map);
 
   map.flyTo([point.lat,point.lon],16,{duration:1.5});
   document.getElementById("scanBox").style.display="none";
