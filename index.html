@@ -2,69 +2,135 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <title>Аномальная Экспедиция</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>STALKER Explorer</title>
 
+  <!-- Leaflet -->
   <link rel="stylesheet"
         href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
   <style>
+    /* ===== Dark Liquid Glass iOS Style ===== */
     body {
       margin: 0;
-      font-family: Arial;
-      background: #050010;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
+      background: radial-gradient(circle at top, #111, #000);
       color: white;
-      text-align: center;
+      overflow: hidden;
     }
 
     #map {
-      height: 70vh;
+      height: 100vh;
       width: 100%;
+      z-index: 1;
     }
 
-    button {
-      padding: 10px 15px;
-      margin: 5px;
+    /* Glass UI Panel */
+    .glass-panel {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 92%;
+      max-width: 420px;
+      padding: 15px;
+      border-radius: 25px;
+      backdrop-filter: blur(18px);
+      background: rgba(255, 255, 255, 0.08);
+      box-shadow: 0 0 25px rgba(0,0,0,0.7);
+      z-index: 999;
+    }
+
+    h2 {
+      font-size: 18px;
+      margin: 0 0 10px;
+      font-weight: 600;
+      text-align: center;
+    }
+
+    /* Buttons */
+    .btn {
+      width: 100%;
+      padding: 14px;
+      margin-top: 10px;
       border: none;
-      border-radius: 10px;
-      background: purple;
-      color: white;
+      border-radius: 18px;
+      font-size: 16px;
+      font-weight: 600;
       cursor: pointer;
-      font-size: 15px;
+      background: rgba(140, 0, 255, 0.65);
+      color: white;
+      transition: 0.3s;
     }
 
-    button:hover {
-      background: darkviolet;
+    .btn:hover {
+      background: rgba(180, 0, 255, 0.8);
     }
 
-    #panel {
-      padding: 10px;
-      background: rgba(255,255,255,0.05);
-    }
-
-    #log {
-      height: 120px;
-      overflow-y: auto;
-      background: black;
-      margin: 10px;
-      padding: 10px;
-      border-radius: 10px;
-      text-align: left;
+    /* Scan Animation Loader */
+    .scan {
+      display: none;
+      text-align: center;
+      margin-top: 12px;
       font-size: 14px;
+      opacity: 0.8;
+    }
+
+    .pulse {
+      margin: 10px auto;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: violet;
+      animation: pulseAnim 1s infinite;
+    }
+
+    @keyframes pulseAnim {
+      0% { transform: scale(1); opacity: 0.4; }
+      50% { transform: scale(2.2); opacity: 1; }
+      100% { transform: scale(1); opacity: 0.4; }
+    }
+
+    /* Log */
+    #log {
+      margin-top: 10px;
+      max-height: 90px;
+      overflow-y: auto;
+      font-size: 13px;
+      opacity: 0.85;
+    }
+
+    /* Mobile scroll fix */
+    #log::-webkit-scrollbar {
+      display: none;
     }
   </style>
 </head>
+
 <body>
-
-<h2>🌀 Аномальная Экспедиция</h2>
-
-<div id="panel">
-  <button onclick="scanAnomalies()">🔍 Сканировать аномалии</button>
-  <button onclick="startJourney()">🚶 Начать экспедицию</button>
-</div>
 
 <div id="map"></div>
 
-<div id="log"></div>
+<!-- Glass UI -->
+<div class="glass-panel">
+  <h2>☢ STALKER Explorer</h2>
+
+  <button class="btn" onclick="scanAnomalies()">
+    🔍 Сканировать зону
+  </button>
+
+  <button class="btn" onclick="startJourney()">
+    🚶 Экспедиция к цели
+  </button>
+
+  <!-- Scan animation -->
+  <div class="scan" id="scanBox">
+    <div class="pulse"></div>
+    Сканирование аномалий...
+  </div>
+
+  <div id="log"></div>
+</div>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
@@ -72,43 +138,48 @@
 let map;
 let userMarker;
 let anomalies = [];
-let selectedTarget = null;
+let target = null;
 let routeLine = null;
 
 const anomalyTypes = [
-  "⚡ Электросигнал",
-  "🕳 Портал",
-  "☢ Радиационная зона",
-  "🔮 Артефакт",
-  "👁 Наблюдение"
+  "⚡ Электро-аномалия",
+  "🕳 Пространственный разлом",
+  "☢ Радиационный выброс",
+  "🔮 Артефактный след",
+  "👁 Зона наблюдения"
 ];
 
-// Лог событий
-function addLog(text) {
-  const log = document.getElementById("log");
-  log.innerHTML += "➤ " + text + "<br>";
-  log.scrollTop = log.scrollHeight;
+/* ===== Log System ===== */
+function log(text) {
+  const box = document.getElementById("log");
+  box.innerHTML += "➤ " + text + "<br>";
+  box.scrollTop = box.scrollHeight;
 }
 
-// Геолокация
+/* ===== Init Map ===== */
 navigator.geolocation.getCurrentPosition(pos => {
   const lat = pos.coords.latitude;
   const lon = pos.coords.longitude;
 
-  map = L.map("map").setView([lat, lon], 13);
+  map = L.map("map", { zoomControl: false })
+    .setView([lat, lon], 14);
 
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png")
     .addTo(map);
 
-  userMarker = L.marker([lat, lon])
+  userMarker = L.circleMarker([lat, lon], {
+    radius: 10,
+    color: "cyan",
+    fillOpacity: 0.9
+  })
     .addTo(map)
-    .bindPopup("📍 Ты здесь")
+    .bindPopup("📍 Ты — сталкер")
     .openPopup();
 
-  addLog("Система активирована. Местоположение определено.");
+  log("Сканер активирован. Координаты получены.");
 });
 
-// Генерация случайной точки в радиусе
+/* ===== Random Point Radius ===== */
 function randomPoint(lat, lon, radiusKm) {
   const radiusDeg = radiusKm / 111;
   const u = Math.random();
@@ -122,136 +193,112 @@ function randomPoint(lat, lon, radiusKm) {
   ];
 }
 
-// Сканирование аномалий
+/* ===== Scan Animation + Generate ===== */
 function scanAnomalies() {
   if (!map) return;
 
+  document.getElementById("scanBox").style.display = "block";
+
   anomalies.forEach(a => map.removeLayer(a.marker));
   anomalies = [];
-  selectedTarget = null;
+  target = null;
 
-  addLog("🔍 Сканирование запущено...");
+  log("Запущено сканирование сектора...");
 
-  const baseLat = userMarker.getLatLng().lat;
-  const baseLon = userMarker.getLatLng().lng;
+  setTimeout(() => {
+    document.getElementById("scanBox").style.display = "none";
 
-  for (let i = 0; i < 7; i++) {
-    const coords = randomPoint(baseLat, baseLon, 10);
+    const base = userMarker.getLatLng();
 
-    const danger = Math.floor(Math.random() * 5) + 1;
-    const type = anomalyTypes[Math.floor(Math.random() * anomalyTypes.length)];
+    for (let i = 0; i < 6; i++) {
+      const coords = randomPoint(base.lat, base.lng, 8);
+      const danger = Math.floor(Math.random() * 5) + 1;
+      const type = anomalyTypes[Math.floor(Math.random() * anomalyTypes.length)];
 
-    const anomaly = {
-      coords,
-      danger,
-      type,
-      marker: null
-    };
-
-    const marker = L.circleMarker(coords, {
-      radius: 10,
-      color: danger >= 4 ? "red" : danger >= 2 ? "orange" : "lime",
-      fillOpacity: 0.8
-    })
+      const marker = L.circleMarker(coords, {
+        radius: 9,
+        color: danger >= 4 ? "red" : "orange",
+        fillOpacity: 0.75
+      })
       .addTo(map)
-      .bindPopup(
-        `<b>${type}</b><br>
-         Опасность: ${danger}/5<br>
-         <i>Нажми чтобы выбрать</i>`
-      )
+      .bindPopup(`
+        <b>${type}</b><br>
+        Опасность: ${danger}/5<br>
+        <i>Нажми чтобы выбрать</i>
+      `)
       .on("click", () => {
-        selectedTarget = anomaly;
-        addLog("🎯 Цель выбрана: " + type + " (опасность " + danger + ")");
-        buildRoute();
+        target = { coords, danger, type };
+        log("🎯 Цель выбрана: " + type);
+        animateRoute();
       });
 
-    anomaly.marker = marker;
-    anomalies.push(anomaly);
-  }
+      anomalies.push({ marker });
+    }
 
-  addLog("Найдено 7 аномальных точек.");
+    log("Обнаружено 6 аномальных сигналов.");
+  }, 2200);
 }
 
-// Построение маршрута
-function buildRoute() {
-  if (!selectedTarget) return;
+/* ===== Animated Route Build ===== */
+function animateRoute() {
+  if (!target) return;
 
   if (routeLine) map.removeLayer(routeLine);
 
   const start = userMarker.getLatLng();
-  const end = selectedTarget.coords;
+  const end = target.coords;
 
-  routeLine = L.polyline([start, end], {
-    color: "cyan"
+  let step = 0;
+  let points = [];
+
+  routeLine = L.polyline([], {
+    color: "cyan",
+    weight: 4
   }).addTo(map);
 
-  const dist = map.distance(start, end) / 1000;
-  addLog("📍 Расстояние до цели: " + dist.toFixed(2) + " км");
+  log("Построение маршрута...");
+
+  const interval = setInterval(() => {
+    step += 0.05;
+
+    const lat = start.lat + (end[0] - start.lat) * step;
+    const lon = start.lng + (end[1] - start.lng) * step;
+
+    points.push([lat, lon]);
+    routeLine.setLatLngs(points);
+
+    if (step >= 1) {
+      clearInterval(interval);
+      log("Маршрут построен. Можно выдвигаться.");
+    }
+  }, 60);
 }
 
-// Экспедиция
+/* ===== Journey Simulation ===== */
 function startJourney() {
-  if (!selectedTarget) {
-    addLog("❗ Сначала выбери аномальную точку.");
+  if (!target) {
+    log("❗ Нет выбранной цели.");
     return;
   }
 
-  addLog("🚶 Экспедиция началась...");
+  log("🚶 Сталкер выходит в зону...");
 
   let progress = 0;
-  const danger = selectedTarget.danger;
-
   const interval = setInterval(() => {
     progress += 20;
 
-    // Случайные события
-    if (Math.random() < danger * 0.15) {
-      randomEvent(danger);
+    if (Math.random() < target.danger * 0.12) {
+      log("⚠ Аномальный эффект рядом... будь осторожен.");
     }
 
-    addLog("⏳ Продвижение: " + progress + "%");
+    log("Продвижение: " + progress + "%");
 
     if (progress >= 100) {
       clearInterval(interval);
-      finishJourney();
+      log("✅ Экспедиция завершена.");
+      log("🎁 Возможный артефакт найден...");
     }
-
-  }, 1200);
-}
-
-// События по пути
-function randomEvent(danger) {
-  const events = [
-    "Ты услышал странный шёпот в лесу...",
-    "Компас начал вращаться!",
-    "Появился силуэт вдали...",
-    "Ты нашёл обломок неизвестного устройства.",
-    "Связь пропала на несколько секунд..."
-  ];
-
-  const event = events[Math.floor(Math.random() * events.length)];
-  addLog("⚠ Событие: " + event);
-
-  if (danger >= 4 && Math.random() < 0.3) {
-    addLog("☢ Ты получил аномальный эффект! Экспедиция опасна...");
-  }
-}
-
-// Финал
-function finishJourney() {
-  addLog("✅ Экспедиция завершена!");
-
-  const rewardChance = Math.random();
-
-  if (rewardChance > 0.6) {
-    addLog("🎁 Ты нашёл артефакт!");
-  } else if (rewardChance > 0.3) {
-    addLog("📡 Ты записал странный сигнал.");
-  } else {
-    addLog("👁 Ты почувствовал, что за тобой наблюдают...");
-  }
-
-  addLog("🌀 Возвращайся и запускай новый поиск.");
+  }, 1300);
 }
 </script>
 
