@@ -1,160 +1,339 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>STALKER Explorer</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>STALKER Explorer</title>
 
-<!-- Leaflet & Routing -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
-<link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.css"/>
+  <!-- Leaflet -->
+  <link rel="stylesheet"
+        href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
-<style>
-  body, html {
-    margin: 0; padding: 0; width: 100%; height: 100%;
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
-    background: #000;
-    color: white;
-  }
-  #map { width: 100%; height: 100%; }
+  <!-- Routing -->
+  <link rel="stylesheet"
+        href="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.css"/>
 
-  /* iOS-style glass panel */
-  .panel {
-    position: absolute; bottom: 10px;
-    left: 50%; transform: translateX(-50%);
-    width: 90%; max-width: 400px;
-    backdrop-filter: blur(18px);
-    background: rgba(255,255,255,0.12);
-    border-radius: 20px;
-    padding: 14px;
-    box-shadow: 0 0 20px rgba(0,0,0,0.7);
-    z-index: 999;
-  }
-  .btn {
-    width: 100%; padding: 14px;
-    margin-top: 8px;
-    border: none; border-radius: 18px;
-    background: #6200ea; color: #fff;
-    font-size: 15px; font-weight: 600;
-  }
-  .addressbox {
-    padding: 8px;
-    margin-top: 10px;
-    background: rgba(0, 0, 0, 0.5);
-    border-radius: 14px;
-  }
-</style>
+  <style>
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
+      background: black;
+      color: white;
+      overflow: hidden;
+    }
+
+    #map {
+      height: 100vh;
+      width: 100%;
+    }
+
+    /* Liquid Glass Panel */
+    .glass {
+      position: absolute;
+      bottom: 15px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 92%;
+      max-width: 430px;
+      padding: 16px;
+      border-radius: 28px;
+      backdrop-filter: blur(20px);
+      background: rgba(255,255,255,0.10);
+      box-shadow: 0 0 30px rgba(0,0,0,0.8);
+      z-index: 999;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 18px;
+      text-align: center;
+      font-weight: 600;
+    }
+
+    .btn {
+      width: 100%;
+      margin-top: 10px;
+      padding: 14px;
+      border: none;
+      border-radius: 18px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      background: rgba(120,0,255,0.75);
+      color: white;
+      transition: 0.25s;
+    }
+
+    .btn:hover {
+      background: rgba(180,0,255,0.9);
+    }
+
+    /* Scan animation */
+    #scanBox {
+      display: none;
+      margin-top: 10px;
+      text-align: center;
+      font-size: 14px;
+      opacity: 0.8;
+    }
+
+    .pulse {
+      width: 20px;
+      height: 20px;
+      margin: 10px auto;
+      border-radius: 50%;
+      background: violet;
+      animation: pulse 1s infinite;
+    }
+
+    @keyframes pulse {
+      0% {transform: scale(1); opacity: 0.3;}
+      50% {transform: scale(2.4); opacity: 1;}
+      100% {transform: scale(1); opacity: 0.3;}
+    }
+
+    /* Log */
+    #log {
+      margin-top: 10px;
+      max-height: 90px;
+      overflow-y: auto;
+      font-size: 13px;
+      opacity: 0.85;
+    }
+
+    /* Settings Modal */
+    #settings {
+      display: none;
+      position: absolute;
+      top: 15px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 92%;
+      max-width: 420px;
+      padding: 18px;
+      border-radius: 24px;
+      backdrop-filter: blur(20px);
+      background: rgba(0,0,0,0.75);
+      z-index: 1000;
+    }
+
+    select, input {
+      width: 100%;
+      padding: 10px;
+      margin-top: 6px;
+      border-radius: 14px;
+      border: none;
+      outline: none;
+      font-size: 15px;
+    }
+
+    /* Info Modal */
+    #infoModal {
+      display: none;
+      position: absolute;
+      top: 25%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 90%;
+      max-width: 400px;
+      padding: 18px;
+      border-radius: 24px;
+      backdrop-filter: blur(22px);
+      background: rgba(255,255,255,0.10);
+      box-shadow: 0 0 25px rgba(0,0,0,0.8);
+      z-index: 2000;
+      text-align: left;
+      animation: fadeIn 0.3s;
+    }
+
+    @keyframes fadeIn {
+      from {opacity: 0; transform: translateX(-50%) scale(0.9);}
+      to {opacity: 1; transform: translateX(-50%) scale(1);}
+    }
+  </style>
 </head>
 
 <body>
+
 <div id="map"></div>
 
-<div class="panel">
-  <button class="btn" onclick="openSettings()">⚙ Настройки поиска</button>
-  <button class="btn" onclick="doScan()">🔍 Сканировать аномалии</button>
-  <button class="btn" onclick="goToTarget()">🚶 Начать навигацию</button>
+<!-- Settings -->
+<div id="settings">
+  <h2>⚙ Настройки поиска</h2>
+
+  <label>Радиус поиска (км):</label>
+  <input type="number" id="radius" value="5" min="1" max="10">
+
+  <label style="margin-top:10px;display:block;">Категория аномалии:</label>
+  <select id="category">
+    <option value="⚡ Электро">⚡ Электро</option>
+    <option value="🕳 Разлом">🕳 Разлом</option>
+    <option value="☢ Радиация">☢ Радиация</option>
+    <option value="🔮 Артефакт">🔮 Артефакт</option>
+    <option value="👁 Наблюдение">👁 Наблюдение</option>
+  </select>
+
+  <button class="btn" onclick="closeSettings()">Закрыть</button>
 </div>
 
-<!-- Настройки -->
-<div id="settings" style="display:none; position:absolute; top:10px; left:50%; transform:translateX(-50%); width:90%; max-width:400px; backdrop-filter:blur(18px); background:rgba(0,0,0,0.7); padding:12px; border-radius:16px; z-index:999;">
-  <label>Радиус (км):
-    <input id="radius" type="number" value="8" min="1" max="30" style="width:60px;">
-  </label>
-  <br><br>
-  <label>Категория:
-    <select id="cat">
-      <option value="all">Все</option>
-      <option value="⚡ Электро">⚡ Электро</option>
-      <option value="🕳 Пространственный">🕳 Пространственный</option>
-      <option value="☢ Радиация">☢ Радиация</option>
-      <option value="🔮 Артефакт">🔮 Артефакт</option>
-      <option value="👁 Наблюдение">👁 Наблюдение</option>
-    </select>
-  </label>
-  <br><br>
-  <button class="btn" onclick="closeSettings()">Закрыть</button>
+<!-- Info -->
+<div id="infoModal"></div>
+
+<!-- Main Panel -->
+<div class="glass">
+  <h2>☢ STALKER Explorer</h2>
+
+  <button class="btn" onclick="openSettings()">⚙ Настройки</button>
+  <button class="btn" onclick="scan()">🔍 Сканировать</button>
+  <button class="btn" onclick="startNavigation()">🚶 Навигация</button>
+
+  <div id="scanBox">
+    <div class="pulse"></div>
+    Поиск аномалий...
+  </div>
+
+  <div id="log"></div>
 </div>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.js"></script>
 
 <script>
-let map, userLoc, anomalies = [], chosen = null, routerControl;
+let map, userMarker;
+let anomalyMarker = null;
+let anomalyData = null;
+let routeControl = null;
 
-const types = ["⚡ Электро","🕳 Пространственный","☢ Радиация","🔮 Артефакт","👁 Наблюдение"];
-
-function log(msg) { console.log(msg); }
-
-/* === I18n Reverse Geocoding для адресов === */
-async function getAddress(lat,lon) {
-  try {
-    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
-    const data = await res.json();
-    return data.display_name;
-  } catch { return ""; }
+function log(text) {
+  document.getElementById("log").innerHTML += "➤ " + text + "<br>";
 }
 
-/* === Инициализация карты (Dark tiles) === */
-navigator.geolocation.getCurrentPosition(p => {
-  map = L.map('map').setView([p.coords.latitude,p.coords.longitude], 14);
+function openSettings() {
+  document.getElementById("settings").style.display = "block";
+}
+function closeSettings() {
+  document.getElementById("settings").style.display = "none";
+}
 
-  L.tileLayer('https://api.maptiler.com/tiles/darkmatter/{z}/{x}/{y}.png?key=YOUR_MAPTILER_KEY', {
-    attribution: '&copy; OSM & MapTiler'
+/* Init Map Dark */
+navigator.geolocation.getCurrentPosition(pos => {
+  const lat = pos.coords.latitude;
+  const lon = pos.coords.longitude;
+
+  map = L.map("map").setView([lat, lon], 14);
+
+  /* Dark Theme Tiles */
+  L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+    attribution: "DarkMap"
   }).addTo(map);
 
-  userLoc = L.marker([p.coords.latitude,p.coords.longitude]).addTo(map);
+  userMarker = L.circleMarker([lat, lon], {
+    radius: 10,
+    color: "cyan",
+    fillOpacity: 1
+  }).addTo(map);
+
+  log("Сканер активирован. Ты в зоне.");
 });
 
-function openSettings(){ document.getElementById("settings").style.display = "block"; }
-function closeSettings(){ document.getElementById("settings").style.display = "none"; }
+/* Reverse Address */
+async function getAddress(lat, lon) {
+  const res = await fetch(
+    `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`
+  );
+  const data = await res.json();
+  return data.display_name;
+}
 
-/* === Сканируем аномалии === */
-function doScan() {
-  anomalies.forEach(a=>map.removeLayer(a.marker));
-  anomalies = []; chosen = null;
+/* Scan */
+function scan() {
+  if (!map) return;
 
-  const r = parseFloat(document.getElementById("radius").value)||8;
-  const cat = document.getElementById("cat").value;
+  document.getElementById("scanBox").style.display = "block";
 
-  const base = map.getCenter();
-  for (let i=0;i<7;i++){
-    const dx = r*Math.random(), ang = Math.random()*Math.PI*2;
-    const lat = base.lat + dx*Math.cos(ang)/111;
-    const lon = base.lng + dx*Math.sin(ang)/111;
+  if (anomalyMarker) map.removeLayer(anomalyMarker);
+  anomalyData = null;
 
-    const tp = types[Math.floor(Math.random()*types.length)];
-    if (cat!="all" && tp.indexOf(cat)!=0) continue;
+  log("Запущено сканирование...");
 
-    const danger = Math.ceil(Math.random()*5);
-    const m = L.circleMarker([lat,lon],{radius:9,color:danger>=4?"red":"orange"}).addTo(map);
+  setTimeout(async () => {
+    document.getElementById("scanBox").style.display = "none";
 
-    m.bindPopup(`${tp}<br>Уровень: ${danger}<br><button onclick="showInfo(${lat},${lon},'${tp}',${danger})">Инфо</button>`);
+    const radius = parseFloat(document.getElementById("radius").value);
+    const category = document.getElementById("category").value;
 
-    anomalies.push({lat,lon,tp,danger,marker:m});
+    const base = userMarker.getLatLng();
+
+    /* Generate ONE anomaly */
+    const angle = Math.random() * Math.PI * 2;
+    const dist = radius * Math.random();
+
+    const lat = base.lat + (dist * Math.cos(angle)) / 111;
+    const lon = base.lng + (dist * Math.sin(angle)) / 111;
+
+    const power = Math.floor(Math.random() * 5) + 1;
+    const addr = await getAddress(lat, lon);
+
+    anomalyData = { lat, lon, category, power, addr };
+
+    anomalyMarker = L.circleMarker([lat, lon], {
+      radius: 12,
+      color: power >= 4 ? "red" : "orange",
+      fillOpacity: 0.85
+    })
+      .addTo(map)
+      .on("click", showInfo);
+
+    log("Аномалия обнаружена: " + category);
+  }, 2000);
+}
+
+/* Info Modal */
+function showInfo() {
+  const m = document.getElementById("infoModal");
+  m.style.display = "block";
+
+  m.innerHTML = `
+    <h2>${anomalyData.category}</h2>
+    <p>⚠ Сила: ${anomalyData.power}/5</p>
+    <p>📍 Координаты: ${anomalyData.lat.toFixed(5)}, ${anomalyData.lon.toFixed(5)}</p>
+    <p>🏙 Адрес: ${anomalyData.addr}</p>
+    <button class="btn" onclick="closeInfo()">Закрыть</button>
+  `;
+}
+
+function closeInfo() {
+  document.getElementById("infoModal").style.display = "none";
+}
+
+/* Navigation */
+function startNavigation() {
+  if (!anomalyData) {
+    log("Нет выбранной аномалии.");
+    return;
   }
-}
 
-/* === Показ информации === */
-async function showInfo(lat,lon,tp,danger){
-  const addr = await getAddress(lat,lon);
-  alert(`Тип: ${tp}\nУровень: ${danger}\nКоординаты: ${lat.toFixed(5)},${lon.toFixed(5)}\nАдрес: ${addr}`);
-  chosen = {lat,lon};
-}
+  if (routeControl) map.removeControl(routeControl);
 
-/* === Маршрут по дорогам === */
-function goToTarget(){
-  if(!chosen){ alert("Выберите аномалию"); return; }
-  if(routerControl) map.removeControl(routerControl);
+  log("Построение маршрута по дорогам...");
 
-  routerControl = L.Routing.control({
+  routeControl = L.Routing.control({
     waypoints: [
-      L.latLng(userLoc.getLatLng()),
-      L.latLng(chosen.lat,chosen.lon)
+      userMarker.getLatLng(),
+      L.latLng(anomalyData.lat, anomalyData.lon)
     ],
-    showAlternatives: false,
-    lineOptions: { styles: [{color:'cyan',weight:5}] }
+    lineOptions: {
+      styles: [{ color: "cyan", weight: 5 }]
+    },
+    createMarker: () => null,
+    addWaypoints: false,
+    draggableWaypoints: false,
+    routeWhileDragging: false
   }).addTo(map);
+
+  log("Навигация активна. Иди к точке.");
 }
 </script>
+
 </body>
 </html>
