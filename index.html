@@ -1,362 +1,662 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no"/>
-  <title>KiwiWay - Anomaly Radar</title>
-
+  <title>KiwiWay – Anomaly Radar</title>
   <script src="https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.js"></script>
   <link href="https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.css" rel="stylesheet"/>
 
   <style>
     :root {
-      --ios-blue:#0A84FF;
-      --ios-green:#30D158;
-      --ios-red:#FF453A;
-      --glass-bg:rgba(25,25,30,0.55);
-      --glass-border:rgba(255,255,255,0.18);
-      --blur:blur(40px) saturate(220%);
+      --blue:  #0A84FF;
+      --green: #30D158;
+      --red:   #FF453A;
+      --glass: rgba(28,28,32,0.55);
+      --glass-light: rgba(255,255,255,0.10);
+      --border: rgba(255,255,255,0.18);
+      --blur: blur(40px) saturate(220%);
     }
 
-    body{margin:0;background:#000;font-family:-apple-system,system-ui;color:#fff;overflow:hidden;}
+    * { box-sizing:border-box; margin:0; padding:0; }
 
-    #map{position:absolute;inset:0;z-index:1;filter:brightness(0.85) contrast(1.15);}
+    body {
+      background:#000;
+      font-family:-apple-system,system-ui,sans-serif;
+      color:#fff;
+      overflow:hidden;
+      height:100dvh;
+    }
 
-    .ui-panel{
-      position:absolute;bottom:28px;left:50%;transform:translateX(-50%);
-      width:92%;max-width:420px;
-      background:var(--glass-bg);
+    /* MAP */
+    #map {
+      position:absolute; inset:0;
+      filter:brightness(0.8) contrast(1.05);
+      transition:filter 1.2s;
+    }
+    #map.scanning { filter:brightness(0.45) contrast(1.3) saturate(0.2) hue-rotate(185deg); }
+    #map.found    { filter:brightness(0.9) contrast(1.1) saturate(1.4); }
+
+    /* PULSE RINGS */
+    #pulse-ring {
+      position:fixed; inset:0; pointer-events:none; z-index:10;
+      display:none; align-items:center; justify-content:center;
+    }
+    .p-ring {
+      position:absolute; border-radius:50%;
+      border:2px solid var(--green); opacity:0;
+      animation:expand 2s ease-out infinite;
+    }
+    .p-ring:nth-child(2){ animation-delay:.65s; }
+    .p-ring:nth-child(3){ animation-delay:1.3s; }
+    @keyframes expand {
+      0%   { width:50px;  height:50px;  opacity:.85; }
+      100% { width:520px; height:520px; opacity:0; }
+    }
+
+    /* FOUND GLOW */
+    #found-glow {
+      position:fixed; inset:0; pointer-events:none; z-index:9;
+      background:radial-gradient(circle at center, rgba(48,209,88,.18) 0%, transparent 65%);
+      opacity:0; transition:opacity 1.2s;
+    }
+    #found-glow.show { opacity:1; }
+
+    /* BOTTOM PANEL */
+    .panel {
+      position:fixed; bottom:0; left:0; right:0;
+      padding:0 14px 30px; z-index:200;
+    }
+
+    .glass-card {
+      background:var(--glass);
       backdrop-filter:var(--blur);
       -webkit-backdrop-filter:var(--blur);
-      border:1px solid var(--glass-border);
-      border-radius:40px;
-      padding:22px;
-      z-index:100;
-      box-shadow:0 25px 70px rgba(0,0,0,0.65);
-      animation:floatIn .8s ease;
-    }
-
-    @keyframes floatIn{
-      from{opacity:0;transform:translateX(-50%) translateY(25px) scale(0.96);} 
-      to{opacity:1;transform:translateX(-50%) translateY(0) scale(1);} 
-    }
-
-    .btn{
-      width:100%;padding:16px;margin:6px 0;border:none;
-      border-radius:22px;font-size:15px;font-weight:700;
-      cursor:pointer;
-      background:rgba(10,132,255,0.55);
-      color:#fff;
-      border:1px solid var(--glass-border);
-      box-shadow:0 8px 20px rgba(0,0,0,0.35);
-      transition:all .25s cubic-bezier(.25,1,.5,1);
-    }
-    .btn-sec{background:rgba(255,255,255,0.10);}
-    .btn:active{transform:scale(0.94);opacity:0.85;}
-
-    #scan-box{
-      display:none;
-      padding:18px;
-      border-radius:26px;
-      background:rgba(255,255,255,0.06);
-      border:1px solid rgba(255,255,255,0.08);
-      animation:pulseBox 1.2s infinite ease-in-out;
-    }
-
-    @keyframes pulseBox{
-      0%,100%{transform:scale(1);opacity:0.85;}
-      50%{transform:scale(1.02);opacity:1;}
-    }
-
-    .step{margin:8px 0;font-size:14px;letter-spacing:0.4px;}
-    .dim{opacity:0.25;}
-
-    #radar{
-      width:80px;height:80px;margin:0 auto 12px;
-      border-radius:50%;
-      border:1px solid rgba(255,255,255,0.25);
-      background:radial-gradient(circle,rgba(48,209,88,0.18) 0%,transparent 70%);
-      box-shadow:inset 0 0 25px rgba(48,209,88,0.15);
-    }
-
-    #radar-arrow{
-      position:absolute;top:50%;left:50%;width:3px;height:36px;
-      background:var(--ios-green);
-      transform-origin:bottom center;
-      transform:translate(-50%,-100%) rotate(0deg);
-      transition:transform .9s cubic-bezier(.25,1,.5,1);
-      border-radius:2px;
-      box-shadow:0 0 12px var(--ios-green);
-    }
-
-    .modal{
-      position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
-      width:85%;max-width:340px;
-      background:var(--glass-bg);
-      backdrop-filter:var(--blur);
+      border:1px solid var(--border);
       border-radius:34px;
-      padding:24px;
-      display:none;
-      z-index:1000;
-      border:1px solid var(--glass-border);
-      box-shadow:0 30px 80px rgba(0,0,0,0.7);
-      animation:pop .35s ease;
+      padding:20px;
+      box-shadow:
+        0 2px 0 rgba(255,255,255,.13) inset,
+        0 30px 70px rgba(0,0,0,.65),
+        0 0 0 .5px rgba(0,0,0,.35);
     }
 
-    @keyframes pop{from{opacity:0;transform:translate(-50%,-50%) scale(0.92);}to{opacity:1;transform:translate(-50%,-50%) scale(1);}}
+    /* BUTTONS */
+    .btn {
+      display:block; width:100%; padding:14px;
+      border:none; border-radius:20px;
+      font-size:15px; font-weight:600; letter-spacing:.3px;
+      cursor:pointer; color:#fff;
+      transition:transform .15s, opacity .15s;
+      position:relative; overflow:hidden;
+    }
+    .btn::after {
+      content:''; position:absolute; inset:0; border-radius:inherit;
+      background:linear-gradient(to bottom,rgba(255,255,255,.16),transparent);
+      pointer-events:none;
+    }
+    .btn:active { transform:scale(0.96); opacity:.82; }
 
-    .active{display:block;}
+    .btn-primary {
+      background:linear-gradient(135deg,#0A84FF,#0060CC);
+      box-shadow:0 4px 22px rgba(10,132,255,.5), 0 1px 0 rgba(255,255,255,.22) inset;
+      margin-top:10px; font-size:16px; letter-spacing:.5px;
+      animation:btnGlow 3s ease-in-out infinite;
+    }
+    @keyframes btnGlow {
+      0%,100%{ box-shadow:0 4px 22px rgba(10,132,255,.5),0 1px 0 rgba(255,255,255,.22) inset; }
+      50%    { box-shadow:0 4px 38px rgba(10,132,255,.8),0 1px 0 rgba(255,255,255,.22) inset; }
+    }
+    .btn-green {
+      background:linear-gradient(135deg,#30D158,#1FA040);
+      box-shadow:0 4px 22px rgba(48,209,88,.5),0 1px 0 rgba(255,255,255,.22) inset;
+      font-size:16px;
+    }
+    .btn-ghost {
+      background:var(--glass-light);
+      border:1px solid var(--border);
+    }
+    .btn-danger { color:var(--red); }
+    .row { display:flex; gap:9px; margin-bottom:9px; }
+    .row .btn { flex:1; }
 
-    #crosshair{
-      display:none;position:absolute;top:50%;left:50%;
-      transform:translate(-50%,-50%);
-      width:32px;height:32px;
-      border:2px solid var(--ios-green);
-      border-radius:50%;
-      box-shadow:0 0 15px rgba(48,209,88,0.6);
-      z-index:50;
-      animation:crossPulse 1.5s infinite;
+    /* RADAR */
+    #radar-wrap {
+      display:none; flex-direction:column;
+      align-items:center; gap:8px; margin-bottom:14px;
+    }
+    #radar-svg {
+      width:82px; height:82px;
+      filter:drop-shadow(0 0 14px rgba(48,209,88,.65));
+    }
+    #signal-bar-wrap {
+      width:100%; background:rgba(255,255,255,.08);
+      border-radius:10px; height:7px; overflow:hidden;
+    }
+    #signal-bar {
+      height:100%; border-radius:10px;
+      background:linear-gradient(90deg,#30D158,#0A84FF);
+      width:0%; transition:width .8s ease;
+      box-shadow:0 0 10px rgba(48,209,88,.55);
+    }
+    #signal-label {
+      font-size:11px; font-weight:700;
+      letter-spacing:1.8px; color:var(--green); text-transform:uppercase;
     }
 
-    @keyframes crossPulse{0%,100%{transform:translate(-50%,-50%) scale(1);}50%{transform:translate(-50%,-50%) scale(1.15);}}
+    /* SCAN STEPS */
+    #scan-box { display:none; margin-bottom:12px; }
+    .step-item {
+      display:flex; align-items:center; gap:10px;
+      padding:9px 13px; border-radius:14px; margin-bottom:5px;
+      background:rgba(255,255,255,.04);
+      border:1px solid rgba(255,255,255,.06);
+      font-size:13px; opacity:.28;
+      transition:opacity .4s, background .4s, transform .3s;
+    }
+    .step-item.active {
+      opacity:1;
+      background:rgba(48,209,88,.13);
+      border-color:rgba(48,209,88,.28);
+      transform:translateX(5px);
+    }
+    .step-item.done { opacity:.65; }
+    .step-dot {
+      width:7px; height:7px; border-radius:50%;
+      background:rgba(255,255,255,.3); flex-shrink:0;
+      transition:background .3s;
+    }
+    .step-item.active .step-dot {
+      background:var(--green);
+      box-shadow:0 0 8px var(--green);
+      animation:blink .65s ease-in-out infinite alternate;
+    }
+    .step-item.done .step-dot { background:var(--blue); }
+    @keyframes blink{ from{opacity:1} to{opacity:.15} }
 
+    /* PROGRESS */
+    #progress-wrap {
+      display:none; margin-bottom:10px;
+      height:3px; background:rgba(255,255,255,.08);
+      border-radius:4px; overflow:hidden;
+    }
+    #progress-bar {
+      height:100%; border-radius:4px;
+      background:linear-gradient(90deg,var(--blue),var(--green));
+      width:0%; transition:width .45s ease;
+    }
+
+    /* MODALS */
+    .modal-overlay {
+      position:fixed; inset:0;
+      background:rgba(0,0,0,.5);
+      backdrop-filter:blur(10px);
+      z-index:500; display:none;
+      align-items:flex-end; justify-content:center;
+      padding:0 14px 30px;
+    }
+    .modal-overlay.open { display:flex; animation:fadeIn .22s; }
+    @keyframes fadeIn{ from{opacity:0} to{opacity:1} }
+    .modal-sheet {
+      width:100%; max-width:440px;
+      background:rgba(20,20,24,.78);
+      backdrop-filter:blur(55px) saturate(200%);
+      border:1px solid var(--border);
+      border-radius:34px; padding:22px;
+      box-shadow:0 2px 0 rgba(255,255,255,.1) inset, 0 30px 60px rgba(0,0,0,.72);
+      animation:slideUp .32s cubic-bezier(.25,.46,.45,.94);
+    }
+    @keyframes slideUp{ from{transform:translateY(55px);opacity:0} to{transform:translateY(0);opacity:1} }
+    .modal-handle {
+      width:36px; height:4px;
+      background:rgba(255,255,255,.2);
+      border-radius:2px; margin:0 auto 18px;
+    }
+    .modal-title { font-size:17px; font-weight:600; margin-bottom:16px; text-align:center; }
+
+    label {
+      display:block; font-size:11px; font-weight:700;
+      letter-spacing:1px; color:rgba(255,255,255,.5);
+      text-transform:uppercase; margin:13px 0 5px;
+    }
+    select {
+      width:100%; padding:12px; border-radius:14px;
+      background:rgba(255,255,255,.08); border:1px solid var(--border);
+      color:#fff; font-size:15px; appearance:none;
+    }
+    input[type=range]{ width:100%; accent-color:var(--blue); }
+
+    /* TOP BADGE */
+    #top-badge {
+      position:fixed; top:50px; left:50%;
+      transform:translateX(-50%) translateY(-90px);
+      background:var(--glass);
+      backdrop-filter:var(--blur);
+      border:1px solid var(--border);
+      border-radius:20px; padding:8px 18px;
+      font-size:13px; font-weight:600;
+      z-index:300; white-space:nowrap;
+      box-shadow:0 2px 0 rgba(255,255,255,.1) inset;
+      transition:transform .55s cubic-bezier(.34,1.56,.64,1);
+    }
+    #top-badge.show{ transform:translateX(-50%) translateY(0); }
+
+    /* CROSSHAIR */
+    #crosshair {
+      display:none; position:fixed; top:50%; left:50%;
+      transform:translate(-50%,-50%); z-index:50;
+    }
+    #crosshair svg{ filter:drop-shadow(0 0 6px var(--green)); animation:spin 5s linear infinite; }
+    @keyframes spin{ to{transform:rotate(360deg)} }
   </style>
 </head>
 <body>
 
 <div id="map"></div>
-<div id="crosshair"></div>
+<div id="found-glow"></div>
+<div id="pulse-ring">
+  <div class="p-ring"></div>
+  <div class="p-ring"></div>
+  <div class="p-ring"></div>
+</div>
 
-<div class="ui-panel">
+<div id="crosshair">
+  <svg width="40" height="40" viewBox="0 0 40 40">
+    <circle cx="20" cy="20" r="17" fill="none" stroke="#30D158" stroke-width="1.4" stroke-dasharray="5 3"/>
+    <circle cx="20" cy="20" r="3" fill="#30D158"/>
+    <line x1="20" y1="2"  x2="20" y2="9"  stroke="#30D158" stroke-width="1.5"/>
+    <line x1="20" y1="31" x2="20" y2="38" stroke="#30D158" stroke-width="1.5"/>
+    <line x1="2"  y1="20" x2="9"  y2="20" stroke="#30D158" stroke-width="1.5"/>
+    <line x1="31" y1="20" x2="38" y2="20" stroke="#30D158" stroke-width="1.5"/>
+  </svg>
+</div>
 
-  <div id="radar-ui" style="display:none;text-align:center;position:relative;">
-    <div id="radar"><div id="radar-arrow"></div></div>
-    <div id="distance-text" style="font-size:12px;color:var(--ios-green);font-weight:800;">
-      СИГНАЛ: 0%
+<div id="top-badge">📡 <span id="badge-text">KiwiWay Radar</span></div>
+
+<div class="panel">
+  <div class="glass-card">
+
+    <!-- Radar -->
+    <div id="radar-wrap">
+      <svg id="radar-svg" viewBox="0 0 80 80">
+        <defs>
+          <radialGradient id="rg" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#30D158" stop-opacity=".25"/>
+            <stop offset="100%" stop-color="#30D158" stop-opacity="0"/>
+          </radialGradient>
+        </defs>
+        <circle cx="40" cy="40" r="38" fill="url(#rg)" stroke="rgba(48,209,88,.3)" stroke-width="1"/>
+        <circle cx="40" cy="40" r="25" fill="none" stroke="rgba(48,209,88,.18)" stroke-width="1"/>
+        <circle cx="40" cy="40" r="12" fill="none" stroke="rgba(48,209,88,.18)" stroke-width="1"/>
+        <line x1="40" y1="2" x2="40" y2="78" stroke="rgba(48,209,88,.12)" stroke-width="1"/>
+        <line x1="2" y1="40" x2="78" y2="40" stroke="rgba(48,209,88,.12)" stroke-width="1"/>
+        <line id="sweep" x1="40" y1="40" x2="40" y2="4" stroke="#30D158" stroke-width="2.5" stroke-linecap="round" opacity=".9"/>
+        <circle id="blip" cx="40" cy="15" r="4" fill="#30D158" opacity="0"/>
+      </svg>
+      <div id="signal-label">СИГНАЛ: 0%</div>
+      <div id="signal-bar-wrap"><div id="signal-bar"></div></div>
     </div>
-  </div>
 
-  <div id="scan-box">
-    <div id="step1" class="step">🎲 Генерация точек...</div>
-    <div id="step2" class="step dim">🔍 Фильтрация...</div>
-    <div id="step3" class="step dim">⚡ Настройка мощности...</div>
-    <div id="step4" class="step dim">🎯 Выбор аномалии...</div>
-    <div id="step5" class="step dim">📡 Запуск радара...</div>
-  </div>
-
-  <div id="ui-idle">
-    <div style="display:flex;gap:10px;">
-      <button class="btn btn-sec" onclick="openM('settings')">Настройки</button>
-      <button class="btn btn-sec" onclick="openM('map-styles')">Слои</button>
+    <!-- Steps -->
+    <div id="scan-box">
+      <div class="step-item" id="s1"><div class="step-dot"></div><span>🎲 Генерация координат</span></div>
+      <div class="step-item" id="s2"><div class="step-dot"></div><span>🔍 Геообработка точек</span></div>
+      <div class="step-item" id="s3"><div class="step-dot"></div><span>⚡ Анализ мощности</span></div>
+      <div class="step-item" id="s4"><div class="step-dot"></div><span>🎯 Выбор аномалии</span></div>
+      <div class="step-item" id="s5"><div class="step-dot"></div><span>📡 Запуск радара</span></div>
     </div>
 
-    <button class="btn" onclick="executeScan()">НАЙТИ АНОМАЛИЮ</button>
-  </div>
+    <!-- Progress bar -->
+    <div id="progress-wrap"><div id="progress-bar"></div></div>
 
-  <div id="ui-found" style="display:none;">
-    <button class="btn" style="background:rgba(48,209,88,0.75);" onclick="resetSystem()">СБРОС</button>
+    <!-- Idle -->
+    <div id="ui-idle">
+      <div class="row">
+        <button class="btn btn-ghost" onclick="openModal('settings')">⚙️ Настройки</button>
+        <button class="btn btn-ghost" onclick="openModal('layers')">🗺 Слои</button>
+      </div>
+      <div class="row">
+        <button class="btn btn-ghost" id="selectBtn" onclick="toggleSelect()">📍 Точка</button>
+        <button class="btn btn-ghost" onclick="goToMe()">🎯 Я тут</button>
+      </div>
+      <button class="btn btn-primary" onclick="executeScan()">НАЙТИ АНОМАЛИЮ</button>
+    </div>
+
+    <!-- Found -->
+    <div id="ui-found" style="display:none;">
+      <button class="btn btn-green" onclick="buildRoute()">🧭 ПОСТРОИТЬ МАРШРУТ</button>
+      <button class="btn btn-ghost btn-danger" style="margin-top:9px;" onclick="resetSystem()">✕ Сброс</button>
+    </div>
+
   </div>
 </div>
 
-<div id="settings" class="modal">
-  <h3 style="margin-top:0;">Настройки</h3>
-  <label>Категория</label>
-  <select id="catSelect" style="width:100%;padding:14px;border-radius:16px;">
-    <option value="quantum">Квантовый</option>
-    <option value="power">Мощный</option>
-    <option value="void">Пустота</option>
-  </select>
-
-  <label>Радиус: <span id="rL">5</span> км</label>
-  <input type="range" id="radiusIn" min="1" max="15" value="5" oninput="syncUI()"/>
-
-  <label>Мощность: <span id="pL">25</span>%</label>
-  <input type="range" id="powerIn" min="1" max="100" value="25" oninput="syncUI()"/>
-
-  <button class="btn" onclick="closeM()">ГОТОВО</button>
+<!-- SETTINGS -->
+<div class="modal-overlay" id="settings">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Настройки радара</div>
+    <label>Категория аномалии</label>
+    <select id="catSelect">
+      <option value="quantum">🌀 Квантовый</option>
+      <option value="power">⚡ Мощный</option>
+      <option value="void">🌑 Пустота</option>
+    </select>
+    <label>Радиус: <span id="rL">5</span> км</label>
+    <input type="range" id="radiusIn" min="1" max="15" value="5" oninput="syncSliders()"/>
+    <label>Целевая мощность: <span id="pL">50</span>%</label>
+    <input type="range" id="powerIn" min="1" max="100" value="50" oninput="syncSliders()"/>
+    <button class="btn btn-primary" style="margin-top:16px;" onclick="closeModal('settings')">ГОТОВО</button>
+  </div>
 </div>
 
-<div id="map-styles" class="modal">
-  <button class="btn btn-sec" onclick="setMapStyle('dark')">ТЁМНАЯ</button>
-  <button class="btn btn-sec" onclick="setMapStyle('sat')">СПУТНИК</button>
-  <button class="btn" onclick="closeM()">ЗАКРЫТЬ</button>
+<!-- LAYERS -->
+<div class="modal-overlay" id="layers">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Стиль карты</div>
+    <button class="btn btn-ghost" style="margin-bottom:9px;" onclick="setStyle('dark')">🌑 Тёмная</button>
+    <button class="btn btn-ghost" style="margin-bottom:9px;" onclick="setStyle('sat')">🛰 Спутник</button>
+    <button class="btn btn-ghost" onclick="closeModal('layers')">Закрыть</button>
+  </div>
 </div>
 
 <script>
-  let map,userPos,searchOrigin,targetPoint;
-  let radarInterval;
+let map, userPos, searchOrigin, targetPoint;
+let radarInterval, sweepInterval, sweepAngle = 0;
+let selectMode = false;
 
-  const STYLES={
-    dark:"https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json",
-    sat:{version:8,sources:{s:{type:"raster",tiles:["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"],tileSize:256}},layers:[{id:"s",type:"raster",source:"s"}]}
+const DARK = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
+const SAT  = {
+  version:8,
+  sources:{ s:{ type:"raster", tiles:["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"], tileSize:256 }},
+  layers:[{ id:"s", type:"raster", source:"s" }]
+};
+
+// Init map
+map = new maplibregl.Map({
+  container:"map", style:DARK,
+  center:[37.6,55.7], zoom:11,
+  attributionControl:false
+});
+
+// Geolocation
+navigator.geolocation.getCurrentPosition(pos => {
+  userPos      = [pos.coords.longitude, pos.coords.latitude];
+  searchOrigin = [...userPos];
+  map.setCenter(userPos);
+  new maplibregl.Marker({ color:"#0A84FF", scale:.85 }).setLngLat(userPos).addTo(map);
+  showBadge("📍 Позиция получена");
+  if(map.loaded()) drawCircle(); else map.on('load', drawCircle);
+}, () => {
+  userPos      = [37.6, 55.7];
+  searchOrigin = [...userPos];
+  showBadge("⚠️ Геолокация недоступна");
+  if(map.loaded()) drawCircle(); else map.on('load', drawCircle);
+});
+
+map.on('load', () => { if(searchOrigin) drawCircle(); });
+
+// ── Radius circle ──────────────────────────────────────────
+function drawCircle() {
+  const km  = parseInt(document.getElementById('radiusIn').value);
+  const ctr = searchOrigin || userPos || [37.6,55.7];
+  const pts = 72, ring = [];
+  for(let i=0;i<=pts;i++){
+    const a = (i/pts)*2*Math.PI;
+    ring.push([ctr[0]+(km/111)*Math.cos(a), ctr[1]+(km/111)*Math.sin(a)]);
+  }
+  const geo = {
+    type:"FeatureCollection",
+    features:[
+      { type:"Feature", geometry:{ type:"Polygon", coordinates:[ring] }},
+      { type:"Feature", geometry:{ type:"LineString", coordinates:ring }}
+    ]
   };
 
-  map=new maplibregl.Map({
-    container:"map",
-    style:STYLES.dark,
-    center:[37.6,55.7],
-    zoom:11,
-    attributionControl:false
-  });
-
-  navigator.geolocation.getCurrentPosition(pos=>{
-    userPos=[pos.coords.longitude,pos.coords.latitude];
-    searchOrigin=[...userPos];
-    map.setCenter(userPos);
-    new maplibregl.Marker({color:"#0A84FF"}).setLngLat(userPos).addTo(map);
-    syncUI();
-    drawCircle();
-  });
-
-  function syncUI(){
-    rL.innerText=radiusIn.value;
-    pL.innerText=powerIn.value;
-    drawCircle();
+  if(map.getSource('circle-src')) {
+    map.getSource('circle-src').setData(geo);
+    return;
   }
+  map.addSource('circle-src',{ type:'geojson', data:geo });
+  map.addLayer({ id:'circle-fill', type:'fill', source:'circle-src',
+    filter:['==','$type','Polygon'],
+    paint:{ 'fill-color':'#0A84FF', 'fill-opacity':0.07 }
+  });
+  map.addLayer({ id:'circle-line', type:'line', source:'circle-src',
+    filter:['==','$type','LineString'],
+    paint:{ 'line-color':'#0A84FF', 'line-width':1.8, 'line-opacity':0.55, 'line-dasharray':[5,4] }
+  });
+}
 
-  function drawCircle(){
-    if(!searchOrigin) return;
-    const km=parseInt(radiusIn.value);
-    const circle=genCircle(searchOrigin,km);
+document.getElementById('radiusIn').addEventListener('input', () => {
+  if(map.getSource('circle-src')) drawCircle();
+});
 
-    if(map.getSource("rad")){
-      map.getSource("rad").setData(circle);
+// ── Helpers ────────────────────────────────────────────────
+function syncSliders() {
+  document.getElementById('rL').textContent = radiusIn.value;
+  document.getElementById('pL').textContent = powerIn.value;
+  if(map.getSource('circle-src')) drawCircle();
+}
+
+function showBadge(txt) {
+  document.getElementById('badge-text').textContent = txt;
+  const b = document.getElementById('top-badge');
+  b.classList.add('show');
+  setTimeout(()=>b.classList.remove('show'), 3200);
+}
+
+function goToMe() {
+  if(userPos) map.flyTo({ center:userPos, zoom:13, duration:900 });
+}
+
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+function setStyle(s) {
+  map.setStyle(s==='dark'? DARK : SAT);
+  map.once('styledata', ()=>setTimeout(drawCircle, 300));
+  closeModal('layers');
+}
+
+function toggleSelect() {
+  selectMode = !selectMode;
+  document.getElementById('crosshair').style.display = selectMode ? 'block' : 'none';
+  document.getElementById('selectBtn').textContent = selectMode ? '✅ Готово' : '📍 Точка';
+  if(!selectMode) {
+    searchOrigin = map.getCenter().toArray();
+    if(map.getSource('circle-src')) drawCircle();
+    showBadge("📍 Точка выбрана");
+  }
+}
+
+function haversine(p1,p2) {
+  const R=6371000, dLat=(p2[1]-p1[1])*Math.PI/180, dLon=(p2[0]-p1[0])*Math.PI/180;
+  const a=Math.sin(dLat/2)**2+Math.cos(p1[1]*Math.PI/180)*Math.cos(p2[1]*Math.PI/180)*Math.sin(dLon/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
+function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+function setStep(i,state){
+  document.getElementById('s'+i).className='step-item '+(state||'');
+}
+function setProgress(p){
+  document.getElementById('progress-bar').style.width=p+'%';
+}
+
+// ── Main Scan (≤15 sec) ───────────────────────────────────
+async function executeScan() {
+  const mode    = document.getElementById('catSelect').value;
+  const radius  = parseInt(document.getElementById('radiusIn').value);
+  const target  = parseInt(document.getElementById('powerIn').value);
+  const origin  = searchOrigin || userPos || [37.6,55.7];
+
+  // UI switch
+  document.getElementById('ui-idle').style.display   = 'none';
+  document.getElementById('ui-found').style.display  = 'none';
+  document.getElementById('scan-box').style.display  = 'block';
+  document.getElementById('progress-wrap').style.display = 'block';
+  document.getElementById('pulse-ring').style.display = 'flex';
+  document.getElementById('map').className            = 'scanning';
+  document.getElementById('found-glow').classList.remove('show');
+
+  setProgress(0);
+  for(let i=1;i<=5;i++) setStep(i,'');
+
+  // Step 1: Generate pool (instant)
+  setStep(1,'active');
+  const POOL=40, pool=[];
+  for(let i=0;i<POOL;i++){
+    const a=(Math.random()*Math.PI*2), d=(Math.sqrt(Math.random())*radius)/111;
+    pool.push([origin[0]+d*Math.cos(a), origin[1]+d*Math.sin(a)]);
+  }
+  await sleep(550);
+  setStep(1,'done'); setProgress(20);
+
+  // Step 2: Parallel geo lookup (max 4 sec timeout)
+  setStep(2,'active');
+  let valid=[];
+  try {
+    const BATCH = pool.slice(0,12); // small batch = fast
+    const results = await Promise.allSettled(
+      BATCH.map(pt =>
+        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pt[1]}&lon=${pt[0]}&zoom=16`,
+          { signal:AbortSignal.timeout(4000) })
+        .then(r=>r.json())
+        .then(data=>({ coords:pt, data }))
+      )
+    );
+    results.forEach(r=>{
+      if(r.status!=='fulfilled') return;
+      const {coords,data}=r.value;
+      let ok=false;
+      if(mode==='quantum') ok=data.type==='cemetery'||data.type==='place_of_worship';
+      if(mode==='power')   ok=data.type==='construction'||data.type==='industrial';
+      if(mode==='void')    ok=!data.address?.road&&!data.address?.residential;
+      // always push some for playability
+      if(ok||Math.random()<0.35) valid.push({coords,data});
+    });
+  } catch(e){}
+
+  // Fallback guarantee
+  if(!valid.length) pool.forEach(pt=>{ if(Math.random()<.5) valid.push({coords:pt,data:{}}); });
+  if(!valid.length) valid = pool.map(pt=>({coords:pt,data:{}}));
+
+  setStep(2,'done'); setProgress(52);
+
+  // Step 3: Power
+  setStep(3,'active');
+  await sleep(450);
+  valid.forEach(p=>p.power=Math.floor(Math.random()*100)+1);
+  setStep(3,'done'); setProgress(72);
+
+  // Step 4: Select
+  setStep(4,'active');
+  await sleep(380);
+  valid.sort((a,b)=>Math.abs(a.power-target)-Math.abs(b.power-target));
+  targetPoint = valid[0].coords;
+  setStep(4,'done'); setProgress(88);
+
+  // Step 5: Radar init
+  setStep(5,'active');
+  await sleep(450);
+  setStep(5,'done'); setProgress(100);
+  await sleep(350);
+
+  // Reveal
+  document.getElementById('scan-box').style.display   = 'none';
+  document.getElementById('progress-wrap').style.display = 'none';
+  document.getElementById('pulse-ring').style.display  = 'none';
+  document.getElementById('map').className             = 'found';
+  document.getElementById('found-glow').classList.add('show');
+
+  showTarget();
+  startRadar();
+  showBadge("🎯 Аномалия обнаружена!");
+}
+
+// ── Radar ─────────────────────────────────────────────────
+function startRadar() {
+  document.getElementById('radar-wrap').style.display = 'flex';
+  document.getElementById('ui-found').style.display   = 'block';
+
+  sweepAngle = 0;
+  sweepInterval = setInterval(()=>{
+    sweepAngle=(sweepAngle+5)%360;
+    const r   = sweepAngle*Math.PI/180;
+    const x2  = 40+36*Math.sin(r), y2=40-36*Math.cos(r);
+    document.getElementById('sweep').setAttribute('x2',x2);
+    document.getElementById('sweep').setAttribute('y2',y2);
+
+    // blip
+    const origin = searchOrigin||userPos||[37.6,55.7];
+    const ta = Math.atan2(targetPoint[0]-origin[0], targetPoint[1]-origin[1])*180/Math.PI;
+    const diff = Math.abs(((sweepAngle-ta)%360+360)%360);
+    const blip = document.getElementById('blip');
+    if(diff<18){
+      const dist = haversine(origin,targetPoint)/((parseInt(radiusIn.value)||5)*1000);
+      const br   = 5+28*(1-Math.min(dist,1)); // closer = closer to center
+      blip.setAttribute('cx', 40+br*Math.sin(ta*Math.PI/180));
+      blip.setAttribute('cy', 40-br*Math.cos(ta*Math.PI/180));
+      blip.setAttribute('opacity', (1-diff/18)*0.9);
     } else {
-      map.addSource("rad",{type:"geojson",data:circle});
-      map.addLayer({
-        id:"rad-fill",
-        type:"fill",
-        source:"rad",
-        paint:{"fill-color":"#0A84FF","fill-opacity":0.06}
-      });
-      map.addLayer({
-        id:"rad-line",
-        type:"line",
-        source:"rad",
-        paint:{"line-color":"#0A84FF","line-width":2,"line-dasharray":[3,4]}
-      });
+      blip.setAttribute('opacity',0);
     }
-  }
+  }, 45);
 
-  function activateStep(i,text){
-    const el=document.getElementById("step"+i);
-    el.classList.remove("dim");
-    el.innerHTML=text+" ⏳";
-  }
+  radarInterval = setInterval(()=>{
+    if(!userPos) return;
+    const dist   = haversine(userPos, targetPoint);
+    const maxD   = parseInt(document.getElementById('radiusIn').value)*1000;
+    const signal = Math.max(0,Math.min(100,(1-dist/maxD)*100));
+    document.getElementById('signal-label').textContent='СИГНАЛ: '+signal.toFixed(0)+'%';
+    document.getElementById('signal-bar').style.width=signal+'%';
+  }, 900);
+}
 
-  function completeStep(i,text){
-    const el=document.getElementById("step"+i);
-    el.innerHTML=text+" ✅";
-  }
+// ── Show Target ────────────────────────────────────────────
+function showTarget() {
+  const el = document.createElement('div');
+  el.style.cssText=`
+    width:22px;height:22px;border-radius:50%;
+    background:radial-gradient(circle,#FF453A 30%,transparent 100%);
+    border:2px solid #FF453A;
+    box-shadow:0 0 20px rgba(255,69,58,.85),0 0 45px rgba(255,69,58,.4);
+    animation:mPulse 1.4s ease-in-out infinite alternate;
+  `;
+  const style = document.createElement('style');
+  style.textContent=`@keyframes mPulse{from{box-shadow:0 0 10px rgba(255,69,58,.6)}to{box-shadow:0 0 30px rgba(255,69,58,1),0 0 60px rgba(255,69,58,.5)}}`;
+  document.head.appendChild(style);
+  new maplibregl.Marker({element:el}).setLngLat(targetPoint).addTo(map);
+  map.flyTo({ center:targetPoint, zoom:15, duration:2200, essential:true });
+}
 
-  async function executeScan(){
-    ui-idle.style.display="none";
-    scan-box.style.display="block";
+// ── Route ──────────────────────────────────────────────────
+function buildRoute() {
+  if(!targetPoint||!userPos) return;
+  const url=`https://www.google.com/maps/dir/?api=1&origin=${userPos[1]},${userPos[0]}&destination=${targetPoint[1]},${targetPoint[0]}&travelmode=walking`;
+  window.open(url,'_blank');
+}
 
-    const mode=catSelect.value;
-    const radius=parseInt(radiusIn.value);
-    const targetPower=parseInt(powerIn.value);
-
-    let pool=[];
-    let valid=[];
-
-    // FAST scan under 15s: no heavy API loop
-
-    activateStep(1,"🎲 Генерация точек");
-    for(let i=0;i<500;i++){
-      const a=Math.random()*Math.PI*2;
-      const d=(Math.sqrt(Math.random())*radius)/111;
-      pool.push([
-        searchOrigin[0]+d*Math.cos(a),
-        searchOrigin[1]+d*Math.sin(a)
-      ]);
-    }
-    completeStep(1,"🎲 Генерация точек");
-    await new Promise(r=>setTimeout(r,800));
-
-    activateStep(2,"🔍 Фильтрация");
-    // Fake category filter (instant) to keep speed
-    valid=pool.map(pt=>({coords:pt,power:Math.floor(Math.random()*100)+1}));
-    completeStep(2,"🔍 Фильтрация");
-    await new Promise(r=>setTimeout(r,800));
-
-    activateStep(3,"⚡ Настройка мощности");
-    completeStep(3,"⚡ Мощность назначена");
-    await new Promise(r=>setTimeout(r,800));
-
-    activateStep(4,"🎯 Выбор аномалии");
-    valid.sort((a,b)=>Math.abs(a.power-targetPower)-Math.abs(b.power-targetPower));
-    const best=valid[0];
-    targetPoint=best.coords;
-    completeStep(4,"🎯 Аномалия выбрана");
-    await new Promise(r=>setTimeout(r,800));
-
-    activateStep(5,"📡 Запуск радара");
-
-    setTimeout(()=>{
-      scan-box.style.display="none";
-      startRadar();
-      showTarget();
-      completeStep(5,"📡 Радар активен");
-    },700);
-  }
-
-  function startRadar(){
-    radar-ui.style.display="block";
-
-    radarInterval=setInterval(()=>{
-      const dist=getDistance(userPos,targetPoint);
-      const maxR=radiusIn.value*1000;
-
-      let base=Math.max(0,(1-dist/maxR)*100);
-      let noise=Math.sin(Date.now()/600)*15;
-      let signal=Math.max(0,Math.min(100,base+noise));
-
-      distance-text.innerText=`СИГНАЛ: ${signal.toFixed(0)}%`;
-      radar-arrow.style.transform=`translate(-50%,-100%) rotate(${signal*3.6}deg)`;
-
-    },700);
-  }
-
-  function showTarget(){
-    new maplibregl.Marker({color:"#FF453A"}).setLngLat(targetPoint).addTo(map);
-    map.flyTo({center:targetPoint,zoom:15,duration:2500});
-    ui-found.style.display="block";
-  }
-
-  function resetSystem(){
-    clearInterval(radarInterval);
-    ui-found.style.display="none";
-    radar-ui.style.display="none";
-    ui-idle.style.display="block";
-    map.flyTo({center:searchOrigin,zoom:11,duration:2000});
-  }
-
-  function genCircle(c,km){
-    const p=64,res=[];
-    const dx=km/(111.32*Math.cos(c[1]*Math.PI/180));
-    const dy=km/110.574;
-    for(let i=0;i<=p;i++){
-      const a=(i/p)*(Math.PI*2);
-      res.push([c[0]+dx*Math.cos(a),c[1]+dy*Math.sin(a)]);
-    }
-    return {type:"Feature",geometry:{type:"Polygon",coordinates:[res]}};
-  }
-
-  function getDistance(p1,p2){
-    const R=6371000;
-    const dLat=(p2[1]-p1[1])*Math.PI/180;
-    const dLon=(p2[0]-p1[0])*Math.PI/180;
-    const a=Math.sin(dLat/2)**2+
-      Math.cos(p1[1]*Math.PI/180)*Math.cos(p2[1]*Math.PI/180)*
-      Math.sin(dLon/2)**2;
-    return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-  }
-
-  function openM(id){document.getElementById(id).classList.add("active");}
-  function closeM(){document.querySelectorAll('.modal').forEach(m=>m.classList.remove('active'));}
-  function setMapStyle(t){map.setStyle(STYLES[t]);closeM();}
+// ── Reset ──────────────────────────────────────────────────
+function resetSystem() {
+  clearInterval(radarInterval);
+  clearInterval(sweepInterval);
+  ['radar-wrap','scan-box','progress-wrap','ui-found'].forEach(id=>{
+    document.getElementById(id).style.display='none';
+  });
+  document.getElementById('pulse-ring').style.display='none';
+  document.getElementById('ui-idle').style.display='block';
+  document.getElementById('map').className='';
+  document.getElementById('found-glow').classList.remove('show');
+  document.getElementById('signal-bar').style.width='0%';
+  document.getElementById('signal-label').textContent='СИГНАЛ: 0%';
+  document.getElementById('blip').setAttribute('opacity',0);
+  targetPoint=null;
+  showBadge("🔄 Система сброшена");
+}
 </script>
-
 </body>
 </html>
