@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no,viewport-fit=cover">
-    <title>KiwiWay - Anomaly Radar v2</title>
+    <title>KiwiWay - Mystery Radar</title>
     <script src='https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.js'></script>
     <link href='https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.css' rel='stylesheet' />
     <style>
@@ -11,249 +11,259 @@
             --ios-blue: #0A84FF; 
             --ios-green: #30D158;
             --ios-red: #FF453A;
-            --glass-bg: rgba(20, 20, 20, 0.7);
-            --glass-border: rgba(255, 255, 255, 0.1);
-            --blur: blur(20px);
+            --glass: rgba(20, 20, 25, 0.6);
+            --blur: blur(30px) saturate(150%);
+            --border: rgba(255, 255, 255, 0.12);
         }
         
-        body { margin: 0; padding: 0; background: #000; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #fff; overflow: hidden; height: 100vh; }
+        body { margin: 0; padding: 0; background: #000; font-family: -apple-system, system-ui, sans-serif; color: #fff; overflow: hidden; height: 100vh; }
         #map { position: absolute; top: 0; bottom: 0; width: 100%; z-index: 1; filter: brightness(0.6) grayscale(0.2); }
 
-        .glass { background: var(--glass-bg); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur); border: 1px solid var(--glass-border); box-shadow: 0 8px 32px rgba(0,0,0,0.5); }
+        .glass-card {
+            background: var(--glass);
+            backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
+            border: 1px solid var(--border);
+            border-radius: 35px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.5);
+        }
 
-        /* Панель управления снизу */
         .ui-panel {
-            position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
-            width: 92%; max-width: 400px; border-radius: 35px;
-            padding: 20px; box-sizing: border-box; z-index: 100;
+            position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
+            width: 92%; max-width: 400px; padding: 25px; box-sizing: border-box; z-index: 100;
         }
 
         .btn {
-            width: 100%; padding: 16px; margin: 6px 0; border: none; border-radius: 20px;
-            font-size: 15px; font-weight: 600; cursor: pointer; transition: 0.2s;
-            background: rgba(255, 255, 255, 0.08); color: #fff;
+            width: 100%; height: 60px; margin: 8px 0; border: none; border-radius: 20px;
+            font-size: 16px; font-weight: 600; cursor: pointer; transition: 0.3s cubic-bezier(0.2, 0, 0.2, 1);
+            background: var(--ios-blue); color: #fff; display: flex; align-items: center; justify-content: center;
         }
-        .btn-main { background: var(--ios-blue); box-shadow: 0 4px 15px rgba(10, 132, 255, 0.3); }
+        .btn-sec { background: rgba(255, 255, 255, 0.08); border: 1px solid var(--border); }
         .btn:active { transform: scale(0.97); opacity: 0.8; }
 
-        /* Этапы сканирования */
-        .scan-step {
-            display: flex; align-items: center; justify-content: space-between;
-            margin: 10px 0; font-size: 13px; opacity: 0.5; transition: 0.3s;
+        #radar-ui { text-align: center; margin-bottom: 20px; }
+        #radar-circle {
+            width: 90px; height: 90px; margin: 0 auto; border-radius: 50%; 
+            border: 1.5px solid rgba(48, 209, 88, 0.3); position: relative;
+            display: flex; align-items: center; justify-content: center;
         }
-        .scan-step.active { opacity: 1; color: var(--ios-blue); }
-        .scan-step.done { opacity: 1; color: var(--ios-green); }
-        .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
-
-        /* Радар */
-        #radar-ui { text-align: center; padding: 10px 0; }
-        #radar {
-            width: 80px; height: 80px; margin: 0 auto 10px; border: 2px solid rgba(48, 209, 88, 0.2);
-            border-radius: 50%; position: relative;
-        }
-        #radar-arrow {
-            position: absolute; top: 50%; left: 50%; width: 2px; height: 35px;
-            background: var(--ios-green); transform-origin: bottom center;
-            transform: translate(-50%, -100%) rotate(0deg); 
-            box-shadow: 0 0 10px var(--ios-green);
+        #needle {
+            width: 2px; height: 40px; background: var(--ios-green);
+            transform-origin: bottom center; transition: transform 0.6s cubic-bezier(0.1, 0.7, 0.1, 1);
+            box-shadow: 0 0 10px var(--ios-green); border-radius: 2px;
         }
 
-        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; height: 30px; }
-        input[type=range]::-webkit-slider-runnable-track { height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px; }
-        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 22px; width: 22px; border-radius: 50%; background: #fff; margin-top: -9px; }
+        .setting-row { margin: 20px 0; }
+        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; height: 40px; }
+        input[type=range]::-webkit-slider-runnable-track { height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none; height: 28px; width: 28px; border-radius: 50%;
+            background: #fff; margin-top: -12px; box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
 
         .modal {
-            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 85%; max-width: 320px; border-radius: 30px; padding: 25px;
-            display: none; z-index: 1000;
+            position: fixed; inset: 0; background: rgba(0,0,0,0.7); 
+            display: none; z-index: 1000; align-items: center; justify-content: center;
         }
-        .modal.active { display: block; }
-        
-        .alert { position: fixed; top: 50px; left: 50%; transform: translateX(-50%); padding: 10px 20px; border-radius: 15px; z-index: 2000; display: none; }
+        .modal-content { width: 85%; max-width: 340px; padding: 30px; }
+
+        #scan-status { font-size: 12px; letter-spacing: 3px; color: var(--ios-blue); font-weight: 700; animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
+
+        .scan-ring {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            border: 1px solid var(--ios-blue); border-radius: 50%;
+            pointer-events: none; animation: expand 3s infinite ease-out;
+        }
+        @keyframes expand { 0% { width: 0; height: 0; opacity: 0.8; } 100% { width: 600px; height: 600px; opacity: 0; } }
     </style>
 </head>
 <body>
 
 <div id="map"></div>
-<div id="iosAlert" class="alert glass"></div>
+<div id="fx-layer"></div>
 
-<div class="ui-panel glass">
+<div class="ui-panel glass-card">
+    <div id="radar-ui" style="display:none;">
+        <div id="radar-circle"><div id="needle"></div></div>
+        <div id="sig-label" style="margin-top:15px; font-size: 13px; color: var(--ios-green); font-weight: 800; letter-spacing: 1px;">СИГНАЛ: 0%</div>
+    </div>
+
+    <div id="scan-box" style="display:none; text-align:center; padding: 15px 0;">
+        <div id="scan-status">АНАЛИЗ ЭФИРА</div>
+    </div>
+
     <div id="ui-idle">
-        <div style="display: flex; gap: 8px; margin-bottom: 10px;">
-            <button class="btn" style="flex:1" onclick="openM('settings')">Настройка</button>
-            <button class="btn" style="flex:1" onclick="resetToLocation()">🎯 Центр</button>
+        <button class="btn" onclick="startSearch()">ПОИСК АНОМАЛИИ</button>
+        <div style="display: flex; gap: 10px;">
+            <button class="btn btn-sec" onclick="openM('settings')">Настройки</button>
+            <button class="btn btn-sec" onclick="recenter()">🎯</button>
         </div>
-        <button class="btn btn-main" onclick="startAdvancedScan()">ЗАПУСК СКАНЕРА</button>
     </div>
 
-    <div id="ui-scanning" style="display: none;">
-        <div class="scan-step" id="step1"><span>Генерация пула координат (500)</span> <div class="dot"></div></div>
-        <div class="scan-step" id="step2"><span>Фильтрация по спектру</span> <div class="dot"></div></div>
-        <div class="scan-step" id="step3"><span>Поиск резонанса мощности</span> <div class="dot"></div></div>
-        <div class="scan-step" id="step4"><span>Захват сигнатуры</span> <div class="dot"></div></div>
-    </div>
-
-    <div id="ui-found" style="display: none;">
-        <div id="radar-ui">
-            <div id="radar"><div id="radar-arrow"></div></div>
-            <div id="signal-text" style="color: var(--ios-green); font-size: 12px; font-weight: 700;">СИГНАЛ: 0%</div>
-        </div>
-        <button class="btn btn-main" style="background: var(--ios-green);" onclick="buildRoute()">ИДТИ К ЦЕЛИ</button>
-        <div style="display: flex; gap: 8px;">
-            <button class="btn" style="flex:1" onclick="openM('info')">ДАННЫЕ</button>
-            <button class="btn" style="flex:1; color: var(--ios-red);" onclick="resetSystem()">СБРОС</button>
-        </div>
+    <div id="ui-found" style="display: none; gap: 10px;">
+        <button class="btn" style="background: var(--ios-green);" onclick="go()">МАРШРУТ</button>
+        <button class="btn btn-sec" onclick="reset()">СБРОС</button>
     </div>
 </div>
 
-<div id="settings" class="modal glass">
-    <h3 style="margin-top:0">Параметры</h3>
-    <label style="font-size:11px; opacity:0.6">РЕЖИМ:</label>
-    <select id="searchMode" class="btn" style="text-align:left; background: rgba(0,0,0,0.3);">
-        <option value="quantum">Квантовый (Промзоны)</option>
-        <option value="void">Пустошь (Природа)</option>
-        <option value="powerful">Мощный (Смешанный)</option>
-    </select>
-    <label style="font-size:11px; opacity:0.6; margin-top:10px; display:block;">МОЩНОСТЬ: <span id="pVal" style="color:var(--ios-green)">50</span>%</label>
-    <input type="range" id="powerIn" min="1" max="100" value="50" oninput="document.getElementById('pVal').innerText=this.value">
-    <button class="btn btn-main" style="margin-top:15px" onclick="closeM()">ГОТОВО</button>
-</div>
-
-<div id="info" class="modal glass">
-    <h3 id="infName" style="color:var(--ios-green); margin-top:0">Объект</h3>
-    <p id="infDesc" style="font-size:13px; opacity:0.8; line-height:1.4"></p>
-    <div id="infCoords" style="font-family:monospace; color:var(--ios-blue); background:rgba(0,0,0,0.2); padding:10px; border-radius:10px; margin-bottom:10px; text-align:center;"></div>
-    <button class="btn btn-main" onclick="closeM()">ЗАКРЫТЬ</button>
+<div id="settings" class="modal" onclick="closeM('settings')">
+    <div class="modal-content glass-card" onclick="event.stopPropagation()">
+        <h3 style="margin: 0 0 20px; text-align: center;">Конфигурация</h3>
+        <div class="setting-row">
+            <label style="font-size: 11px; opacity: 0.6;">КАТЕГОРИЯ</label>
+            <select id="cat" style="width:100%; height:50px; background:rgba(255,255,255,0.05); color:#fff; border:1px solid var(--border); border-radius:15px; padding:0 12px; margin-top:8px; font-size:15px;">
+                <option value="void">Пустота (Леса, поля, овраги)</option>
+                <option value="quantum">Квантовый (Дороги, мосты, вода)</option>
+                <option value="power">Мощный (Всё включено)</option>
+            </select>
+        </div>
+        <div class="setting-row">
+            <label style="font-size: 11px; opacity: 0.6;">РАДИУС: <span id="rT" style="color:var(--ios-blue)">5</span> км</label>
+            <input type="range" id="radiusIn" min="1" max="25" value="5" oninput="sync()">
+        </div>
+        <div class="setting-row">
+            <label style="font-size: 11px; opacity: 0.6;">МОЩНОСТЬ АНОМАЛИИ: <span id="pT" style="color:var(--ios-green)">50</span>%</label>
+            <input type="range" id="powerIn" min="1" max="100" value="50" oninput="sync()">
+        </div>
+        <button class="btn" style="margin-top:15px;" onclick="closeM('settings')">ПРИНЯТЬ</button>
+    </div>
 </div>
 
 <script>
-    let map, userPos, targetPoint, radarInterval;
-    const STYLE = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
+    let map, userPos, targetPos, radarInt, audio;
 
-    // Инициализация карты
     map = new maplibregl.Map({
         container: 'map',
-        style: STYLE,
-        center: [37.617, 55.755],
-        zoom: 12,
-        attributionControl: false
+        style: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
+        center: [30, 50], zoom: 11, attributionControl: false
     });
 
-    // Геопозиция
-    navigator.geolocation.getCurrentPosition(pos => {
-        userPos = [pos.coords.longitude, pos.coords.latitude];
+    navigator.geolocation.getCurrentPosition(p => {
+        userPos = [p.coords.longitude, p.coords.latitude];
         map.setCenter(userPos);
-        new maplibregl.Marker({color: '#0A84FF'}).setLngLat(userPos).addTo(map);
+        new maplibregl.Marker({ color: '#0A84FF' }).setLngLat(userPos).addTo(map);
     });
 
-    function resetToLocation() {
-        if(userPos) map.flyTo({center: userPos, zoom: 13});
+    function sync() {
+        document.getElementById('rT').innerText = document.getElementById('radiusIn').value;
+        document.getElementById('pT').innerText = document.getElementById('powerIn').value;
     }
 
-    // --- НОВЫЙ АЛГОРИТМ ---
-    async function startAdvancedScan() {
-        const mode = document.getElementById('searchMode').value;
-        const userPower = parseInt(document.getElementById('powerIn').value);
-        const radius = 5; // км
+    // МИНИМАЛИСТИЧНЫЙ ТАИНСТВЕННЫЙ ЗВУК
+    function playMysterySound() {
+        if (!audio) audio = new (window.AudioContext || window.webkitAudioContext)();
+        
+        const master = audio.createGain();
+        master.connect(audio.destination);
+        master.gain.setValueAtTime(0, audio.currentTime);
+        master.gain.linearRampToValueAtTime(0.15, audio.currentTime + 1.5);
 
+        // Глубокий резонанс (основа)
+        const base = audio.createOscillator();
+        base.type = 'sine';
+        base.frequency.setValueAtTime(60, audio.currentTime);
+        
+        // Мерцающий обертон
+        const shimmer = audio.createOscillator();
+        shimmer.type = 'sine';
+        shimmer.frequency.setValueAtTime(120, audio.currentTime);
+
+        // Модуляция частоты (плавающее ощущение)
+        const lfo = audio.createOscillator();
+        const lfoGain = audio.createGain();
+        lfo.frequency.setValueAtTime(0.5, audio.currentTime);
+        lfoGain.gain.setValueAtTime(3, audio.currentTime);
+        
+        lfo.connect(lfoGain);
+        lfoGain.connect(base.frequency);
+        lfoGain.connect(shimmer.frequency);
+
+        base.connect(master);
+        shimmer.connect(master);
+        
+        base.start(); shimmer.start(); lfo.start();
+
+        return {
+            stop: () => {
+                master.gain.exponentialRampToValueAtTime(0.001, audio.currentTime + 1);
+                setTimeout(() => { base.stop(); shimmer.stop(); lfo.stop(); }, 1100);
+            }
+        };
+    }
+
+    async function startSearch() {
+        const sound = playMysterySound();
         document.getElementById('ui-idle').style.display = 'none';
-        document.getElementById('ui-scanning').style.display = 'block';
+        document.getElementById('scan-box').style.display = 'block';
+        document.getElementById('fx-layer').innerHTML = '<div class="scan-ring"></div>';
 
-        // 1. Генерация пула
-        await updateStep('step1', 1000);
-        const pool = [];
-        for(let i=0; i<300; i++) {
-            const a = Math.random() * Math.PI * 2;
-            const d = (Math.sqrt(Math.random()) * radius) / 111;
-            pool.push({
-                coords: [userPos[0] + d * Math.cos(a), userPos[1] + d * Math.sin(a)],
-                power: Math.floor(Math.random() * 100) + 1
-            });
-        }
+        const radius = document.getElementById('radiusIn').value;
+        const type = document.getElementById('cat').value;
+        let found = null;
 
-        // 2. Фильтрация (имитация)
-        await updateStep('step2', 1500);
-        
-        // 3. Поиск резонанса
-        await updateStep('step3', 1200);
-        // Ищем точку, чья мощность ближе всего к ползунку
-        pool.sort((a, b) => Math.abs(a.power - userPower) - Math.abs(b.power - userPower));
-        const candidate = pool[0];
-
-        // 4. Запрос к OSM для финальной точки (чтобы была реальной)
-        await updateStep('step4', 800);
-        
-        try {
-            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${candidate.coords[1]}&lon=${candidate.coords[0]}&zoom=17`);
-            const data = await res.json();
+        for (let i = 0; i < 20; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const dist = (Math.sqrt(Math.random()) * radius) / 111;
+            const pt = [userPos[0] + dist * Math.cos(angle), userPos[1] + dist * Math.sin(angle)];
             
-            targetPoint = candidate.coords;
-            finalizeDiscovery(data, candidate.power);
-        } catch(e) {
-            targetPoint = candidate.coords;
-            finalizeDiscovery({display_name: "Неизвестный сектор"}, candidate.power);
+            try {
+                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pt[1]}&lon=${pt[0]}&zoom=18`);
+                const data = await res.json();
+                const tags = JSON.stringify(data.address).toLowerCase() + (data.type || "").toLowerCase();
+                
+                let ok = false;
+                if (type === 'void') ok = /wood|forest|field|grass|park|valley|nature/.test(tags);
+                else if (type === 'quantum') ok = /bridge|road|water|coast|river|lake|highway/.test(tags);
+                else if (type === 'power') ok = true;
+
+                if (ok) { found = pt; break; }
+            } catch(e) {}
         }
-    }
 
-    async function updateStep(id, ms) {
-        const el = document.getElementById(id);
-        el.classList.add('active');
-        await new Promise(r => setTimeout(r, ms));
-        el.classList.remove('active');
-        el.classList.add('done');
-    }
-
-    function finalizeDiscovery(data, actualPower) {
         setTimeout(() => {
-            document.getElementById('ui-scanning').style.display = 'none';
-            document.getElementById('ui-found').style.display = 'block';
+            sound.stop();
+            document.getElementById('scan-box').style.display = 'none';
+            document.getElementById('fx-layer').innerHTML = '';
             
-            // Ставим метку
-            if(window.targetM) window.targetM.remove();
-            const el = document.createElement('div');
-            el.style.cssText = "width:15px; height:15px; background:var(--ios-red); border-radius:50%; box-shadow:0 0 15px var(--ios-red);";
-            window.targetM = new maplibregl.Marker(el).setLngLat(targetPoint).addTo(map);
+            if (found) {
+                targetPos = found;
+                initRadar();
+                mark();
+            } else {
+                alert("Эфир чист. Аномалий не обнаружено.");
+                reset();
+            }
+        }, 4000);
+    }
+
+    function initRadar() {
+        document.getElementById('radar-ui').style.display = 'block';
+        document.getElementById('ui-found').style.display = 'flex';
+        const pwr = parseInt(document.getElementById('powerIn').value);
+
+        radarInt = setInterval(() => {
+            const d = getD(userPos, targetPos);
+            const max = document.getElementById('radiusIn').value * 1000;
             
-            map.flyTo({center: targetPoint, zoom: 15, pitch: 45});
+            let baseSig = Math.max(0, (1 - d/max) * 100);
+            // Мощность аномалии удерживает сигнал от падения в ноль
+            let jitter = (Math.random() - 0.5) * (105 - pwr);
+            let final = Math.min(100, Math.max(pwr * 0.2, baseSig + jitter));
 
-            // Инфо
-            document.getElementById('infName').innerText = "ОБЪЕКТ #" + Math.floor(Math.random()*9000 + 1000);
-            document.getElementById('infDesc').innerHTML = `<b>Источник:</b> ${data.display_name}<br><b>Резонанс:</b> ${actualPower}%`;
-            document.getElementById('infCoords').innerText = targetPoint[1].toFixed(6) + ", " + targetPoint[0].toFixed(6);
-
-            startRadarLogic(actualPower);
+            document.getElementById('needle').style.transform = `translate(-50%, -100%) rotate(${(final - 50) * 1.5}deg)`;
+            document.getElementById('sig-label').innerText = `СИГНАЛ: ${Math.round(final)}%`;
         }, 500);
     }
 
-    function startRadarLogic(power) {
-        radarInterval = setInterval(() => {
-            const dist = getDistance(userPos, targetPoint);
-            const maxDist = 5000;
-            let signal = Math.max(0, (1 - dist/maxDist) * 100);
-            
-            // Дрожание стрелки (зависит от мощности)
-            let jitter = (Math.random() - 0.5) * (110 - power) * 0.5;
-            let displaySignal = Math.max(0, Math.min(100, signal + jitter));
-
-            document.getElementById('radar-arrow').style.transform = `translate(-50%, -100%) rotate(${displaySignal * 3.6}deg)`;
-            document.getElementById('signal-text').innerText = `СИГНАЛ: ${displaySignal.toFixed(0)}%`;
-        }, 100);
+    function mark() {
+        if (window.m) window.m.remove();
+        const el = document.createElement('div');
+        el.style.cssText = "width:24px; height:24px; background:radial-gradient(circle, var(--ios-red) 0%, transparent 70%); border-radius:50%; box-shadow: 0 0 20px var(--ios-red);";
+        window.m = new maplibregl.Marker(el).setLngLat(targetPos).addTo(map);
+        map.flyTo({ center: targetPos, zoom: 14, speed: 0.8 });
     }
 
-    function buildRoute() {
-        const url = `https://www.google.com/maps/dir/?api=1&destination=${targetPoint[1]},${targetPoint[0]}&travelmode=walking`;
-        window.open(url, '_blank');
-    }
-
-    function resetSystem() {
-        clearInterval(radarInterval);
-        document.getElementById('ui-found').style.display = 'none';
-        document.getElementById('ui-idle').style.display = 'block';
-        document.querySelectorAll('.scan-step').forEach(s => s.className = 'scan-step');
-        if(window.targetM) window.targetM.remove();
-    }
-
-    function getDistance(p1, p2) {
+    function getD(p1, p2) {
         const R = 6371000;
         const dLat = (p2[1]-p1[1]) * Math.PI/180;
         const dLon = (p2[0]-p1[0]) * Math.PI/180;
@@ -261,9 +271,18 @@
         return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     }
 
-    function openM(id) { document.getElementById(id).classList.add('active'); }
-    function closeM() { document.querySelectorAll('.modal').forEach(m => m.classList.remove('active')); }
-</script>
+    function reset() {
+        clearInterval(radarInt);
+        document.getElementById('radar-ui').style.display = 'none';
+        document.getElementById('ui-found').style.display = 'none';
+        document.getElementById('ui-idle').style.display = 'block';
+        if (window.m) window.m.remove();
+    }
 
+    function recenter() { if (userPos) map.flyTo({ center: userPos, zoom: 12 }); }
+    function openM(id) { document.getElementById(id).style.display = 'flex'; }
+    function closeM(id) { document.getElementById(id).style.display = 'none'; }
+    function go() { window.open(`https://www.google.com/maps/dir/?api=1&destination=${targetPos[1]},${targetPos[0]}&travelmode=walking`); }
+</script>
 </body>
 </html>
