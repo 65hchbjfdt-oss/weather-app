@@ -6,337 +6,158 @@
   <title>KiwiWay – Anomaly Radar</title>
   <script src="https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.js"></script>
   <link href="https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.css" rel="stylesheet"/>
-
   <style>
-    :root {
-      --blue:  #0A84FF;
-      --green: #30D158;
-      --red:   #FF453A;
-      --glass: rgba(28,28,32,0.55);
-      --glass-light: rgba(255,255,255,0.10);
-      --border: rgba(255,255,255,0.18);
-      --blur: blur(40px) saturate(220%);
-    }
-
-    * { box-sizing:border-box; margin:0; padding:0; }
-
-    body {
-      background:#000;
-      font-family:-apple-system,system-ui,sans-serif;
-      color:#fff;
-      overflow:hidden;
-      height:100dvh;
-    }
-
-    /* MAP */
-    #map {
-      position:absolute; inset:0;
-      filter:brightness(0.8) contrast(1.05);
-      transition:filter 1.2s;
-    }
-    #map.scanning { filter:brightness(0.45) contrast(1.3) saturate(0.2) hue-rotate(185deg); }
-    #map.found    { filter:brightness(0.9) contrast(1.1) saturate(1.4); }
-
-    /* PULSE RINGS */
-    #pulse-ring {
-      position:fixed; inset:0; pointer-events:none; z-index:10;
-      display:none; align-items:center; justify-content:center;
-    }
-    .p-ring {
-      position:absolute; border-radius:50%;
-      border:2px solid var(--green); opacity:0;
-      animation:expand 2s ease-out infinite;
-    }
-    .p-ring:nth-child(2){ animation-delay:.65s; }
-    .p-ring:nth-child(3){ animation-delay:1.3s; }
-    @keyframes expand {
-      0%   { width:50px;  height:50px;  opacity:.85; }
-      100% { width:520px; height:520px; opacity:0; }
-    }
-
-    /* FOUND GLOW */
-    #found-glow {
-      position:fixed; inset:0; pointer-events:none; z-index:9;
-      background:radial-gradient(circle at center, rgba(48,209,88,.18) 0%, transparent 65%);
-      opacity:0; transition:opacity 1.2s;
-    }
-    #found-glow.show { opacity:1; }
-
-    /* BOTTOM PANEL */
-    .panel {
-      position:fixed; bottom:0; left:0; right:0;
-      padding:0 14px 30px; z-index:200;
-    }
-
-    .glass-card {
-      background:var(--glass);
-      backdrop-filter:var(--blur);
-      -webkit-backdrop-filter:var(--blur);
-      border:1px solid var(--border);
-      border-radius:34px;
-      padding:20px;
-      box-shadow:
-        0 2px 0 rgba(255,255,255,.13) inset,
-        0 30px 70px rgba(0,0,0,.65),
-        0 0 0 .5px rgba(0,0,0,.35);
-    }
-
-    /* BUTTONS */
-    .btn {
-      display:block; width:100%; padding:14px;
-      border:none; border-radius:20px;
-      font-size:15px; font-weight:600; letter-spacing:.3px;
-      cursor:pointer; color:#fff;
-      transition:transform .15s, opacity .15s;
-      position:relative; overflow:hidden;
-    }
-    .btn::after {
-      content:''; position:absolute; inset:0; border-radius:inherit;
-      background:linear-gradient(to bottom,rgba(255,255,255,.16),transparent);
-      pointer-events:none;
-    }
-    .btn:active { transform:scale(0.96); opacity:.82; }
-
-    .btn-primary {
-      background:linear-gradient(135deg,#0A84FF,#0060CC);
-      box-shadow:0 4px 22px rgba(10,132,255,.5), 0 1px 0 rgba(255,255,255,.22) inset;
-      margin-top:10px; font-size:16px; letter-spacing:.5px;
-      animation:btnGlow 3s ease-in-out infinite;
-    }
-    @keyframes btnGlow {
-      0%,100%{ box-shadow:0 4px 22px rgba(10,132,255,.5),0 1px 0 rgba(255,255,255,.22) inset; }
-      50%    { box-shadow:0 4px 38px rgba(10,132,255,.8),0 1px 0 rgba(255,255,255,.22) inset; }
-    }
-    .btn-green {
-      background:linear-gradient(135deg,#30D158,#1FA040);
-      box-shadow:0 4px 22px rgba(48,209,88,.5),0 1px 0 rgba(255,255,255,.22) inset;
-      font-size:16px;
-    }
-    .btn-ghost {
-      background:var(--glass-light);
-      border:1px solid var(--border);
-    }
-    .btn-danger { color:var(--red); }
-    .row { display:flex; gap:9px; margin-bottom:9px; }
-    .row .btn { flex:1; }
-
-    /* RADAR */
-    #radar-wrap {
-      display:none; flex-direction:column;
-      align-items:center; gap:8px; margin-bottom:14px;
-    }
-    #radar-svg {
-      width:82px; height:82px;
-      filter:drop-shadow(0 0 14px rgba(48,209,88,.65));
-    }
-    #signal-bar-wrap {
-      width:100%; background:rgba(255,255,255,.08);
-      border-radius:10px; height:7px; overflow:hidden;
-    }
-    #signal-bar {
-      height:100%; border-radius:10px;
-      background:linear-gradient(90deg,#30D158,#0A84FF);
-      width:0%; transition:width .8s ease;
-      box-shadow:0 0 10px rgba(48,209,88,.55);
-    }
-    #signal-label {
-      font-size:11px; font-weight:700;
-      letter-spacing:1.8px; color:var(--green); text-transform:uppercase;
-    }
-
-    /* SCAN STEPS */
-    #scan-box { display:none; margin-bottom:12px; }
-    .step-item {
-      display:flex; align-items:center; gap:10px;
-      padding:9px 13px; border-radius:14px; margin-bottom:5px;
-      background:rgba(255,255,255,.04);
-      border:1px solid rgba(255,255,255,.06);
-      font-size:13px; opacity:.28;
-      transition:opacity .4s, background .4s, transform .3s;
-    }
-    .step-item.active {
-      opacity:1;
-      background:rgba(48,209,88,.13);
-      border-color:rgba(48,209,88,.28);
-      transform:translateX(5px);
-    }
-    .step-item.done { opacity:.65; }
-    .step-dot {
-      width:7px; height:7px; border-radius:50%;
-      background:rgba(255,255,255,.3); flex-shrink:0;
-      transition:background .3s;
-    }
-    .step-item.active .step-dot {
-      background:var(--green);
-      box-shadow:0 0 8px var(--green);
-      animation:blink .65s ease-in-out infinite alternate;
-    }
-    .step-item.done .step-dot { background:var(--blue); }
-    @keyframes blink{ from{opacity:1} to{opacity:.15} }
-
-    /* PROGRESS */
-    #progress-wrap {
-      display:none; margin-bottom:10px;
-      height:3px; background:rgba(255,255,255,.08);
-      border-radius:4px; overflow:hidden;
-    }
-    #progress-bar {
-      height:100%; border-radius:4px;
-      background:linear-gradient(90deg,var(--blue),var(--green));
-      width:0%; transition:width .45s ease;
-    }
-
-    /* MODALS */
-    .modal-overlay {
-      position:fixed; inset:0;
-      background:rgba(0,0,0,.5);
-      backdrop-filter:blur(10px);
-      z-index:500; display:none;
-      align-items:flex-end; justify-content:center;
-      padding:0 14px 30px;
-    }
-    .modal-overlay.open { display:flex; animation:fadeIn .22s; }
-    @keyframes fadeIn{ from{opacity:0} to{opacity:1} }
-    .modal-sheet {
-      width:100%; max-width:440px;
-      background:rgba(20,20,24,.78);
-      backdrop-filter:blur(55px) saturate(200%);
-      border:1px solid var(--border);
-      border-radius:34px; padding:22px;
-      box-shadow:0 2px 0 rgba(255,255,255,.1) inset, 0 30px 60px rgba(0,0,0,.72);
-      animation:slideUp .32s cubic-bezier(.25,.46,.45,.94);
-    }
-    @keyframes slideUp{ from{transform:translateY(55px);opacity:0} to{transform:translateY(0);opacity:1} }
-    .modal-handle {
-      width:36px; height:4px;
-      background:rgba(255,255,255,.2);
-      border-radius:2px; margin:0 auto 18px;
-    }
-    .modal-title { font-size:17px; font-weight:600; margin-bottom:16px; text-align:center; }
-
-    label {
-      display:block; font-size:11px; font-weight:700;
-      letter-spacing:1px; color:rgba(255,255,255,.5);
-      text-transform:uppercase; margin:13px 0 5px;
-    }
-    select {
-      width:100%; padding:12px; border-radius:14px;
-      background:rgba(255,255,255,.08); border:1px solid var(--border);
-      color:#fff; font-size:15px; appearance:none;
-    }
-    input[type=range]{ width:100%; accent-color:var(--blue); }
-
-    /* TOP BADGE */
-    #top-badge {
-      position:fixed; top:50px; left:50%;
-      transform:translateX(-50%) translateY(-90px);
-      background:var(--glass);
-      backdrop-filter:var(--blur);
-      border:1px solid var(--border);
-      border-radius:20px; padding:8px 18px;
-      font-size:13px; font-weight:600;
-      z-index:300; white-space:nowrap;
-      box-shadow:0 2px 0 rgba(255,255,255,.1) inset;
-      transition:transform .55s cubic-bezier(.34,1.56,.64,1);
-    }
-    #top-badge.show{ transform:translateX(-50%) translateY(0); }
-
-    /* CROSSHAIR */
-    #crosshair {
-      display:none; position:fixed; top:50%; left:50%;
-      transform:translate(-50%,-50%); z-index:50;
-    }
-    #crosshair svg{ filter:drop-shadow(0 0 6px var(--green)); animation:spin 5s linear infinite; }
-    @keyframes spin{ to{transform:rotate(360deg)} }
+    :root{--blue:#0A84FF;--green:#30D158;--red:#FF453A;--glass:rgba(28,28,32,.58);--glass-l:rgba(255,255,255,.10);--border:rgba(255,255,255,.18);--blur:blur(42px) saturate(220%);}
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{background:#000;font-family:-apple-system,system-ui,sans-serif;color:#fff;overflow:hidden;height:100dvh;}
+    #map{position:absolute;inset:0;filter:brightness(.8) contrast(1.05);transition:filter 1.2s;}
+    #map.scanning{filter:brightness(.4) contrast(1.3) saturate(.12) hue-rotate(185deg);}
+    #map.found{filter:brightness(.9) contrast(1.1) saturate(1.4);}
+    #pulse-ring{position:fixed;pointer-events:none;z-index:10;display:none;width:0;height:0;}
+    .p-ring{position:absolute;border-radius:50%;border:2px solid var(--green);opacity:0;transform:translate(-50%,-50%);animation:expand 2.2s ease-out infinite;}
+    .p-ring:nth-child(2){animation-delay:.73s;}.p-ring:nth-child(3){animation-delay:1.46s;}
+    @keyframes expand{0%{width:40px;height:40px;opacity:.9;}100%{width:520px;height:520px;opacity:0;}}
+    #found-glow{position:fixed;inset:0;pointer-events:none;z-index:9;background:radial-gradient(circle at center,rgba(48,209,88,.18) 0%,transparent 65%);opacity:0;transition:opacity 1.2s;}
+    #found-glow.show{opacity:1;}
+    .panel{position:fixed;bottom:0;left:0;right:0;padding:0 14px 28px;z-index:200;}
+    .glass-card{background:var(--glass);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border:1px solid var(--border);border-radius:34px;padding:20px;box-shadow:0 2px 0 rgba(255,255,255,.13) inset,0 30px 70px rgba(0,0,0,.65);}
+    .btn{display:block;width:100%;padding:14px;border:none;border-radius:20px;font-size:15px;font-weight:600;letter-spacing:.3px;cursor:pointer;color:#fff;transition:transform .15s,opacity .15s;position:relative;overflow:hidden;}
+    .btn::after{content:'';position:absolute;inset:0;border-radius:inherit;background:linear-gradient(to bottom,rgba(255,255,255,.17),transparent);pointer-events:none;}
+    .btn:active{transform:scale(.96);opacity:.82;}
+    .btn-primary{background:linear-gradient(135deg,#0A84FF,#005FCC);box-shadow:0 4px 22px rgba(10,132,255,.5),0 1px 0 rgba(255,255,255,.22) inset;margin-top:10px;font-size:16px;letter-spacing:.5px;animation:btnGlow 3s ease-in-out infinite;}
+    @keyframes btnGlow{0%,100%{box-shadow:0 4px 22px rgba(10,132,255,.5),0 1px 0 rgba(255,255,255,.22) inset;}50%{box-shadow:0 4px 40px rgba(10,132,255,.85),0 1px 0 rgba(255,255,255,.22) inset;}}
+    .btn-green{background:linear-gradient(135deg,#30D158,#1A9E40);box-shadow:0 4px 22px rgba(48,209,88,.5),0 1px 0 rgba(255,255,255,.22) inset;font-size:16px;}
+    .btn-ghost{background:var(--glass-l);border:1px solid var(--border);}
+    .btn-danger{color:var(--red);}
+    .btn-sm{padding:11px;font-size:13px;}
+    .row{display:flex;gap:9px;margin-bottom:9px;}.row .btn{flex:1;}
+    #radar-wrap{display:none;flex-direction:column;align-items:center;gap:8px;margin-bottom:14px;}
+    #needle-svg{width:96px;height:60px;filter:drop-shadow(0 0 14px rgba(48,209,88,.7));}
+    #needle-line{transform-origin:48px 52px;transform:rotate(-80deg);transition:transform 1s cubic-bezier(.34,1.56,.64,1);}
+    #signal-bar-wrap{width:100%;background:rgba(255,255,255,.08);border-radius:10px;height:7px;overflow:hidden;}
+    #signal-bar{height:100%;border-radius:10px;background:linear-gradient(90deg,#30D158,#0A84FF);width:0%;transition:width .8s ease;box-shadow:0 0 10px rgba(48,209,88,.55);}
+    #signal-label{font-size:11px;font-weight:700;letter-spacing:1.8px;color:var(--green);text-transform:uppercase;}
+    #scan-box{display:none;margin-bottom:12px;}
+    .step-item{display:flex;align-items:center;gap:10px;padding:9px 13px;border-radius:14px;margin-bottom:5px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);font-size:13px;opacity:.25;transition:opacity .4s,background .4s,transform .35s;}
+    .step-item.active{opacity:1;background:rgba(48,209,88,.13);border-color:rgba(48,209,88,.28);transform:translateX(5px);}
+    .step-item.done{opacity:.6;}
+    .step-dot{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.3);flex-shrink:0;transition:background .3s;}
+    .step-item.active .step-dot{background:var(--green);box-shadow:0 0 8px var(--green);animation:blink .65s ease-in-out infinite alternate;}
+    .step-item.done .step-dot{background:var(--blue);}
+    @keyframes blink{from{opacity:1}to{opacity:.15}}
+    #progress-wrap{display:none;margin-bottom:10px;height:3px;background:rgba(255,255,255,.08);border-radius:4px;overflow:hidden;}
+    #progress-bar{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--blue),var(--green));width:0%;transition:width .45s ease;}
+    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(10px);z-index:500;display:none;align-items:flex-end;justify-content:center;padding:0 14px 28px;}
+    .modal-overlay.open{display:flex;animation:fadeIn .22s;}
+    @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+    .modal-sheet{width:100%;max-width:440px;background:rgba(20,20,24,.82);backdrop-filter:blur(55px) saturate(200%);border:1px solid var(--border);border-radius:34px;padding:22px;box-shadow:0 2px 0 rgba(255,255,255,.1) inset,0 30px 60px rgba(0,0,0,.75);animation:slideUp .32s cubic-bezier(.25,.46,.45,.94);}
+    @keyframes slideUp{from{transform:translateY(55px);opacity:0}to{transform:translateY(0);opacity:1}}
+    .modal-handle{width:36px;height:4px;background:rgba(255,255,255,.2);border-radius:2px;margin:0 auto 18px;}
+    .modal-title{font-size:17px;font-weight:600;margin-bottom:16px;text-align:center;}
+    label{display:block;font-size:11px;font-weight:700;letter-spacing:1px;color:rgba(255,255,255,.5);text-transform:uppercase;margin:13px 0 5px;}
+    select{width:100%;padding:12px;border-radius:14px;background:rgba(255,255,255,.08);border:1px solid var(--border);color:#fff;font-size:15px;appearance:none;}
+    input[type=range]{width:100%;accent-color:var(--blue);}
+    #top-badge{position:fixed;top:50px;left:50%;transform:translateX(-50%) translateY(-90px);background:var(--glass);backdrop-filter:var(--blur);border:1px solid var(--border);border-radius:20px;padding:8px 18px;font-size:13px;font-weight:600;z-index:300;white-space:nowrap;box-shadow:0 2px 0 rgba(255,255,255,.1) inset;transition:transform .55s cubic-bezier(.34,1.56,.64,1);}
+    #top-badge.show{transform:translateX(-50%) translateY(0);}
+    #crosshair{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:50;}
+    #crosshair svg{filter:drop-shadow(0 0 6px var(--green));animation:spin 5s linear infinite;}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .divider{height:1px;background:rgba(255,255,255,.1);margin:10px 0;}
   </style>
 </head>
 <body>
 
 <div id="map"></div>
 <div id="found-glow"></div>
-<div id="pulse-ring">
-  <div class="p-ring"></div>
-  <div class="p-ring"></div>
-  <div class="p-ring"></div>
-</div>
+<div id="pulse-ring"><div class="p-ring"></div><div class="p-ring"></div><div class="p-ring"></div></div>
 
 <div id="crosshair">
   <svg width="40" height="40" viewBox="0 0 40 40">
     <circle cx="20" cy="20" r="17" fill="none" stroke="#30D158" stroke-width="1.4" stroke-dasharray="5 3"/>
     <circle cx="20" cy="20" r="3" fill="#30D158"/>
-    <line x1="20" y1="2"  x2="20" y2="9"  stroke="#30D158" stroke-width="1.5"/>
+    <line x1="20" y1="2" x2="20" y2="9" stroke="#30D158" stroke-width="1.5"/>
     <line x1="20" y1="31" x2="20" y2="38" stroke="#30D158" stroke-width="1.5"/>
-    <line x1="2"  y1="20" x2="9"  y2="20" stroke="#30D158" stroke-width="1.5"/>
+    <line x1="2" y1="20" x2="9" y2="20" stroke="#30D158" stroke-width="1.5"/>
     <line x1="31" y1="20" x2="38" y2="20" stroke="#30D158" stroke-width="1.5"/>
   </svg>
 </div>
 
 <div id="top-badge">📡 <span id="badge-text">KiwiWay Radar</span></div>
 
-<div class="panel">
-  <div class="glass-card">
+<div class="panel"><div class="glass-card">
 
-    <!-- Radar -->
-    <div id="radar-wrap">
-      <svg id="radar-svg" viewBox="0 0 80 80">
-        <defs>
-          <radialGradient id="rg" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stop-color="#30D158" stop-opacity=".25"/>
-            <stop offset="100%" stop-color="#30D158" stop-opacity="0"/>
-          </radialGradient>
-        </defs>
-        <circle cx="40" cy="40" r="38" fill="url(#rg)" stroke="rgba(48,209,88,.3)" stroke-width="1"/>
-        <circle cx="40" cy="40" r="25" fill="none" stroke="rgba(48,209,88,.18)" stroke-width="1"/>
-        <circle cx="40" cy="40" r="12" fill="none" stroke="rgba(48,209,88,.18)" stroke-width="1"/>
-        <line x1="40" y1="2" x2="40" y2="78" stroke="rgba(48,209,88,.12)" stroke-width="1"/>
-        <line x1="2" y1="40" x2="78" y2="40" stroke="rgba(48,209,88,.12)" stroke-width="1"/>
-        <line id="sweep" x1="40" y1="40" x2="40" y2="4" stroke="#30D158" stroke-width="2.5" stroke-linecap="round" opacity=".9"/>
-        <circle id="blip" cx="40" cy="15" r="4" fill="#30D158" opacity="0"/>
-      </svg>
-      <div id="signal-label">СИГНАЛ: 0%</div>
-      <div id="signal-bar-wrap"><div id="signal-bar"></div></div>
-    </div>
-
-    <!-- Steps -->
-    <div id="scan-box">
-      <div class="step-item" id="s1"><div class="step-dot"></div><span>🎲 Генерация координат</span></div>
-      <div class="step-item" id="s2"><div class="step-dot"></div><span>🔍 Геообработка точек</span></div>
-      <div class="step-item" id="s3"><div class="step-dot"></div><span>⚡ Анализ мощности</span></div>
-      <div class="step-item" id="s4"><div class="step-dot"></div><span>🎯 Выбор аномалии</span></div>
-      <div class="step-item" id="s5"><div class="step-dot"></div><span>📡 Запуск радара</span></div>
-    </div>
-
-    <!-- Progress bar -->
-    <div id="progress-wrap"><div id="progress-bar"></div></div>
-
-    <!-- Idle -->
-    <div id="ui-idle">
-      <div class="row">
-        <button class="btn btn-ghost" onclick="openModal('settings')">⚙️ Настройки</button>
-        <button class="btn btn-ghost" onclick="openModal('layers')">🗺 Слои</button>
-      </div>
-      <div class="row">
-        <button class="btn btn-ghost" id="selectBtn" onclick="toggleSelect()">📍 Точка</button>
-        <button class="btn btn-ghost" onclick="goToMe()">🎯 Я тут</button>
-      </div>
-      <button class="btn btn-primary" onclick="executeScan()">НАЙТИ АНОМАЛИЮ</button>
-    </div>
-
-    <!-- Found -->
-    <div id="ui-found" style="display:none;">
-      <button class="btn btn-green" onclick="buildRoute()">🧭 ПОСТРОИТЬ МАРШРУТ</button>
-      <button class="btn btn-ghost btn-danger" style="margin-top:9px;" onclick="resetSystem()">✕ Сброс</button>
-    </div>
-
+  <!-- GAUGE NEEDLE -->
+  <div id="radar-wrap">
+    <svg id="needle-svg" viewBox="0 0 96 60">
+      <defs>
+        <linearGradient id="arcGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#30D158"/>
+          <stop offset="50%" stop-color="#FFD60A"/>
+          <stop offset="100%" stop-color="#FF453A"/>
+        </linearGradient>
+      </defs>
+      <!-- arc track -->
+      <path d="M 8,52 A 40,40 0 0,1 88,52" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="5" stroke-linecap="round"/>
+      <path d="M 8,52 A 40,40 0 0,1 88,52" fill="none" stroke="url(#arcGrad)" stroke-width="5" stroke-linecap="round" opacity=".65"/>
+      <!-- ticks -->
+      <line x1="8" y1="52" x2="13" y2="46" stroke="rgba(255,255,255,.4)" stroke-width="1.2"/>
+      <line x1="48" y1="12" x2="48" y2="18" stroke="rgba(255,255,255,.4)" stroke-width="1.2"/>
+      <line x1="88" y1="52" x2="83" y2="46" stroke="rgba(255,255,255,.4)" stroke-width="1.2"/>
+      <!-- labels -->
+      <text x="3" y="58" fill="rgba(255,255,255,.4)" font-size="6" font-family="system-ui">L</text>
+      <text x="45" y="10" fill="rgba(255,255,255,.4)" font-size="6" font-family="system-ui">M</text>
+      <text x="84" y="58" fill="rgba(255,255,255,.4)" font-size="6" font-family="system-ui">H</text>
+      <!-- needle -->
+      <line id="needle-line" x1="48" y1="52" x2="48" y2="16" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round"/>
+      <circle cx="48" cy="52" r="4" fill="#30D158" opacity=".95"/>
+    </svg>
+    <div id="signal-label">СИГНАЛ: 0%</div>
+    <div id="signal-bar-wrap"><div id="signal-bar"></div></div>
   </div>
-</div>
+
+  <!-- SCAN STEPS -->
+  <div id="scan-box">
+    <div class="step-item" id="s1"><div class="step-dot"></div><span>🎲 Генерация координат</span></div>
+    <div class="step-item" id="s2"><div class="step-dot"></div><span>🔍 Геообработка точек</span></div>
+    <div class="step-item" id="s3"><div class="step-dot"></div><span>⚡ Анализ мощности</span></div>
+    <div class="step-item" id="s4"><div class="step-dot"></div><span>🎯 Выбор аномалии</span></div>
+    <div class="step-item" id="s5"><div class="step-dot"></div><span>📡 Запуск радара</span></div>
+  </div>
+
+  <div id="progress-wrap"><div id="progress-bar"></div></div>
+
+  <!-- IDLE -->
+  <div id="ui-idle">
+    <div class="row">
+      <button class="btn btn-ghost" onclick="tap();openModal('settings')">⚙️ Настройки</button>
+      <button class="btn btn-ghost" onclick="tap();openModal('layers')">🗺 Слои</button>
+    </div>
+    <div class="row">
+      <button class="btn btn-ghost" id="selectBtn" onclick="tap();toggleSelect()">📍 Точка</button>
+      <button class="btn btn-ghost" onclick="tap();goToMe()">🎯 Я тут</button>
+    </div>
+    <button class="btn btn-primary" onclick="tapPrimary();executeScan()">НАЙТИ АНОМАЛИЮ</button>
+  </div>
+
+  <!-- FOUND -->
+  <div id="ui-found" style="display:none;">
+    <button class="btn btn-green" onclick="tap();buildRoute()">🧭 ПОСТРОИТЬ МАРШРУТ</button>
+    <div class="divider"></div>
+    <div class="row" style="margin-bottom:0;">
+      <button class="btn btn-ghost btn-sm" onclick="tap();switchStyle('dark')">🌑 Схема</button>
+      <button class="btn btn-ghost btn-sm" onclick="tap();switchStyle('sat')">🛰 Спутник</button>
+    </div>
+    <button class="btn btn-ghost btn-danger" style="margin-top:9px;" onclick="tap();resetSystem()">✕ Сброс</button>
+  </div>
+
+</div></div>
 
 <!-- SETTINGS -->
 <div class="modal-overlay" id="settings">
   <div class="modal-sheet">
     <div class="modal-handle"></div>
     <div class="modal-title">Настройки радара</div>
-    <label>Категория аномалии</label>
+    <label>Категория</label>
     <select id="catSelect">
       <option value="quantum">🌀 Квантовый</option>
       <option value="power">⚡ Мощный</option>
@@ -346,7 +167,7 @@
     <input type="range" id="radiusIn" min="1" max="15" value="5" oninput="syncSliders()"/>
     <label>Целевая мощность: <span id="pL">50</span>%</label>
     <input type="range" id="powerIn" min="1" max="100" value="50" oninput="syncSliders()"/>
-    <button class="btn btn-primary" style="margin-top:16px;" onclick="closeModal('settings')">ГОТОВО</button>
+    <button class="btn btn-primary" style="margin-top:16px;" onclick="tap();closeModal('settings')">ГОТОВО</button>
   </div>
 </div>
 
@@ -355,306 +176,306 @@
   <div class="modal-sheet">
     <div class="modal-handle"></div>
     <div class="modal-title">Стиль карты</div>
-    <button class="btn btn-ghost" style="margin-bottom:9px;" onclick="setStyle('dark')">🌑 Тёмная</button>
-    <button class="btn btn-ghost" style="margin-bottom:9px;" onclick="setStyle('sat')">🛰 Спутник</button>
-    <button class="btn btn-ghost" onclick="closeModal('layers')">Закрыть</button>
+    <button class="btn btn-ghost" style="margin-bottom:9px;" onclick="tap();switchStyle('dark');closeModal('layers')">🌑 Тёмная</button>
+    <button class="btn btn-ghost" style="margin-bottom:9px;" onclick="tap();switchStyle('sat');closeModal('layers')">🛰 Спутник</button>
+    <button class="btn btn-ghost" onclick="tap();closeModal('layers')">Закрыть</button>
   </div>
 </div>
 
 <script>
-let map, userPos, searchOrigin, targetPoint;
-let radarInterval, sweepInterval, sweepAngle = 0;
+/* SOUND */
+const AC = new (window.AudioContext || window.webkitAudioContext)();
+function playTone(f, dur, vol, type, f2) {
+  try {
+    if (AC.state === 'suspended') AC.resume();
+    const g = AC.createGain(), o = AC.createOscillator();
+    o.type = type || 'sine';
+    o.frequency.setValueAtTime(f, AC.currentTime);
+    if (f2) o.frequency.exponentialRampToValueAtTime(f2, AC.currentTime + dur);
+    g.gain.setValueAtTime(vol, AC.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, AC.currentTime + dur);
+    o.connect(g); g.connect(AC.destination);
+    o.start(); o.stop(AC.currentTime + dur + 0.01);
+  } catch(e) {}
+}
+function tap()        { playTone(1100, 0.055, 0.13, 'sine', 600); }
+function tapPrimary() { playTone(880, 0.085, 0.20, 'triangle', 440); }
+function tapFound()   { [880,1100,1320,1760].forEach((f,i) => setTimeout(() => playTone(f,0.14,0.18,'sine'), i*100)); }
+
+/* STATE */
+let map, userPos, searchOrigin, targetPoint, anomalyPower = 50;
+let radarInterval, needleInterval;
 let selectMode = false;
+let allMarkers = [], userMarker = null;
 
 const DARK = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
-const SAT  = {
-  version:8,
-  sources:{ s:{ type:"raster", tiles:["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"], tileSize:256 }},
-  layers:[{ id:"s", type:"raster", source:"s" }]
-};
+const SAT  = { version:8, sources:{ s:{ type:"raster", tiles:["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"], tileSize:256 }}, layers:[{ id:"s", type:"raster", source:"s" }] };
 
-// Init map
-map = new maplibregl.Map({
-  container:"map", style:DARK,
-  center:[37.6,55.7], zoom:11,
-  attributionControl:false
-});
+map = new maplibregl.Map({ container:"map", style:DARK, center:[37.6,55.7], zoom:11, attributionControl:false });
 
-// Geolocation
 navigator.geolocation.getCurrentPosition(pos => {
-  userPos      = [pos.coords.longitude, pos.coords.latitude];
+  userPos = [pos.coords.longitude, pos.coords.latitude];
   searchOrigin = [...userPos];
   map.setCenter(userPos);
-  new maplibregl.Marker({ color:"#0A84FF", scale:.85 }).setLngLat(userPos).addTo(map);
+  addUserMarker();
   showBadge("📍 Позиция получена");
-  if(map.loaded()) drawCircle(); else map.on('load', drawCircle);
+  if (map.loaded()) drawCircle(); else map.on('load', drawCircle);
 }, () => {
-  userPos      = [37.6, 55.7];
+  userPos = [37.6, 55.7];
   searchOrigin = [...userPos];
   showBadge("⚠️ Геолокация недоступна");
-  if(map.loaded()) drawCircle(); else map.on('load', drawCircle);
+  if (map.loaded()) drawCircle(); else map.on('load', drawCircle);
 });
 
-map.on('load', () => { if(searchOrigin) drawCircle(); });
+map.on('load', () => { if (searchOrigin) drawCircle(); });
 
-// ── Radius circle ──────────────────────────────────────────
-function drawCircle() {
-  const km  = parseInt(document.getElementById('radiusIn').value);
-  const ctr = searchOrigin || userPos || [37.6,55.7];
-  const pts = 72, ring = [];
-  for(let i=0;i<=pts;i++){
-    const a = (i/pts)*2*Math.PI;
-    ring.push([ctr[0]+(km/111)*Math.cos(a), ctr[1]+(km/111)*Math.sin(a)]);
-  }
-  const geo = {
-    type:"FeatureCollection",
-    features:[
-      { type:"Feature", geometry:{ type:"Polygon", coordinates:[ring] }},
-      { type:"Feature", geometry:{ type:"LineString", coordinates:ring }}
-    ]
-  };
-
-  if(map.getSource('circle-src')) {
-    map.getSource('circle-src').setData(geo);
-    return;
-  }
-  map.addSource('circle-src',{ type:'geojson', data:geo });
-  map.addLayer({ id:'circle-fill', type:'fill', source:'circle-src',
-    filter:['==','$type','Polygon'],
-    paint:{ 'fill-color':'#0A84FF', 'fill-opacity':0.07 }
-  });
-  map.addLayer({ id:'circle-line', type:'line', source:'circle-src',
-    filter:['==','$type','LineString'],
-    paint:{ 'line-color':'#0A84FF', 'line-width':1.8, 'line-opacity':0.55, 'line-dasharray':[5,4] }
-  });
+function addUserMarker() {
+  if (userMarker) userMarker.remove();
+  userMarker = new maplibregl.Marker({ color:"#0A84FF", scale:.85 }).setLngLat(userPos).addTo(map);
 }
 
-document.getElementById('radiusIn').addEventListener('input', () => {
-  if(map.getSource('circle-src')) drawCircle();
-});
+/* GEO-CORRECT CIRCLE */
+function geoCircle(center, radiusKm, steps=80) {
+  const [lng, lat] = center;
+  const d = radiusKm / 6371;
+  const latR = lat * Math.PI / 180, lngR = lng * Math.PI / 180;
+  const pts = [];
+  for (let i = 0; i <= steps; i++) {
+    const b = (i / steps) * 2 * Math.PI;
+    const pLat = Math.asin(Math.sin(latR)*Math.cos(d) + Math.cos(latR)*Math.sin(d)*Math.cos(b));
+    const pLng = lngR + Math.atan2(Math.sin(b)*Math.sin(d)*Math.cos(latR), Math.cos(d)-Math.sin(latR)*Math.sin(pLat));
+    pts.push([pLng*180/Math.PI, pLat*180/Math.PI]);
+  }
+  return pts;
+}
 
-// ── Helpers ────────────────────────────────────────────────
+function drawCircle() {
+  const km = parseInt(document.getElementById('radiusIn').value);
+  const ctr = searchOrigin || userPos || [37.6, 55.7];
+  const ring = geoCircle(ctr, km);
+  const geo = { type:"FeatureCollection", features:[
+    { type:"Feature", geometry:{ type:"Polygon",    coordinates:[ring] }},
+    { type:"Feature", geometry:{ type:"LineString", coordinates:ring }}
+  ]};
+  if (map.getSource('circle-src')) { map.getSource('circle-src').setData(geo); return; }
+  map.addSource('circle-src', { type:'geojson', data:geo });
+  map.addLayer({ id:'circle-fill', type:'fill', source:'circle-src', filter:['==','$type','Polygon'], paint:{ 'fill-color':'#0A84FF','fill-opacity':0.07 }});
+  map.addLayer({ id:'circle-line', type:'line', source:'circle-src', filter:['==','$type','LineString'], paint:{ 'line-color':'#0A84FF','line-width':1.8,'line-opacity':.55,'line-dasharray':[5,4] }});
+}
+
+document.getElementById('radiusIn').addEventListener('input', () => { if (map.getSource('circle-src')) drawCircle(); });
+
+/* PULSE POSITION */
+function positionPulse() {
+  const o = searchOrigin || userPos || [37.6, 55.7];
+  const pt = map.project(o);
+  const pr = document.getElementById('pulse-ring');
+  pr.style.left = pt.x + 'px';
+  pr.style.top  = pt.y + 'px';
+}
+
+/* UTILS */
 function syncSliders() {
   document.getElementById('rL').textContent = radiusIn.value;
   document.getElementById('pL').textContent = powerIn.value;
-  if(map.getSource('circle-src')) drawCircle();
+  if (map.getSource('circle-src')) drawCircle();
 }
-
 function showBadge(txt) {
   document.getElementById('badge-text').textContent = txt;
   const b = document.getElementById('top-badge');
   b.classList.add('show');
-  setTimeout(()=>b.classList.remove('show'), 3200);
+  clearTimeout(b._t);
+  b._t = setTimeout(() => b.classList.remove('show'), 3200);
 }
-
-function goToMe() {
-  if(userPos) map.flyTo({ center:userPos, zoom:13, duration:900 });
-}
-
+function goToMe() { if (userPos) map.flyTo({ center:userPos, zoom:13, duration:900 }); }
 function openModal(id)  { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
-function setStyle(s) {
-  map.setStyle(s==='dark'? DARK : SAT);
-  map.once('styledata', ()=>setTimeout(drawCircle, 300));
-  closeModal('layers');
+function switchStyle(s) {
+  map.setStyle(s === 'dark' ? DARK : SAT);
+  map.once('styledata', () => setTimeout(drawCircle, 300));
 }
 
 function toggleSelect() {
   selectMode = !selectMode;
   document.getElementById('crosshair').style.display = selectMode ? 'block' : 'none';
-  document.getElementById('selectBtn').textContent = selectMode ? '✅ Готово' : '📍 Точка';
-  if(!selectMode) {
+  document.getElementById('selectBtn').textContent   = selectMode ? '✅ Готово' : '📍 Точка';
+  if (!selectMode) {
     searchOrigin = map.getCenter().toArray();
-    if(map.getSource('circle-src')) drawCircle();
+    if (map.getSource('circle-src')) drawCircle();
     showBadge("📍 Точка выбрана");
   }
 }
 
-function haversine(p1,p2) {
+function haversine(p1, p2) {
   const R=6371000, dLat=(p2[1]-p1[1])*Math.PI/180, dLon=(p2[0]-p1[0])*Math.PI/180;
   const a=Math.sin(dLat/2)**2+Math.cos(p1[1]*Math.PI/180)*Math.cos(p2[1]*Math.PI/180)*Math.sin(dLon/2)**2;
   return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
 }
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+function setStep(i, st) { document.getElementById('s'+i).className = 'step-item '+(st||''); }
+function setProgress(p) { document.getElementById('progress-bar').style.width = p+'%'; }
 
-function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
-
-function setStep(i,state){
-  document.getElementById('s'+i).className='step-item '+(state||'');
-}
-function setProgress(p){
-  document.getElementById('progress-bar').style.width=p+'%';
-}
-
-// ── Main Scan (≤15 sec) ───────────────────────────────────
+/* SCAN */
 async function executeScan() {
-  const mode    = document.getElementById('catSelect').value;
-  const radius  = parseInt(document.getElementById('radiusIn').value);
-  const target  = parseInt(document.getElementById('powerIn').value);
-  const origin  = searchOrigin || userPos || [37.6,55.7];
+  const mode   = document.getElementById('catSelect').value;
+  const radius = parseInt(document.getElementById('radiusIn').value);
+  const target = parseInt(document.getElementById('powerIn').value);
+  const origin = searchOrigin || userPos || [37.6, 55.7];
 
-  // UI switch
   document.getElementById('ui-idle').style.display   = 'none';
   document.getElementById('ui-found').style.display  = 'none';
   document.getElementById('scan-box').style.display  = 'block';
   document.getElementById('progress-wrap').style.display = 'block';
-  document.getElementById('pulse-ring').style.display = 'flex';
-  document.getElementById('map').className            = 'scanning';
+  document.getElementById('map').className = 'scanning';
   document.getElementById('found-glow').classList.remove('show');
 
-  setProgress(0);
-  for(let i=1;i<=5;i++) setStep(i,'');
+  positionPulse();
+  document.getElementById('pulse-ring').style.display = 'block';
 
-  // Step 1: Generate pool (instant)
+  setProgress(0);
+  for (let i=1;i<=5;i++) setStep(i,'');
+
+  // Step 1
   setStep(1,'active');
-  const POOL=40, pool=[];
-  for(let i=0;i<POOL;i++){
-    const a=(Math.random()*Math.PI*2), d=(Math.sqrt(Math.random())*radius)/111;
-    pool.push([origin[0]+d*Math.cos(a), origin[1]+d*Math.sin(a)]);
+  const pool = [];
+  for (let i=0;i<40;i++) {
+    const b=Math.random()*2*Math.PI, dist=Math.sqrt(Math.random())*radius, d=dist/6371;
+    const latR=origin[1]*Math.PI/180, lngR=origin[0]*Math.PI/180;
+    const pLat=Math.asin(Math.sin(latR)*Math.cos(d)+Math.cos(latR)*Math.sin(d)*Math.cos(b));
+    const pLng=lngR+Math.atan2(Math.sin(b)*Math.sin(d)*Math.cos(latR),Math.cos(d)-Math.sin(latR)*Math.sin(pLat));
+    pool.push([pLng*180/Math.PI, pLat*180/Math.PI]);
   }
   await sleep(550);
   setStep(1,'done'); setProgress(20);
 
-  // Step 2: Parallel geo lookup (max 4 sec timeout)
+  // Step 2
   setStep(2,'active');
-  let valid=[];
+  let valid = [];
   try {
-    const BATCH = pool.slice(0,12); // small batch = fast
-    const results = await Promise.allSettled(
-      BATCH.map(pt =>
+    const res = await Promise.allSettled(
+      pool.slice(0,12).map(pt =>
         fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pt[1]}&lon=${pt[0]}&zoom=16`,
           { signal:AbortSignal.timeout(4000) })
-        .then(r=>r.json())
-        .then(data=>({ coords:pt, data }))
+        .then(r=>r.json()).then(data=>({ coords:pt, data }))
       )
     );
-    results.forEach(r=>{
-      if(r.status!=='fulfilled') return;
+    res.forEach(r => {
+      if (r.status!=='fulfilled') return;
       const {coords,data}=r.value;
       let ok=false;
       if(mode==='quantum') ok=data.type==='cemetery'||data.type==='place_of_worship';
       if(mode==='power')   ok=data.type==='construction'||data.type==='industrial';
       if(mode==='void')    ok=!data.address?.road&&!data.address?.residential;
-      // always push some for playability
       if(ok||Math.random()<0.35) valid.push({coords,data});
     });
-  } catch(e){}
+  } catch(e) {}
 
-  // Fallback guarantee
-  if(!valid.length) pool.forEach(pt=>{ if(Math.random()<.5) valid.push({coords:pt,data:{}}); });
-  if(!valid.length) valid = pool.map(pt=>({coords:pt,data:{}}));
-
+  if (!valid.length) pool.forEach(pt=>{ if(Math.random()<.5) valid.push({coords:pt,data:{}}); });
+  if (!valid.length) valid = pool.map(pt=>({coords:pt,data:{}}));
   setStep(2,'done'); setProgress(52);
 
-  // Step 3: Power
+  // Step 3
   setStep(3,'active');
   await sleep(450);
-  valid.forEach(p=>p.power=Math.floor(Math.random()*100)+1);
+  valid.forEach(p => p.power = Math.floor(Math.random()*100)+1);
   setStep(3,'done'); setProgress(72);
 
-  // Step 4: Select
+  // Step 4
   setStep(4,'active');
   await sleep(380);
   valid.sort((a,b)=>Math.abs(a.power-target)-Math.abs(b.power-target));
-  targetPoint = valid[0].coords;
+  targetPoint  = valid[0].coords;
+  anomalyPower = valid[0].power;
   setStep(4,'done'); setProgress(88);
 
-  // Step 5: Radar init
+  // Step 5
   setStep(5,'active');
   await sleep(450);
   setStep(5,'done'); setProgress(100);
   await sleep(350);
 
-  // Reveal
-  document.getElementById('scan-box').style.display   = 'none';
+  document.getElementById('scan-box').style.display      = 'none';
   document.getElementById('progress-wrap').style.display = 'none';
-  document.getElementById('pulse-ring').style.display  = 'none';
-  document.getElementById('map').className             = 'found';
+  document.getElementById('pulse-ring').style.display    = 'none';
+  document.getElementById('map').className = 'found';
   document.getElementById('found-glow').classList.add('show');
 
   showTarget();
   startRadar();
+  tapFound();
   showBadge("🎯 Аномалия обнаружена!");
 }
 
-// ── Radar ─────────────────────────────────────────────────
+/* RADAR — needle by power, not rotating */
 function startRadar() {
   document.getElementById('radar-wrap').style.display = 'flex';
   document.getElementById('ui-found').style.display   = 'block';
 
-  sweepAngle = 0;
-  sweepInterval = setInterval(()=>{
-    sweepAngle=(sweepAngle+5)%360;
-    const r   = sweepAngle*Math.PI/180;
-    const x2  = 40+36*Math.sin(r), y2=40-36*Math.cos(r);
-    document.getElementById('sweep').setAttribute('x2',x2);
-    document.getElementById('sweep').setAttribute('y2',y2);
+  // Map power 1-100 → angle -80° to +80° around gauge center
+  const baseAngle = -80 + (anomalyPower / 100) * 160;
 
-    // blip
-    const origin = searchOrigin||userPos||[37.6,55.7];
-    const ta = Math.atan2(targetPoint[0]-origin[0], targetPoint[1]-origin[1])*180/Math.PI;
-    const diff = Math.abs(((sweepAngle-ta)%360+360)%360);
-    const blip = document.getElementById('blip');
-    if(diff<18){
-      const dist = haversine(origin,targetPoint)/((parseInt(radiusIn.value)||5)*1000);
-      const br   = 5+28*(1-Math.min(dist,1)); // closer = closer to center
-      blip.setAttribute('cx', 40+br*Math.sin(ta*Math.PI/180));
-      blip.setAttribute('cy', 40-br*Math.cos(ta*Math.PI/180));
-      blip.setAttribute('opacity', (1-diff/18)*0.9);
-    } else {
-      blip.setAttribute('opacity',0);
-    }
-  }, 45);
+  function jitterNeedle() {
+    const j = (Math.random()-0.5) * 14;
+    document.getElementById('needle-line').style.transform = `rotate(${baseAngle+j}deg)`;
+  }
+  jitterNeedle();
+  needleInterval = setInterval(jitterNeedle, 800);
 
-  radarInterval = setInterval(()=>{
-    if(!userPos) return;
+  radarInterval = setInterval(() => {
+    if (!userPos) return;
     const dist   = haversine(userPos, targetPoint);
-    const maxD   = parseInt(document.getElementById('radiusIn').value)*1000;
-    const signal = Math.max(0,Math.min(100,(1-dist/maxD)*100));
-    document.getElementById('signal-label').textContent='СИГНАЛ: '+signal.toFixed(0)+'%';
-    document.getElementById('signal-bar').style.width=signal+'%';
-  }, 900);
+    const maxD   = parseInt(document.getElementById('radiusIn').value) * 1000;
+    const signal = Math.max(0, Math.min(100, (1 - dist/maxD)*100));
+    document.getElementById('signal-label').textContent = 'СИГНАЛ: '+signal.toFixed(0)+'%';
+    document.getElementById('signal-bar').style.width   = signal+'%';
+  }, 1000);
 }
 
-// ── Show Target ────────────────────────────────────────────
+/* SHOW TARGET + FLY */
 function showTarget() {
-  const el = document.createElement('div');
-  el.style.cssText=`
-    width:22px;height:22px;border-radius:50%;
-    background:radial-gradient(circle,#FF453A 30%,transparent 100%);
-    border:2px solid #FF453A;
-    box-shadow:0 0 20px rgba(255,69,58,.85),0 0 45px rgba(255,69,58,.4);
-    animation:mPulse 1.4s ease-in-out infinite alternate;
-  `;
-  const style = document.createElement('style');
-  style.textContent=`@keyframes mPulse{from{box-shadow:0 0 10px rgba(255,69,58,.6)}to{box-shadow:0 0 30px rgba(255,69,58,1),0 0 60px rgba(255,69,58,.5)}}`;
-  document.head.appendChild(style);
-  new maplibregl.Marker({element:el}).setLngLat(targetPoint).addTo(map);
-  map.flyTo({ center:targetPoint, zoom:15, duration:2200, essential:true });
+  if (!document.getElementById('kf')) {
+    const s=document.createElement('style'); s.id='kf';
+    s.textContent=`@keyframes mPulse{0%{box-shadow:0 0 10px rgba(255,69,58,.6),0 0 0 0 rgba(255,69,58,.4);}70%{box-shadow:0 0 22px rgba(255,69,58,.9),0 0 0 14px rgba(255,69,58,0);}100%{box-shadow:0 0 10px rgba(255,69,58,.6),0 0 0 0 rgba(255,69,58,0);}}`;
+    document.head.appendChild(s);
+  }
+  const el=document.createElement('div');
+  el.style.cssText=`width:22px;height:22px;border-radius:50%;background:radial-gradient(circle,#FF453A 40%,rgba(255,69,58,.3) 100%);border:2px solid #FF453A;animation:mPulse 1.6s ease-out infinite;cursor:pointer;`;
+  const m=new maplibregl.Marker({element:el}).setLngLat(targetPoint).addTo(map);
+  allMarkers.push(m);
+
+  // Camera flies to anomaly
+  map.flyTo({ center:targetPoint, zoom:15, speed:1.4, curve:1.6, essential:true });
 }
 
-// ── Route ──────────────────────────────────────────────────
 function buildRoute() {
-  if(!targetPoint||!userPos) return;
-  const url=`https://www.google.com/maps/dir/?api=1&origin=${userPos[1]},${userPos[0]}&destination=${targetPoint[1]},${targetPoint[0]}&travelmode=walking`;
-  window.open(url,'_blank');
+  if (!targetPoint||!userPos) return;
+  window.open(`https://www.google.com/maps/dir/?api=1&origin=${userPos[1]},${userPos[0]}&destination=${targetPoint[1]},${targetPoint[0]}&travelmode=walking`,'_blank');
 }
 
-// ── Reset ──────────────────────────────────────────────────
+/* RESET — all markers + layers removed */
 function resetSystem() {
   clearInterval(radarInterval);
-  clearInterval(sweepInterval);
-  ['radar-wrap','scan-box','progress-wrap','ui-found'].forEach(id=>{
-    document.getElementById(id).style.display='none';
-  });
-  document.getElementById('pulse-ring').style.display='none';
-  document.getElementById('ui-idle').style.display='block';
-  document.getElementById('map').className='';
+  clearInterval(needleInterval);
+
+  allMarkers.forEach(m => m.remove());
+  allMarkers = [];
+
+  ['circle-fill','circle-line'].forEach(id => { if(map.getLayer(id)) map.removeLayer(id); });
+  if (map.getSource('circle-src')) map.removeSource('circle-src');
+
+  if (userPos) addUserMarker();
+  setTimeout(drawCircle, 60);
+
+  ['radar-wrap','scan-box','progress-wrap','ui-found'].forEach(id => { document.getElementById(id).style.display='none'; });
+  document.getElementById('pulse-ring').style.display = 'none';
+  document.getElementById('ui-idle').style.display    = 'block';
+  document.getElementById('map').className            = '';
   document.getElementById('found-glow').classList.remove('show');
-  document.getElementById('signal-bar').style.width='0%';
-  document.getElementById('signal-label').textContent='СИГНАЛ: 0%';
-  document.getElementById('blip').setAttribute('opacity',0);
-  targetPoint=null;
+  document.getElementById('signal-bar').style.width      = '0%';
+  document.getElementById('signal-label').textContent    = 'СИГНАЛ: 0%';
+  document.getElementById('needle-line').style.transform = 'rotate(-80deg)';
+  targetPoint = null;
   showBadge("🔄 Система сброшена");
 }
 </script>
