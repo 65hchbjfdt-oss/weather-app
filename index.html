@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no,viewport-fit=cover">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
     <title>KiwiWay - Anomaly Radar</title>
     <script src='https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.js'></script>
     <link href='https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.css' rel='stylesheet' />
@@ -11,142 +11,187 @@
             --ios-blue: #0A84FF; 
             --ios-green: #30D158;
             --ios-red: #FF453A;
-            --glass-bg: rgba(25, 25, 25, 0.5);
-            --glass-border: rgba(255, 255, 255, 0.12);
-            --blur: blur(40px) saturate(180%);
+            --glass-bg: rgba(35, 35, 40, 0.45);
+            --glass-border: rgba(255, 255, 255, 0.15);
+            --blur: blur(35px) saturate(200%);
         }
         
-        body { margin: 0; padding: 0; background: #000; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #fff; overflow: hidden; }
-        #map { position: absolute; top: 0; bottom: 0; width: 100%; z-index: 1; filter: brightness(0.7) contrast(1.2); }
+        body { margin: 0; padding: 0; background: #000; font-family: -apple-system, system-ui, sans-serif; color: #fff; overflow: hidden; }
         
-        /* Жидкое стекло (Liquid Glass) */
+        #map { position: absolute; top: 0; bottom: 0; width: 100%; z-index: 1; filter: brightness(0.85) contrast(1.1); transition: filter 0.5s ease; }
+        
+        /* UI Panel */
         .ui-panel {
-            position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
-            width: 90%; max-width: 380px; 
+            position: absolute; bottom: 35px; left: 50%; transform: translateX(-50%);
+            width: 92%; max-width: 400px; 
             background: var(--glass-bg);
             backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
             border: 1px solid var(--glass-border); 
-            border-top: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 40px; padding: 24px; box-sizing: border-box; z-index: 100;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            border-top: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 36px;
+            padding: 22px; box-sizing: border-box; z-index: 100;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.05);
         }
 
         .btn {
-            width: 100%; padding: 18px; margin: 8px 0; border: none; border-radius: 22px;
-            font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.4s cubic-bezier(0.15, 1, 0.3, 1);
-            background: rgba(255, 255, 255, 0.08); color: #fff;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            width: 100%; padding: 16px; margin: 6px 0; border: none; border-radius: 20px;
+            font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+            background: rgba(10, 132, 255, 0.6); color: #fff;
+            backdrop-filter: blur(10px); border: 1px solid var(--glass-border);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
         }
-        .btn-main { background: var(--ios-blue); box-shadow: 0 10px 20px rgba(10, 132, 255, 0.3); }
-        .btn:active { transform: scale(0.96); background: rgba(255, 255, 255, 0.15); }
+        .btn-sec { background: rgba(255, 255, 255, 0.1); color: #fff; }
+        .btn:active { transform: scale(0.95); opacity: 0.8; }
+
+        /* Sliders */
+        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; height: 35px; }
+        input[type=range]::-webkit-slider-runnable-track { height: 6px; background: rgba(255,255,255,0.15); border-radius: 4px; }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none; height: 26px; width: 26px; border-radius: 50%;
+            background: #fff; margin-top: -10px; box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+            transition: transform 0.1s;
+        }
+        input[type=range]::-webkit-slider-thumb:active { transform: scale(1.1); }
 
         /* Radar Unit */
+        #radar-ui { margin-bottom: 15px; }
         #radar {
-            width: 80px; height: 80px; margin: 0 auto 15px; border: 1px solid rgba(48, 209, 88, 0.3);
+            width: 75px; height: 75px; margin: 0 auto 12px; border: 1px solid rgba(255,255,255,0.25);
             border-radius: 50%; position: relative; 
-            background: radial-gradient(circle, rgba(48, 209, 88, 0.1) 0%, transparent 75%);
+            background: radial-gradient(circle, rgba(48, 209, 88, 0.15) 0%, transparent 70%);
+            box-shadow: inset 0 0 20px rgba(48, 209, 88, 0.1);
         }
         #radar-arrow {
-            position: absolute; top: 50%; left: 50%; width: 2px; height: 38px;
+            position: absolute; top: 50%; left: 50%; width: 2.5px; height: 34px;
             background: var(--ios-green); transform-origin: bottom center;
             transform: translate(-50%, -100%) rotate(0deg); 
-            transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: 0 0 15px var(--ios-green);
+            transition: transform 1.2s cubic-bezier(0.25, 0.1, 0.25, 1);
+            border-radius: 2px;
+            box-shadow: 0 0 8px var(--ios-green);
         }
 
-        /* Анимация импульса от точки поиска */
-        .pulse-ring {
-            position: absolute; border: 2px solid var(--ios-blue);
-            border-radius: 50%; pointer-events: none; z-index: 5;
-            transform: translate(-50%, -50%);
-            animation: ring-grow 3s cubic-bezier(0.165, 0.84, 0.44, 1) infinite;
-        }
-        @keyframes ring-grow {
-            0% { width: 0; height: 0; opacity: 0.8; border-width: 4px; }
-            100% { width: 600px; height: 600px; opacity: 0; border-width: 1px; }
-        }
-
+        /* Modals & Alerts */
         .modal {
-            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -45%) scale(0.9);
-            width: 85%; max-width: 320px; background: rgba(30, 30, 30, 0.8);
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.95);
+            width: 85%; max-width: 320px; 
+            background: var(--glass-bg);
             backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
-            border-radius: 35px; padding: 25px; display: none; z-index: 1000; 
-            border: 1px solid var(--glass-border); opacity: 0; transition: all 0.5s cubic-bezier(0.15, 1, 0.3, 1);
+            border-radius: 32px; padding: 25px;
+            display: none; z-index: 1000; 
+            border: 1px solid var(--glass-border);
+            border-top: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 25px 50px rgba(0,0,0,0.6);
+            opacity: 0; transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
         }
-        .active { display: block; opacity: 1; transform: translate(-50%, -50%) scale(1); }
+        .custom-alert {
+            position: fixed; top: 40px; left: 50%; transform: translateX(-50%) translateY(-20px);
+            background: rgba(255, 69, 58, 0.85); padding: 14px 28px; border-radius: 24px;
+            z-index: 2000; font-size: 14px; font-weight: 600; display: none;
+            backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.2);
+            box-shadow: 0 12px 30px rgba(255, 69, 58, 0.3);
+            opacity: 0; transition: all 0.3s ease;
+        }
         
+        .active { display: block; opacity: 1; transform: translate(-50%, -50%) scale(1); }
+        .alert-active { display: block; opacity: 1; transform: translateX(-50%) translateY(0); }
+
         #crosshair {
             display: none; position: absolute; top: 50%; left: 50%;
-            transform: translate(-50%, -50%); width: 40px; height: 40px;
-            z-index: 50; border: 2px solid #fff; border-radius: 50%;
-            mix-blend-mode: difference;
+            transform: translate(-50%, -50%); width: 30px; height: 30px;
+            z-index: 50; border: 1.5px solid var(--ios-green); border-radius: 50%;
+            box-shadow: 0 0 10px rgba(48, 209, 88, 0.5);
         }
-        #crosshair::after { content: ''; position: absolute; top: 50%; left: 50%; width: 100%; height: 2px; background: #fff; transform: translate(-50%, -50%); }
-        #crosshair::before { content: ''; position: absolute; top: 50%; left: 50%; height: 100%; width: 2px; background: #fff; transform: translate(-50%, -50%); }
 
-        input[type="range"] { -webkit-appearance: none; width: 100%; background: transparent; }
-        input[type="range"]::-webkit-slider-runnable-track { width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; }
-        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; height: 24px; width: 24px; border-radius: 50%; background: #fff; margin-top: -9px; box-shadow: 0 3px 8px rgba(0,0,0,0.3); }
+        /* Анимация импульса поиска */
+        #searchPulse {
+            display: none; position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%); width: 0px; height: 0px;
+            z-index: 40; border: 2px solid var(--ios-blue); border-radius: 50%;
+            pointer-events: none;
+            box-shadow: 0 0 20px var(--ios-blue), inset 0 0 20px var(--ios-blue);
+            animation: radarWave 1.5s infinite cubic-bezier(0.25, 1, 0.5, 1);
+        }
+        
+        @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
+        @keyframes radarWave {
+            0% { width: 0px; height: 0px; opacity: 1; }
+            100% { width: 400px; height: 400px; opacity: 0; }
+        }
+        
+        select { appearance: none; -webkit-appearance: none; }
     </style>
 </head>
 <body>
 
 <div id="map"></div>
 <div id="crosshair"></div>
-<div id="pulse-container" style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:5;"></div>
+<div id="searchPulse"></div> <div id="iosAlert" class="custom-alert"></div>
 
 <div class="ui-panel">
     <div id="radar-ui" style="display:none; text-align: center;">
         <div id="radar"><div id="radar-arrow"></div></div>
-        <div id="distance-text" style="font-size: 12px; letter-spacing: 2px; color: var(--ios-green); font-weight: 700;">СИГНАЛ: 0%</div>
+        <div id="distance-text" style="font-size: 11px; letter-spacing: 2px; color: var(--ios-green); font-weight: 800; text-shadow: 0 0 8px rgba(48,209,88,0.4);">СИГНАЛ: 0%</div>
     </div>
 
     <div id="scan-box" style="display:none; text-align:center; padding: 20px 0;">
-        <div style="font-size: 12px; color: var(--ios-blue); letter-spacing: 3px; font-weight: 700; animation: pulse 2s infinite ease-in-out;">СКАНИРОВАНИЕ ЭФИРА...</div>
+        <div style="font-size: 13px; color: var(--ios-blue); letter-spacing: 4px; font-weight: 800; animation: pulse 1.5s infinite ease-in-out;">СКАНИРОВАНИЕ...</div>
     </div>
 
     <div id="ui-idle">
-        <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-            <button class="btn" style="flex:1" onclick="openM('settings')">Опции</button>
-            <button class="btn" style="flex:1" onclick="openM('map-styles')">Слои</button>
+        <div style="display: flex; gap: 10px;">
+            <button class="btn btn-sec" onclick="openM('settings')">Настройки</button>
+            <button class="btn btn-sec" onclick="openM('map-styles')">Слои</button>
         </div>
-        <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-            <button class="btn" style="flex:1" onclick="toggleSelect()" id="selectBtn">📍 Метка</button>
-            <button class="btn" style="flex:1; color: var(--ios-blue);" onclick="resetToUser()">🎯 Центр</button>
+        <div style="display: flex; gap: 10px;">
+            <button class="btn btn-sec" style="flex: 1; font-size: 13px;" id="selectBtn" onclick="toggleSelect()">📍 Указать точку</button>
+            <button class="btn btn-sec" style="flex: 1; font-size: 13px; color: var(--ios-blue);" onclick="resetToLocation()">🎯 Моя позиция</button>
         </div>
-        <button class="btn btn-main" id="mainBtn" onclick="executeScan()">НАЧАТЬ ПОИСК</button>
+        <button class="btn" id="mainBtn" onclick="executeScan()">НАЙТИ АНОМАЛИЮ</button>
     </div>
 
     <div id="ui-found" style="display: none;">
-        <button class="btn" style="background: var(--ios-green); color: #000;" onclick="openM('info')">ПОДРОБНЕЕ</button>
-        <button class="btn" style="color: var(--ios-red);" onclick="resetSystem()">СБРОСИТЬ</button>
+        <button class="btn" style="background: rgba(48, 209, 88, 0.8); color: #fff;" onclick="buildRoute()">ПОСТРОИТЬ МАРШРУТ</button>
+        <div style="display: flex; gap: 10px;">
+            <button class="btn btn-sec" style="flex: 1;" onclick="openM('info')">ДАННЫЕ</button>
+            <button class="btn btn-sec" style="flex: 1; color: var(--ios-red);" onclick="resetSystem()">СБРОС</button>
+        </div>
     </div>
 </div>
 
 <div id="settings" class="modal">
-    <h3 style="text-align:center; font-weight: 600;">Настройки</h3>
-    <p style="font-size: 12px; opacity: 0.5;">РАДИУС: <span id="rL">5</span> км</p>
+    <h3 style="text-align:center; margin-top:0; font-weight: 600;">Настройки</h3>
+    <label style="font-size: 12px; opacity: 0.6; font-weight: 600;">КАТЕГОРИЯ</label>
+    <select id="catSelect" style="width:100%; background:rgba(255,255,255,0.1); color:#fff; border:1px solid var(--glass-border); padding:14px; border-radius:16px; margin: 8px 0 20px; font-size: 15px;">
+        <option value="quantum">Квантовый</option>
+        <option value="power">Мощный</option>
+        <option value="void">Пустота</option>
+    </select>
+    
+    <label style="font-size: 12px; opacity: 0.6; font-weight: 600;">РАДИУС: <span id="rL" style="color:var(--ios-blue)">5</span> км</label>
     <input type="range" id="radiusIn" min="1" max="15" value="5" oninput="syncUI()">
-    <p style="font-size: 12px; opacity: 0.5; margin-top:15px;">МОЩНОСТЬ: <span id="pL">25</span>%</p>
-    <input type="range" id="powerIn" min="1" max="100" value="25" oninput="syncUI()">
-    <div style="display:flex; justify-content: space-between; margin-top:20px; font-size:14px;">
-        <span>Звук</span>
-        <input type="checkbox" id="soundToggle" checked>
+    
+    <label style="font-size: 12px; opacity: 0.6; margin-top: 15px; display: block; font-weight: 600;">МОЩНОСТЬ (РАДАР): <span id="pL" style="color:var(--ios-green)">25</span>%</label>
+    <input type="range" id="powerIn" min="1" max="50" value="25" oninput="syncUI()">
+
+    <div style="display:flex; justify-content: space-between; align-items: center; margin-top:20px; font-size: 15px; font-weight: 500;">
+        <span>Звук системы</span>
+        <input type="checkbox" id="soundToggle" checked style="width: 20px; height: 20px;">
     </div>
-    <button class="btn btn-main" style="margin-top:25px" onclick="closeM()">ГОТОВО</button>
+    <button class="btn" style="margin-top:25px" onclick="closeM()">ГОТОВО</button>
 </div>
 
 <div id="info" class="modal">
-    <h2 id="anomalyName" style="color: var(--ios-green); margin:0 0 10px;"></h2>
-    <div id="infoBody" style="font-size: 14px; line-height: 1.5; opacity: 0.9;"></div>
-    <div id="coordsBox" style="margin-top:20px; font-family: monospace; background:rgba(255,255,255,0.05); padding:12px; border-radius:15px; font-size:12px;"></div>
-    <button class="btn btn-main" style="margin-top:20px" onclick="closeM()">ЗАКРЫТЬ</button>
+    <h3 id="anomalyName" style="color: var(--ios-green); margin-bottom:8px; font-weight: 700;">Объект</h3>
+    <div id="infoBody" style="font-size: 14px; opacity: 0.8; line-height: 1.6;"></div>
+    <div id="coordsBox" style="margin-top:15px; font-family: ui-monospace, monospace; background:rgba(0,0,0,0.3); padding:12px; border-radius:14px; text-align:center; color: var(--ios-blue); border: 1px solid rgba(255,255,255,0.05);"></div>
+    <div class="btn btn-sec" style="font-size: 13px; margin-top: 12px;" onclick="copyCoords()">СКОПИРОВАТЬ КООРДИНАТЫ</div>
+    <button class="btn" style="margin-top:10px" onclick="closeM()">ЗАКРЫТЬ</button>
 </div>
 
 <div id="map-styles" class="modal">
-    <button class="btn" onclick="setMapStyle('dark')">ТЕМНАЯ</button>
-    <button class="btn" onclick="setMapStyle('sat')">СПУТНИК</button>
-    <button class="btn" style="margin-top:15px; border:none;" onclick="closeM()">ОТМЕНА</button>
+    <button class="btn btn-sec" onclick="setMapStyle('dark')">ТЕМНАЯ МАТЕРИЯ</button>
+    <button class="btn btn-sec" onclick="setMapStyle('sat')">СПУТНИК</button>
+    <button class="btn" style="margin-top:15px" onclick="closeM()">ЗАКРЫТЬ</button>
 </div>
 
 <script>
@@ -154,47 +199,35 @@
     let map, userPos, searchOrigin, targetPoint, isSelecting = false;
     let radarInterval;
 
-    // Apple-style Таинственный Звук
-    function playMysterySound() {
-        if (!document.getElementById('soundToggle').checked) return;
-        const now = ctx.currentTime;
-        
-        // 1. Глубокий "Пульс" (Bass)
-        const bass = ctx.createOscillator();
-        const bassGain = ctx.createGain();
-        bass.type = 'sine';
-        bass.frequency.setValueAtTime(20, now);
-        bass.frequency.exponentialRampToValueAtTime(45, now + 3);
-        bassGain.gain.setValueAtTime(0, now);
-        bassGain.gain.linearRampToValueAtTime(0.4, now + 0.5);
-        bassGain.gain.linearRampToValueAtTime(0, now + 3.5);
-        bass.connect(bassGain).connect(ctx.destination);
-        
-        // 2. Таинственный резонанс (High-end)
-        const chime = ctx.createOscillator();
-        const chimeGain = ctx.createGain();
-        chime.type = 'triangle';
-        chime.frequency.setValueAtTime(880, now);
-        chime.frequency.exponentialRampToValueAtTime(440, now + 3);
-        chimeGain.gain.setValueAtTime(0, now);
-        chimeGain.gain.linearRampToValueAtTime(0.05, now + 0.2);
-        chimeGain.gain.exponentialRampToValueAtTime(0.001, now + 3);
-        chime.connect(chimeGain).connect(ctx.destination);
-
-        bass.start(); bass.stop(now + 3.5);
-        chime.start(); chime.stop(now + 3);
+    function showAlert(text) {
+        const el = document.getElementById('iosAlert');
+        el.innerText = text;
+        el.classList.add('alert-active');
+        setTimeout(() => el.classList.remove('alert-active'), 3000);
     }
 
-    function playTap() {
+    function playSound(type) {
         if (!document.getElementById('soundToggle').checked) return;
         const osc = ctx.createOscillator();
         const g = ctx.createGain();
-        osc.frequency.setValueAtTime(1200, ctx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(400, ctx.currentTime + 0.1);
-        g.gain.setValueAtTime(0.1, ctx.currentTime);
-        g.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.1);
-        osc.connect(g).connect(ctx.destination);
-        osc.start(); osc.stop(ctx.currentTime + 0.1);
+        osc.connect(g); g.connect(ctx.destination);
+        const now = ctx.currentTime;
+        
+        if (type === 'tap') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(800, now);
+            g.gain.setValueAtTime(0.05, now);
+            g.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+            osc.start(now); osc.stop(now + 0.15);
+        } else if (type === 'found') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(120, now);
+            osc.frequency.exponentialRampToValueAtTime(60, now + 3.0);
+            g.gain.setValueAtTime(0, now);
+            g.gain.linearRampToValueAtTime(0.4, now + 0.8);
+            g.gain.exponentialRampToValueAtTime(0.001, now + 3.5);
+            osc.start(now); osc.stop(now + 3.5);
+        }
     }
 
     const STYLES = {
@@ -224,13 +257,26 @@
         if (searchOrigin) {
             const r = document.getElementById('radiusIn').value;
             const circle = genCircle(searchOrigin, r);
-            if (map.getSource('rad')) map.getSource('rad').setData(circle);
-            else {
+            if (map.getSource('rad')) {
+                map.getSource('rad').setData(circle);
+            } else {
                 map.addSource('rad', { type: 'geojson', data: circle });
+                // Слегка прозрачная заливка
                 map.addLayer({ id: 'rad-l', type: 'fill', source: 'rad', paint: { 'fill-color': '#0A84FF', 'fill-opacity': 0.05 } });
-                map.addLayer({ id: 'rad-b', type: 'line', source: 'rad', paint: { 'line-color': '#0A84FF', 'line-width': 1, 'line-dasharray': [4, 4] } });
+                // Добавлена четкая пунктирная граница радиуса (как на радаре)
+                map.addLayer({ id: 'rad-line', type: 'line', source: 'rad', paint: { 'line-color': '#0A84FF', 'line-width': 1.5, 'line-dasharray': [3, 4] } });
             }
         }
+    }
+
+    // Возврат к геолокации
+    function resetToLocation() {
+        if (!userPos) return showAlert("ГЕОПОЗИЦИЯ НЕ НАЙДЕНА");
+        searchOrigin = [...userPos];
+        map.flyTo({ center: userPos, zoom: 11, duration: 1500 });
+        syncUI();
+        playSound('tap');
+        showAlert("ИСХОДНАЯ ТОЧКА: МОЯ ПОЗИЦИЯ");
     }
 
     function toggleSelect() {
@@ -238,104 +284,137 @@
         document.getElementById('crosshair').style.display = isSelecting ? 'block' : 'none';
         const b = document.getElementById('mainBtn');
         const sBtn = document.getElementById('selectBtn');
+        
         if (isSelecting) {
             b.innerText = "ПОДТВЕРДИТЬ ТОЧКУ";
+            b.style.background = "rgba(48, 209, 88, 0.7)";
             sBtn.innerText = "ОТМЕНА";
             b.onclick = () => {
                 searchOrigin = [map.getCenter().lng, map.getCenter().lat];
-                toggleSelect(); syncUI();
-                b.innerText = "НАЧАТЬ ПОИСК"; b.onclick = executeScan;
-                sBtn.innerText = "📍 Метка";
+                toggleSelect(); syncUI(); playSound('tap');
+                b.innerText = "НАЙТИ АНОМАЛИЮ"; b.style.background = "rgba(10, 132, 255, 0.6)";
+                b.onclick = executeScan;
             };
         } else {
-            b.innerText = "НАЧАТЬ ПОИСК"; b.onclick = executeScan;
-            sBtn.innerText = "📍 Метка";
+            b.innerText = "НАЙТИ АНОМАЛИЮ";
+            b.style.background = "rgba(10, 132, 255, 0.6)";
+            sBtn.innerText = "📍 Указать точку";
+            b.onclick = executeScan;
         }
     }
 
     async function executeScan() {
+        // Камера центрируется на точке старта поиска
+        map.flyTo({ center: searchOrigin, zoom: 11, duration: 1000 });
+        
         document.getElementById('ui-idle').style.display = 'none';
         document.getElementById('scan-box').style.display = 'block';
         
-        playMysterySound();
-        createMapPulse();
-
+        // Включаем импульс поиска
+        setTimeout(() => document.getElementById('searchPulse').style.display = 'block', 500);
+        
+        playSound('tap');
+        
+        const mode = document.getElementById('catSelect').value;
         const radius = document.getElementById('radiusIn').value;
         let found = null;
 
-        for (let i = 0; i < 15; i++) {
+        for (let i = 0; i < 20; i++) {
             const a = Math.random() * Math.PI * 2;
             const d = (Math.sqrt(Math.random()) * radius) / 111;
             const pt = [searchOrigin[0] + d * Math.cos(a), searchOrigin[1] + d * Math.sin(a)];
             try {
                 const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pt[1]}&lon=${pt[0]}&zoom=18`);
                 const data = await res.json();
-                if (data && data.display_name) { found = { coords: pt, data: data }; break; }
+                let score = 0;
+                if (mode === 'quantum' && (data.addresstype === 'historic' || data.type === 'cemetery' || data.addresstype === 'place_of_worship')) score = 100;
+                if (mode === 'power' && (data.address.industrial || data.type === 'construction' || data.type === 'ruins')) score = 100;
+                if (mode === 'void' && (!data.address.road && !data.address.house_number)) score = 100;
+                if (score === 100) { found = { coords: pt, data: data }; break; }
             } catch(e) {}
         }
 
         setTimeout(() => {
             document.getElementById('scan-box').style.display = 'none';
-            document.getElementById('pulse-container').innerHTML = '';
+            document.getElementById('searchPulse').style.display = 'none'; // Выключаем импульс
+            
             if (found) {
                 targetPoint = found.coords;
                 startRadar();
-                showTarget(found);
+                showTarget(found, mode);
+                playSound('found');
             } else {
                 resetSystem();
-                alert("АНОМАЛИЙ НЕ НАЙДЕНО");
+                showAlert("СИГНАЛ ПОТЕРЯН: АНОМАЛИЙ НЕ НАЙДЕНО");
             }
-        }, 3500);
-    }
-
-    function createMapPulse() {
-        const container = document.getElementById('pulse-container');
-        const pos = map.project(searchOrigin);
-        
-        for(let i=0; i<3; i++) {
-            setTimeout(() => {
-                const ring = document.createElement('div');
-                ring.className = 'pulse-ring';
-                ring.style.left = pos.x + 'px';
-                ring.style.top = pos.y + 'px';
-                container.appendChild(ring);
-            }, i * 800);
-        }
+        }, 3000); // Увеличил время сканирования для красоты анимации
     }
 
     function startRadar() {
         const power = parseInt(document.getElementById('powerIn').value);
         document.getElementById('radar-ui').style.display = 'block';
+        
         radarInterval = setInterval(() => {
             const dist = getDistance(userPos, targetPoint);
             const maxR = document.getElementById('radiusIn').value * 1000;
-            let strength = Math.max(0, (1 - dist / maxR) * 100);
-            let noise = (Math.random() - 0.5) * (110 - power);
-            let finalSignal = Math.max(0, Math.min(100, strength + noise));
             
-            document.getElementById('radar-arrow').style.transform = `translate(-50%, -100%) rotate(${finalSignal * 3.6}deg)`;
-            document.getElementById('distance-text').innerText = `СИГНАЛ: ${finalSignal.toFixed(0)}%`;
-        }, 600);
+            let baseStrength = Math.max(0, (1 - dist / maxR) * 100);
+            let drift = Math.sin(Date.now() / 800) * (power * 1.2); 
+            let currentSignal = Math.max(0, Math.min(100, baseStrength + drift));
+            
+            if (Math.random() > 0.98) currentSignal = 0;
+
+            document.getElementById('radar-arrow').style.transform = `translate(-50%, -100%) rotate(${currentSignal * 3.6}deg)`;
+            document.getElementById('distance-text').innerText = `СИГНАЛ: ${currentSignal.toFixed(0)}%`;
+        }, 800);
     }
 
-    function showTarget(obj) {
-        document.getElementById('anomalyName').innerText = "ОБЪЕКТ НАЙДЕН";
-        document.getElementById('infoBody').innerHTML = `<b>АДРЕС:</b><br>${obj.data.display_name}`;
+    function showTarget(obj, mode) {
+        const names = {
+            quantum: ["Разрыв 404", "Нулевой Храм", "Эхо Времени"],
+            power: ["Сектор Гробо", "Сталь-9", "Зона Распада"],
+            void: ["Тихая Топь", "Мертвый Квадрат", "Шепот Ветра"]
+        };
+        document.getElementById('anomalyName').innerText = names[mode][Math.floor(Math.random()*3)];
+        document.getElementById('infoBody').innerHTML = `<b>ТИП:</b> ${mode.toUpperCase()}<br><b>ЛОКАЦИЯ:</b> ${obj.data.display_name || 'Неизвестная территория'}`;
         document.getElementById('coordsBox').innerText = `${targetPoint[1].toFixed(6)}, ${targetPoint[0].toFixed(6)}`;
         
         if (window.m) window.m.remove();
-        window.m = new maplibregl.Marker({ color: '#FF453A' }).setLngLat(targetPoint).addTo(map);
-        map.flyTo({ center: targetPoint, zoom: 16, duration: 3000 });
+        const el = document.createElement('div');
+        el.style.cssText = "width:18px; height:18px; background:var(--ios-red); border-radius:50%; box-shadow: 0 0 20px var(--ios-red), inset 0 0 5px rgba(255,255,255,0.5);";
+        window.m = new maplibregl.Marker(el).setLngLat(targetPoint).addTo(map);
+        map.flyTo({ center: targetPoint, zoom: 16, duration: 3000, curve: 1.5 });
         document.getElementById('ui-found').style.display = 'block';
+    }
+
+    async function buildRoute() {
+        try {
+            const res = await fetch(`https://router.project-osrm.org/route/v1/foot/${userPos[0]},${userPos[1]};${targetPoint[0]},${targetPoint[1]}?geometries=geojson`);
+            const data = await res.json();
+            if (map.getLayer('route')) { map.removeLayer('route'); map.removeSource('route'); }
+            map.addSource('route', { type: 'geojson', data: data.routes[0].geometry });
+            map.addLayer({ id: 'route', type: 'line', source: 'route', paint: { 'line-color': '#0A84FF', 'line-width': 5, 'line-opacity': 0.8 } });
+            playSound('tap');
+        } catch (e) {
+            showAlert("ОШИБКА ПОСТРОЕНИЯ МАРШРУТА");
+        }
     }
 
     function resetSystem() {
         clearInterval(radarInterval);
         if (window.m) window.m.remove();
+        if (map.getLayer('route')) { map.removeLayer('route'); map.removeSource('route'); }
         document.getElementById('ui-found').style.display = 'none';
         document.getElementById('radar-ui').style.display = 'none';
         document.getElementById('ui-idle').style.display = 'block';
-        playTap();
+        map.flyTo({ center: searchOrigin, zoom: 11, duration: 2000 });
+        playSound('tap');
+    }
+
+    function copyCoords() {
+        navigator.clipboard.writeText(document.getElementById('coordsBox').innerText);
+        showAlert("КООРДИНАТЫ СКОПИРОВАНЫ");
+        playSound('tap');
     }
 
     function genCircle(c, km) {
@@ -357,9 +436,20 @@
         return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     }
 
-    function openM(id) { document.getElementById(id).classList.add('active'); playTap(); }
-    function closeM() { document.querySelectorAll('.modal').forEach(m => m.classList.remove('active')); playTap(); }
-    function setMapStyle(t) { map.setStyle(STYLES[t]); closeM(); }
+    function openM(id) { 
+        document.getElementById(id).classList.add('active'); 
+        playSound('tap'); 
+    }
+    
+    function closeM() { 
+        document.querySelectorAll('.modal').forEach(m => m.classList.remove('active')); 
+        playSound('tap'); 
+    }
+    
+    function setMapStyle(t) { 
+        map.setStyle(STYLES[t]); 
+        closeM(); 
+    }
 </script>
 </body>
 </html>
