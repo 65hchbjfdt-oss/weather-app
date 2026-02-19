@@ -2,550 +2,255 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>KiwiWay - Anomaly Radar</title>
-    
-    <!-- Подключаем MapLibre GL -->
-    <script src='https://unpkg.com/maplibre-gl@4.1.2/dist/maplibre-gl.js'></script>
-    <link href='https://unpkg.com/maplibre-gl@4.1.2/dist/maplibre-gl.css' rel='stylesheet' />
-
+    <meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no,viewport-fit=cover">
+    <title>KiwiWay - Anomaly Radar v2</title>
+    <script src='https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.js'></script>
+    <link href='https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.css' rel='stylesheet' />
     <style>
         :root { 
             --ios-blue: #0A84FF; 
             --ios-green: #30D158;
             --ios-red: #FF453A;
-            --glass-bg: rgba(20, 20, 20, 0.65);
-            --glass-border: rgba(255, 255, 255, 0.15);
-            --blur: blur(20px) saturate(180%);
+            --glass-bg: rgba(20, 20, 20, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --blur: blur(20px);
         }
         
-        body { margin: 0; padding: 0; background: #000; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #fff; overflow: hidden; height: 100vh; }
-        
-        #map { position: absolute; top: 0; bottom: 0; width: 100%; z-index: 1; }
+        body { margin: 0; padding: 0; background: #000; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #fff; overflow: hidden; height: 100vh; }
+        #map { position: absolute; top: 0; bottom: 0; width: 100%; z-index: 1; filter: brightness(0.6) grayscale(0.2); }
 
-        /* Нижняя панель управления */
-        .dock-container {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            right: 20px;
-            z-index: 100;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            pointer-events: none; /* Чтобы клики проходили сквозь пустые места */
+        .glass { background: var(--glass-bg); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur); border: 1px solid var(--glass-border); box-shadow: 0 8px 32px rgba(0,0,0,0.5); }
+
+        /* Панель управления снизу */
+        .ui-panel {
+            position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
+            width: 92%; max-width: 400px; border-radius: 35px;
+            padding: 20px; box-sizing: border-box; z-index: 100;
         }
 
-        .glass-panel {
-            background: var(--glass-bg);
-            backdrop-filter: var(--blur);
-            -webkit-backdrop-filter: var(--blur);
-            border: 1px solid var(--glass-border);
-            border-radius: 24px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
-            pointer-events: auto;
-            transition: all 0.3s ease;
-        }
-
-        /* Верхняя часть панели (статус/радар) */
-        .status-bar {
-            padding: 15px 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            min-height: 60px;
-        }
-
-        /* Основная часть панели (кнопки) */
-        .controls-bar {
-            padding: 15px;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-        }
-
-        .full-width { grid-column: span 2; }
-
-        /* Кнопки */
         .btn {
-            border: none;
-            padding: 14px;
-            border-radius: 16px;
-            font-size: 15px;
-            font-weight: 600;
-            cursor: pointer;
-            background: rgba(255, 255, 255, 0.1);
-            color: #fff;
-            transition: transform 0.1s, opacity 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
+            width: 100%; padding: 16px; margin: 6px 0; border: none; border-radius: 20px;
+            font-size: 15px; font-weight: 600; cursor: pointer; transition: 0.2s;
+            background: rgba(255, 255, 255, 0.08); color: #fff;
         }
-        .btn:active { transform: scale(0.96); opacity: 0.8; }
-        
-        .btn-main { 
-            background: var(--ios-blue); 
-            box-shadow: 0 4px 15px rgba(10, 132, 255, 0.4);
-            font-size: 16px;
-        }
-        .btn-success { background: var(--ios-green); box-shadow: 0 4px 15px rgba(48, 209, 88, 0.4); }
-        .btn-danger { background: rgba(255, 69, 58, 0.2); color: var(--ios-red); border: 1px solid rgba(255, 69, 58, 0.3); }
-        .btn-outline { background: transparent; border: 1px solid rgba(255,255,255,0.2); }
+        .btn-main { background: var(--ios-blue); box-shadow: 0 4px 15px rgba(10, 132, 255, 0.3); }
+        .btn:active { transform: scale(0.97); opacity: 0.8; }
 
-        /* Радар внутри панели */
-        #radar-mini {
-            width: 50px; height: 50px;
-            border: 2px solid rgba(48, 209, 88, 0.3);
-            border-radius: 50%;
-            position: relative;
-            background: radial-gradient(circle, rgba(48, 209, 88, 0.1) 0%, transparent 70%);
-            display: none; /* Скрыт по умолчанию */
+        /* Этапы сканирования */
+        .scan-step {
+            display: flex; align-items: center; justify-content: space-between;
+            margin: 10px 0; font-size: 13px; opacity: 0.5; transition: 0.3s;
+        }
+        .scan-step.active { opacity: 1; color: var(--ios-blue); }
+        .scan-step.done { opacity: 1; color: var(--ios-green); }
+        .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+
+        /* Радар */
+        #radar-ui { text-align: center; padding: 10px 0; }
+        #radar {
+            width: 80px; height: 80px; margin: 0 auto 10px; border: 2px solid rgba(48, 209, 88, 0.2);
+            border-radius: 50%; position: relative;
         }
         #radar-arrow {
-            position: absolute; top: 50%; left: 50%; width: 2px; height: 22px;
+            position: absolute; top: 50%; left: 50%; width: 2px; height: 35px;
             background: var(--ios-green); transform-origin: bottom center;
-            transform: translate(-50%, -100%) rotate(0deg);
-            border-radius: 2px;
-        }
-        .signal-text { font-size: 12px; font-weight: 700; color: var(--ios-green); letter-spacing: 0.5px; }
-
-        /* Настройки сканирования */
-        .settings-row {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 8px;
-            font-size: 12px;
-            color: rgba(255,255,255,0.7);
-        }
-        select.mode-select {
-            background: rgba(0,0,0,0.3); color: white; border: 1px solid rgba(255,255,255,0.2);
-            border-radius: 8px; padding: 6px 10px; outline: none; flex-grow: 1;
+            transform: translate(-50%, -100%) rotate(0deg); 
+            box-shadow: 0 0 10px var(--ios-green);
         }
 
-        /* Инфо о точке */
-        #info-overlay {
-            display: none;
-            padding: 15px;
-            text-align: center;
-        }
-        #anomaly-title { color: var(--ios-green); margin: 0 0 5px 0; font-size: 16px; }
-        #anomaly-desc { font-size: 13px; opacity: 0.8; line-height: 1.4; }
+        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; height: 30px; }
+        input[type=range]::-webkit-slider-runnable-track { height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 22px; width: 22px; border-radius: 50%; background: #fff; margin-top: -9px; }
 
-        /* Алерты */
-        #toast {
-            position: fixed; top: 40px; left: 50%; transform: translateX(-50%);
-            background: rgba(0,0,0,0.8); backdrop-filter: blur(10px);
-            padding: 10px 20px; border-radius: 20px; font-size: 13px;
-            z-index: 2000; display: none; border: 1px solid rgba(255,255,255,0.1);
+        .modal {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 85%; max-width: 320px; border-radius: 30px; padding: 25px;
+            display: none; z-index: 1000;
         }
-
-        /* Прицел */
-        #crosshair {
-            position: absolute; top: 50%; left: 50%;
-            transform: translate(-50%, -50%); width: 30px; height: 30px;
-            border: 2px solid rgba(10, 132, 255, 0.5); border-radius: 50%;
-            z-index: 50; pointer-events: none; display: none;
-        }
-        #crosshair::after {
-            content:''; position: absolute; top: 50%; left: 50%; width: 4px; height: 4px;
-            background: var(--ios-blue); transform: translate(-50%, -50%); border-radius: 50%;
-        }
-
-        @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(10, 132, 255, 0.4); }
-            70% { box-shadow: 0 0 0 20px rgba(10, 132, 255, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(10, 132, 255, 0); }
-        }
-        .scanning { animation: pulse 1.5s infinite; }
+        .modal.active { display: block; }
+        
+        .alert { position: fixed; top: 50px; left: 50%; transform: translateX(-50%); padding: 10px 20px; border-radius: 15px; z-index: 2000; display: none; }
     </style>
 </head>
 <body>
 
 <div id="map"></div>
-<div id="crosshair"></div>
-<div id="toast"></div>
+<div id="iosAlert" class="alert glass"></div>
 
-<!-- НИЖНЯЯ ПАНЕЛЬ УПРАВЛЕНИЯ -->
-<div class="dock-container">
-    
-    <!-- Панель статуса / Радара -->
-    <div class="glass-panel status-bar" id="statusPanel">
-        <div style="display:flex; align-items:center; gap:15px;">
-            <div id="radar-mini"><div id="radar-arrow"></div></div>
-            <div>
-                <div id="status-label" style="font-size:11px; opacity:0.6;">ГОТОВ К ПОИСКУ</div>
-                <div id="distance-display" class="signal-text">--%</div>
-            </div>
+<div class="ui-panel glass">
+    <div id="ui-idle">
+        <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+            <button class="btn" style="flex:1" onclick="openM('settings')">Настройка</button>
+            <button class="btn" style="flex:1" onclick="resetToLocation()">🎯 Центр</button>
         </div>
-        <button id="centerBtn" class="btn btn-outline" style="padding: 8px 12px; font-size:12px;" onclick="resetToLocation()">🎯 Центр</button>
+        <button class="btn btn-main" onclick="startAdvancedScan()">ЗАПУСК СКАНЕРА</button>
     </div>
 
-    <!-- Панель управления -->
-    <div class="glass-panel controls-bar" id="controlPanel">
-        
-        <!-- Режим поиска -->
-        <div class="full-width settings-row">
-            <span>РЕЖИМ:</span>
-            <select id="searchMode" class="mode-select">
-                <option value="quantum">Квантовый (Заброшки)</option>
-                <option value="void">Пустошь (Природа)</option>
-                <option value="powerful">Мощный (Все подряд)</option>
-            </select>
-        </div>
-
-        <!-- Ползунок радиуса -->
-        <div class="full-width settings-row">
-            <span>РАДИУС: <b id="radiusVal" style="color:#fff">5</b> км</span>
-            <input type="range" id="radiusIn" min="1" max="20" value="5" oninput="syncUI()" style="flex-grow:1; accent-color: var(--ios-blue);">
-        </div>
-
-        <!-- Главная кнопка действия -->
-        <button id="mainActionBtn" class="btn btn-main full-width" onclick="handleMainAction()">
-            НАЙТИ АНОМАЛИЮ
-        </button>
-
-        <!-- Дополнительные кнопки (скрыты или меняются) -->
-        <button id="btnSelectPoint" class="btn btn-outline" onclick="toggleSelectMode()">📍 Точка</button>
-        <button id="btnReset" class="btn btn-danger" onclick="resetSystem()" style="display:none;">СБРОС</button>
+    <div id="ui-scanning" style="display: none;">
+        <div class="scan-step" id="step1"><span>Генерация пула координат (500)</span> <div class="dot"></div></div>
+        <div class="scan-step" id="step2"><span>Фильтрация по спектру</span> <div class="dot"></div></div>
+        <div class="scan-step" id="step3"><span>Поиск резонанса мощности</span> <div class="dot"></div></div>
+        <div class="scan-step" id="step4"><span>Захват сигнатуры</span> <div class="dot"></div></div>
     </div>
 
-    <!-- Панель найденного объекта -->
-    <div class="glass-panel" id="foundPanel" style="display:none;">
-        <div id="info-overlay" style="display:block;">
-            <h3 id="anomalyName" style="margin:0; color:var(--ios-green)">Аномалия найдена!</h3>
-            <p id="anomalyDesc" style="font-size:12px; opacity:0.8; margin: 5px 0 10px;">Координаты определены.</p>
-            <div style="display:flex; gap:10px;">
-                <button class="btn btn-success" style="flex:1" onclick="buildRoute()">МАРШРУТ</button>
-                <button class="btn btn-outline" style="flex:1" onclick="copyCoords()">КОПИРОВАТЬ</button>
-            </div>
+    <div id="ui-found" style="display: none;">
+        <div id="radar-ui">
+            <div id="radar"><div id="radar-arrow"></div></div>
+            <div id="signal-text" style="color: var(--ios-green); font-size: 12px; font-weight: 700;">СИГНАЛ: 0%</div>
+        </div>
+        <button class="btn btn-main" style="background: var(--ios-green);" onclick="buildRoute()">ИДТИ К ЦЕЛИ</button>
+        <div style="display: flex; gap: 8px;">
+            <button class="btn" style="flex:1" onclick="openM('info')">ДАННЫЕ</button>
+            <button class="btn" style="flex:1; color: var(--ios-red);" onclick="resetSystem()">СБРОС</button>
         </div>
     </div>
+</div>
 
+<div id="settings" class="modal glass">
+    <h3 style="margin-top:0">Параметры</h3>
+    <label style="font-size:11px; opacity:0.6">РЕЖИМ:</label>
+    <select id="searchMode" class="btn" style="text-align:left; background: rgba(0,0,0,0.3);">
+        <option value="quantum">Квантовый (Промзоны)</option>
+        <option value="void">Пустошь (Природа)</option>
+        <option value="powerful">Мощный (Смешанный)</option>
+    </select>
+    <label style="font-size:11px; opacity:0.6; margin-top:10px; display:block;">МОЩНОСТЬ: <span id="pVal" style="color:var(--ios-green)">50</span>%</label>
+    <input type="range" id="powerIn" min="1" max="100" value="50" oninput="document.getElementById('pVal').innerText=this.value">
+    <button class="btn btn-main" style="margin-top:15px" onclick="closeM()">ГОТОВО</button>
+</div>
+
+<div id="info" class="modal glass">
+    <h3 id="infName" style="color:var(--ios-green); margin-top:0">Объект</h3>
+    <p id="infDesc" style="font-size:13px; opacity:0.8; line-height:1.4"></p>
+    <div id="infCoords" style="font-family:monospace; color:var(--ios-blue); background:rgba(0,0,0,0.2); padding:10px; border-radius:10px; margin-bottom:10px; text-align:center;"></div>
+    <button class="btn btn-main" onclick="closeM()">ЗАКРЫТЬ</button>
 </div>
 
 <script>
-    // --- Глобальные переменные ---
-    let map, audioCtx, userPos = null, searchOrigin = null, targetPoint = null;
-    let radarInterval, isSelecting = false, isScanning = false;
-    
-    // Инициализация звука при первом клике
-    function initAudio() {
-        if (!audioCtx) {
-            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        }
-        if (audioCtx.state === 'suspended') audioCtx.resume();
-    }
+    let map, userPos, targetPoint, radarInterval;
+    const STYLE = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
 
-    function showToast(msg) {
-        const t = document.getElementById('toast');
-        t.innerText = msg;
-        t.style.display = 'block';
-        setTimeout(() => t.style.display = 'none', 3000);
-    }
+    // Инициализация карты
+    map = new maplibregl.Map({
+        container: 'map',
+        style: STYLE,
+        center: [37.617, 55.755],
+        zoom: 12,
+        attributionControl: false
+    });
 
-    function playBeep(freq, dur) {
-        initAudio();
-        if (!audioCtx) return;
-        const osc = audioCtx.createOscillator();
-        const g = audioCtx.createGain();
-        osc.connect(g); g.connect(audioCtx.destination);
-        osc.frequency.value = freq;
-        g.gain.setValueAtTime(0.1, audioCtx.currentTime);
-        g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
-        osc.start(); osc.stop(audioCtx.currentTime + dur);
-    }
-
-    function playSuccessSound() {
-        initAudio();
-        if(!audioCtx) return;
-        const t = audioCtx.currentTime;
-        const osc = audioCtx.createOscillator();
-        const g = audioCtx.createGain();
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(440, t);
-        osc.frequency.linearRampToValueAtTime(880, t + 0.3);
-        g.gain.setValueAtTime(0.1, t);
-        g.gain.linearRampToValueAtTime(0, t + 0.5);
-        osc.connect(g); g.connect(audioCtx.destination);
-        osc.start(t); osc.stop(t+0.5);
-    }
-
-    // --- Карта ---
-    function initMap() {
-        map = new maplibregl.Map({
-            container: 'map',
-            style: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
-            center: [37.617, 55.755], // Москва по дефолту
-            zoom: 11,
-            attributionControl: false
-        });
-
-        map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
-
-        map.on('load', () => {
-            console.log("Map Loaded");
-            // Пробуем получить геолокацию
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(pos => {
-                    userPos = [pos.coords.longitude, pos.coords.latitude];
-                    searchOrigin = [...userPos];
-                    map.setCenter(userPos);
-                    map.setZoom(13);
-                    addMarker(userPos, '#0A84FF');
-                    syncUI();
-                }, () => {
-                    showToast("Геолокация недоступна");
-                    syncUI();
-                }, { enableHighAccuracy: true, timeout: 10000 });
-            } else {
-                syncUI();
-            }
-        });
-    }
-
-    function addMarker(coords, color) {
-        const el = document.createElement('div');
-        el.style.width = '16px'; el.style.height = '16px';
-        el.style.borderRadius = '50%'; el.style.background = color;
-        el.style.boxShadow = `0 0 10px ${color}`;
-        el.style.border = '2px solid #fff';
-        new maplibregl.Marker(el).setLngLat(coords).addTo(map);
-    }
-
-    // --- Логика интерфейса ---
-    function syncUI() {
-        document.getElementById('radiusVal').innerText = document.getElementById('radiusIn').value;
-        if (searchOrigin && map.isStyleLoaded()) {
-            drawSearchCircle(searchOrigin, parseFloat(document.getElementById('radiusIn').value));
-        }
-    }
-
-    function drawSearchCircle(center, km) {
-        if (map.getSource('searchArea')) {
-            map.getSource('searchArea').setData(genCircle(center, km));
-        } else {
-            map.addSource('searchArea', { type: 'geojson', data: genCircle(center, km) });
-            map.addLayer({
-                id: 'searchFill', type: 'fill', source: 'searchArea',
-                paint: { 'fill-color': '#0A84FF', 'fill-opacity': 0.1 }
-            });
-            map.addLayer({
-                id: 'searchLine', type: 'line', source: 'searchArea',
-                paint: { 'line-color': '#0A84FF', 'line-width': 1, 'line-dasharray': [2, 2] }
-            });
-        }
-    }
-
-    function toggleSelectMode() {
-        isSelecting = !isSelecting;
-        document.getElementById('crosshair').style.display = isSelecting ? 'block' : 'none';
-        document.getElementById('btnSelectPoint').style.background = isSelecting ? 'rgba(255,255,255,0.2)' : '';
-        playBeep(600, 0.05);
-    }
+    // Геопозиция
+    navigator.geolocation.getCurrentPosition(pos => {
+        userPos = [pos.coords.longitude, pos.coords.latitude];
+        map.setCenter(userPos);
+        new maplibregl.Marker({color: '#0A84FF'}).setLngLat(userPos).addTo(map);
+    });
 
     function resetToLocation() {
-        if (userPos) {
-            map.flyTo({ center: userPos, zoom: 13 });
-            searchOrigin = [...userPos];
-            syncUI();
-            playBeep(800, 0.1);
-        }
+        if(userPos) map.flyTo({center: userPos, zoom: 13});
     }
 
-    function handleMainAction() {
-        const btn = document.getElementById('mainActionBtn');
-        
-        if (isScanning) return; // Защита от двойного клика
-
-        if (targetPoint) {
-            // Если цель уже найдена, сбрасываем
-            resetSystem();
-            return;
-        }
-
-        // Запуск сканирования
-        isScanning = true;
-        btn.innerText = "СКАНИРОВАНИЕ...";
-        btn.classList.add('scanning');
-        document.getElementById('status-label').innerText = "ПОИСК СИГНАЛА...";
-        document.getElementById('status-label').style.color = "var(--ios-blue)";
-        playBeep(400, 0.1);
-
-        executeScan().then(found => {
-            isScanning = false;
-            btn.classList.remove('scanning');
-            
-            if (found) {
-                targetPoint = found.coords;
-                finishScan(found);
-            } else {
-                btn.innerText = "НАЙТИ АНОМАЛИЮ";
-                document.getElementById('status-label').innerText = "СИГНАЛ НЕ ОБНАРУЖЕН";
-                document.getElementById('status-label').style.color = "var(--ios-red)";
-                showToast("В этом секторе чисто");
-                playBeep(150, 0.5);
-            }
-        });
-    }
-
-    async function executeScan() {
+    // --- НОВЫЙ АЛГОРИТМ ---
+    async function startAdvancedScan() {
         const mode = document.getElementById('searchMode').value;
-        const radius = parseFloat(document.getElementById('radiusIn').value);
-        let attempts = 0;
-        const maxAttempts = 50;
+        const userPower = parseInt(document.getElementById('powerIn').value);
+        const radius = 5; // км
 
-        while (attempts < maxAttempts) {
-            attempts++;
-            // Случайная точка в круге
-            const angle = Math.random() * Math.PI * 2;
-            const distDeg = (Math.sqrt(Math.random()) * radius) / 111;
-            const pt = [
-                searchOrigin[0] + distDeg * Math.cos(angle),
-                searchOrigin[1] + distDeg * Math.sin(angle)
-            ];
+        document.getElementById('ui-idle').style.display = 'none';
+        document.getElementById('ui-scanning').style.display = 'block';
 
-            try {
-                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pt[1]}&lon=${pt[0]}&zoom=17&addressdetails=1`, {
-                    headers: { 'User-Agent': 'KiwiWayApp/1.0' }
-                });
-                const data = await res.json();
-                
-                if (data && validatePoint(data, mode)) {
-                    return { coords: pt,  data };
-                }
-            } catch (e) { console.error(e); }
-            
-            // Небольшая задержка чтобы не спамить API
-            await new Promise(r => setTimeout(r, 100));
+        // 1. Генерация пула
+        await updateStep('step1', 1000);
+        const pool = [];
+        for(let i=0; i<300; i++) {
+            const a = Math.random() * Math.PI * 2;
+            const d = (Math.sqrt(Math.random()) * radius) / 111;
+            pool.push({
+                coords: [userPos[0] + d * Math.cos(a), userPos[1] + d * Math.sin(a)],
+                power: Math.floor(Math.random() * 100) + 1
+            });
         }
-        return null;
+
+        // 2. Фильтрация (имитация)
+        await updateStep('step2', 1500);
+        
+        // 3. Поиск резонанса
+        await updateStep('step3', 1200);
+        // Ищем точку, чья мощность ближе всего к ползунку
+        pool.sort((a, b) => Math.abs(a.power - userPower) - Math.abs(b.power - userPower));
+        const candidate = pool[0];
+
+        // 4. Запрос к OSM для финальной точки (чтобы была реальной)
+        await updateStep('step4', 800);
+        
+        try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${candidate.coords[1]}&lon=${candidate.coords[0]}&zoom=17`);
+            const data = await res.json();
+            
+            targetPoint = candidate.coords;
+            finalizeDiscovery(data, candidate.power);
+        } catch(e) {
+            targetPoint = candidate.coords;
+            finalizeDiscovery({display_name: "Неизвестный сектор"}, candidate.power);
+        }
     }
 
-    function finishScan(found) {
-        playSuccessSound();
-        document.getElementById('mainActionBtn').innerText = "ЦЕЛЬ ЗАХВАЧЕНА";
-        document.getElementById('mainActionBtn').style.background = "var(--ios-green)";
-        document.getElementById('btnReset').style.display = "block";
-        document.getElementById('btnSelectPoint').style.display = "none";
-        
-        // Показать инфо
-        document.getElementById('foundPanel').style.display = "block";
-        document.getElementById('anomalyName').innerText = "ОБЪЕКТ #" + Math.floor(Math.random()*900)+100;
-        document.getElementById('anomalyDesc').innerText = found.data.display_name.split(',')[0]; // Краткое название
-        
-        // Маркер цели
-        addMarker(targetPoint, '#FF453A');
-        map.flyTo({ center: targetPoint, zoom: 15 });
-
-        // Запуск радара
-        startRadarLogic();
+    async function updateStep(id, ms) {
+        const el = document.getElementById(id);
+        el.classList.add('active');
+        await new Promise(r => setTimeout(r, ms));
+        el.classList.remove('active');
+        el.classList.add('done');
     }
 
-    function startRadarLogic() {
-        document.getElementById('radar-mini').style.display = 'block';
-        document.getElementById('status-label').innerText = "РАДАР АКТИВЕН";
-        
-        clearInterval(radarInterval);
-        radarInterval = setInterval(() => {
-            if (!userPos || !targetPoint) return;
+    function finalizeDiscovery(data, actualPower) {
+        setTimeout(() => {
+            document.getElementById('ui-scanning').style.display = 'none';
+            document.getElementById('ui-found').style.display = 'block';
             
-            const dist = getDistance(userPos, targetPoint);
-            const maxR = document.getElementById('radiusIn').value * 1000;
+            // Ставим метку
+            if(window.targetM) window.targetM.remove();
+            const el = document.createElement('div');
+            el.style.cssText = "width:15px; height:15px; background:var(--ios-red); border-radius:50%; box-shadow:0 0 15px var(--ios-red);";
+            window.targetM = new maplibregl.Marker(el).setLngLat(targetPoint).addTo(map);
             
-            // Расчет сигнала
-            let signal = Math.max(0, (1 - dist / maxR) * 100);
-            // Добавляем шум
-            signal += (Math.random() - 0.5) * 10;
-            signal = Math.min(100, Math.max(0, signal));
+            map.flyTo({center: targetPoint, zoom: 15, pitch: 45});
 
-            document.getElementById('distance-display').innerText = Math.round(signal) + '%';
-            document.getElementById('radar-arrow').style.transform = `translate(-50%, -100%) rotate(${signal * 3.6}deg)`;
+            // Инфо
+            document.getElementById('infName').innerText = "ОБЪЕКТ #" + Math.floor(Math.random()*9000 + 1000);
+            document.getElementById('infDesc').innerHTML = `<b>Источник:</b> ${data.display_name}<br><b>Резонанс:</b> ${actualPower}%`;
+            document.getElementById('infCoords').innerText = targetPoint[1].toFixed(6) + ", " + targetPoint[0].toFixed(6);
 
-            if (signal > 90) playBeep(1200, 0.05);
+            startRadarLogic(actualPower);
         }, 500);
     }
 
-    function resetSystem() {
-        targetPoint = null;
-        isScanning = false;
-        clearInterval(radarInterval);
-        
-        document.getElementById('foundPanel').style.display = "none";
-        document.getElementById('radar-mini').style.display = "none";
-        document.getElementById('btnReset').style.display = "none";
-        document.getElementById('btnSelectPoint').style.display = "block";
-        
-        const btn = document.getElementById('mainActionBtn');
-        btn.innerText = "НАЙТИ АНОМАЛИЮ";
-        btn.style.background = "";
-        
-        document.getElementById('status-label').innerText = "ГОТОВ К ПОИСКУ";
-        document.getElementById('status-label').style.color = "";
-        document.getElementById('distance-display').innerText = "--%";
+    function startRadarLogic(power) {
+        radarInterval = setInterval(() => {
+            const dist = getDistance(userPos, targetPoint);
+            const maxDist = 5000;
+            let signal = Math.max(0, (1 - dist/maxDist) * 100);
+            
+            // Дрожание стрелки (зависит от мощности)
+            let jitter = (Math.random() - 0.5) * (110 - power) * 0.5;
+            let displaySignal = Math.max(0, Math.min(100, signal + jitter));
 
-        // Удаляем маркер цели (упрощенно перезагрузкой слоя или просто визуально скрываем логику)
-        // В реальном приложении нужно удалять конкретный маркер
-        map.setStyle(map.getStyle()); // Хардкорный ресет слоев для чистоты
-        setTimeout(() => {
-             if(searchOrigin) drawSearchCircle(searchOrigin, parseFloat(document.getElementById('radiusIn').value));
-             if(userPos) addMarker(userPos, '#0A84FF');
-        }, 1000);
+            document.getElementById('radar-arrow').style.transform = `translate(-50%, -100%) rotate(${displaySignal * 3.6}deg)`;
+            document.getElementById('signal-text').innerText = `СИГНАЛ: ${displaySignal.toFixed(0)}%`;
+        }, 100);
     }
 
     function buildRoute() {
-        if (!userPos || !targetPoint) return;
-        const url = `https://router.project-osrm.org/route/v1/driving/${userPos[0]},${userPos[1]};${targetPoint[0]},${targetPoint[1]}?geometries=geojson`;
-        
-        fetch(url).then(r => r.json()).then(data => {
-            if (data.code === 'Ok') {
-                if (map.getLayer('route')) { map.removeLayer('route'); map.removeSource('route'); }
-                map.addSource('route', { type: 'geojson',  data.routes[0].geometry });
-                map.addLayer({
-                    id: 'route', type: 'line', source: 'route',
-                    paint: { 'line-color': '#30D158', 'line-width': 5, 'line-opacity': 0.8 }
-                });
-                showToast("Маршрут построен");
-            }
-        });
+        const url = `https://www.google.com/maps/dir/?api=1&destination=${targetPoint[1]},${targetPoint[0]}&travelmode=walking`;
+        window.open(url, '_blank');
     }
 
-    function copyCoords() {
-        if(targetPoint) {
-            navigator.clipboard.writeText(`${targetPoint[1].toFixed(5)}, ${targetPoint[0].toFixed(5)}`);
-            showToast("Координаты скопированы");
-        }
-    }
-
-    // --- Вспомогательные функции ---
-    function validatePoint(osmData, mode) {
-        const txt = JSON.stringify(osmData).toLowerCase();
-        const addr = osmData.address || {};
-        
-        // Простые фильтры
-        if (mode === 'quantum') {
-            if (txt.includes('house') || txt.includes('shop') || txt.includes('cafe')) return false;
-            if (txt.includes('abandoned') || txt.includes('industrial') || txt.includes('construction') || addr.building) return true;
-        }
-        if (mode === 'void') {
-            if (txt.includes('building') || txt.includes('road') || txt.includes('house')) return false;
-            if (txt.includes('forest') || txt.includes('park') || txt.includes('water') || addr.natural) return true;
-        }
-        if (mode === 'powerful') return true; // Лотерея
-        
-        return false;
-    }
-
-    function genCircle(c, km) {
-        const p = 64, res = [];
-        const dx = km / (111.32 * Math.cos(c[1] * Math.PI / 180));
-        const dy = km / 110.574;
-        for (let i = 0; i <= p; i++) {
-            const a = (i / p) * (Math.PI * 2);
-            res.push([c[0] + dx * Math.cos(a), c[1] + dy * Math.sin(a)]);
-        }
-        return { type: 'Feature', geometry: { type: 'Polygon', coordinates: [res] } };
+    function resetSystem() {
+        clearInterval(radarInterval);
+        document.getElementById('ui-found').style.display = 'none';
+        document.getElementById('ui-idle').style.display = 'block';
+        document.querySelectorAll('.scan-step').forEach(s => s.className = 'scan-step');
+        if(window.targetM) window.targetM.remove();
     }
 
     function getDistance(p1, p2) {
@@ -556,20 +261,9 @@
         return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     }
 
-    // Обработка клика по карте для выбора точки
-    map && map.on('click', (e) => {
-        if (isSelecting) {
-            searchOrigin = [e.lngLat.lng, e.lngLat.lat];
-            toggleSelectMode();
-            syncUI();
-            map.flyTo({ center: searchOrigin, zoom: 13 });
-            playBeep(800, 0.1);
-        }
-    });
-
-    // Запуск
-    initMap();
+    function openM(id) { document.getElementById(id).classList.add('active'); }
+    function closeM() { document.querySelectorAll('.modal').forEach(m => m.classList.remove('active')); }
 </script>
+
 </body>
 </html>
-
