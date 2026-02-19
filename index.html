@@ -20,7 +20,6 @@
         
         #map { position: absolute; top: 0; bottom: 0; width: 100%; z-index: 1; filter: brightness(0.7) contrast(1.2); }
 
-        /* Жидкое стекло iOS */
         .glass {
             background: var(--glass-bg);
             backdrop-filter: var(--blur);
@@ -45,7 +44,6 @@
         .btn-main { background: var(--ios-blue); box-shadow: 0 4px 15px rgba(10, 132, 255, 0.3); }
         .btn:active { transform: scale(0.96); opacity: 0.7; }
 
-        /* Ползунки */
         input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; height: 40px; }
         input[type=range]::-webkit-slider-runnable-track { height: 8px; background: rgba(255,255,255,0.1); border-radius: 10px; }
         input[type=range]::-webkit-slider-thumb {
@@ -53,7 +51,6 @@
             background: #fff; margin-top: -10px; box-shadow: 0 2px 10px rgba(0,0,0,0.5);
         }
 
-        /* Радар */
         #radar {
             width: 90px; height: 90px; margin: 0 auto 15px; border: 2px solid rgba(48, 209, 88, 0.3);
             border-radius: 50%; position: relative; background: radial-gradient(circle, rgba(48, 209, 88, 0.1) 0%, transparent 80%);
@@ -66,7 +63,6 @@
             border-radius: 4px; box-shadow: 0 0 12px var(--ios-green);
         }
 
-        /* Модалки */
         .modal {
             position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.9);
             width: 88%; max-width: 350px; border-radius: 35px; padding: 30px;
@@ -179,10 +175,18 @@
 </div>
 
 <script>
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    let map, userPos, searchOrigin, targetPoint, isSelecting = false;
+    let audioCtx, map, userPos, searchOrigin, targetPoint, isSelecting = false;
     let radarInterval;
-    let currentMapStyle = 'dark'; // Для отслеживания стиля карты
+    let currentMapStyle = 'dark';
+
+    function initAudio() {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+    }
 
     function showAlert(text) {
         const el = document.getElementById('iosAlert');
@@ -191,10 +195,9 @@
         setTimeout(() => el.style.display = 'none', 3000);
     }
 
-    // УДАЛЕНО: playMysterySound (чтобы убрать звук поиска)
-
     function playBeep(freq, dur) {
-        if (!document.getElementById('soundToggle').checked) return;
+        initAudio();
+        if (!document.getElementById('soundToggle').checked || !audioCtx) return;
         const osc = audioCtx.createOscillator();
         const g = audioCtx.createGain();
         osc.connect(g); g.connect(audioCtx.destination);
@@ -206,44 +209,84 @@
 
     const STYLES = {
         dark: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
-        sat: { "version": 8, "sources": { "s": { "type": "raster", "tiles": ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"], "tileSize": 256 }}, "layers": [{ "id": "s", "type": "raster", "source": "s" }] }
+        sat: { 
+            "version": 8, 
+            "sources": { 
+                "s": { 
+                    "type": "raster", 
+                    "tiles": ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"], 
+                    "tileSize": 256 
+                }
+            }, 
+            "layers": [{ "id": "s", "type": "raster", "source": "s" }] 
+        }
     };
 
+    // Инициализация карты
     map = new maplibregl.Map({
         container: 'map',
         style: STYLES.dark,
-        center: [37.6, 55.7],
+        center: [37.617, 55.755],
         zoom: 12,
         attributionControl: false
     });
 
-    navigator.geolocation.getCurrentPosition(pos => {
-        userPos = [pos.coords.longitude, pos.coords.latitude];
-        searchOrigin = [...userPos];
-        map.setCenter(userPos);
-        new maplibregl.Marker({ color: '#0A84FF' }).setLngLat(userPos).addTo(map);
-        syncUI();
+    map.on('load', function() {
+        console.log('Map loaded');
     });
+
+    // Геолокация
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            function(pos) {
+                userPos = [pos.coords.longitude, pos.coords.latitude];
+                searchOrigin = [userPos[0], userPos[1]];
+                map.setCenter(userPos);
+                new maplibregl.Marker({ color: '#0A84FF' }).setLngLat(userPos).addTo(map);
+                syncUI();
+            },
+            function(err) {
+                console.warn('Geolocation error:', err);
+                userPos = [37.617, 55.755];
+                searchOrigin = [userPos[0], userPos[1]];
+                syncUI();
+            },
+            { enableHighAccuracy: true, timeout: 10000 }
+        );
+    }
 
     function syncUI() {
         document.getElementById('rL').innerText = document.getElementById('radiusIn').value;
         document.getElementById('pL').innerText = document.getElementById('powerIn').value;
-        if (searchOrigin) {
-            const r = document.getElementById('radiusIn').value;
+        
+        if (searchOrigin && map.isStyleLoaded()) {
+            const r = parseFloat(document.getElementById('radiusIn').value);
             const geojson = genCircle(searchOrigin, r);
+            
             if (map.getSource('rad')) {
                 map.getSource('rad').setData(geojson);
             } else {
-                map.addSource('rad', { type: 'geojson',  geojson });
-                map.addLayer({ id: 'rad-fill', type: 'fill', source: 'rad', paint: { 'fill-color': '#0A84FF', 'fill-opacity': 0.05 } });
-                map.addLayer({ id: 'rad-line', type: 'line', source: 'rad', paint: { 'line-color': '#0A84FF', 'line-width': 2, 'line-dasharray': [2, 2] } });
+                map.addSource('rad', { type: 'geojson', data: geojson });
+                map.addLayer({ 
+                    id: 'rad-fill', 
+                    type: 'fill', 
+                    source: 'rad', 
+                    paint: { 'fill-color': '#0A84FF', 'fill-opacity': 0.05 } 
+                });
+                map.addLayer({ 
+                    id: 'rad-line', 
+                    type: 'line', 
+                    source: 'rad', 
+                    paint: { 'line-color': '#0A84FF', 'line-width': 2, 'line-dasharray': [2, 2] } 
+                });
             }
         }
     }
 
     function resetToLocation() {
+        initAudio();
         if (!userPos) return;
-        searchOrigin = [...userPos];
+        searchOrigin = [userPos[0], userPos[1]];
         map.flyTo({ center: userPos, zoom: 12 });
         syncUI();
         playBeep(800, 0.1);
@@ -259,10 +302,12 @@
             b.innerText = "ПОДТВЕРДИТЬ ЦЕЛЬ";
             b.style.background = "var(--ios-green)";
             sBtn.innerText = "ОТМЕНА";
-            b.onclick = () => {
+            b.onclick = function() {
                 searchOrigin = [map.getCenter().lng, map.getCenter().lat];
-                toggleSelect(); syncUI();
-                b.innerText = "НАЙТИ АНОМАЛИЮ"; b.style.background = "";
+                toggleSelect(); 
+                syncUI();
+                b.innerText = "НАЙТИ АНОМАЛИЮ"; 
+                b.style.background = "";
                 b.onclick = executeScan;
             };
         } else {
@@ -274,12 +319,10 @@
     }
 
     async function executeScan() {
-        if (audioCtx.state === 'suspended') audioCtx.resume();
+        initAudio();
         document.getElementById('ui-idle').style.display = 'none';
         document.getElementById('scan-box').style.display = 'block';
         document.getElementById('searchPulse').style.display = 'block';
-        
-        // Звук поиска удален
         
         const mode = document.getElementById('searchMode').value;
         const radius = parseFloat(document.getElementById('radiusIn').value);
@@ -287,57 +330,51 @@
         let attempts = 0;
         const maxAttempts = 50;
 
-        // Ключевые слова для фильтрации
         const keywords = {
             quantum: ['abandoned', 'ruin', 'dump', 'garbage', 'factory', 'plant', 'railway', 'track', 'road', 'quarry', 'mine', 'bunker', 'fortification', 'заброшенный', 'свалка', 'руины', 'развалины', 'ангар', 'склад', 'карьер'],
             void: ['ravine', 'park', 'forest', 'meadow', 'field', 'spring', 'stream', 'river', 'pond', 'lake', 'cemetery', 'wood', 'scrubland', 'ovrag', 'пустошь', 'парк', 'лес', 'родник', 'ручей', 'овраг', 'поляна', 'пруд', 'озеро'],
-            powerful: [] // Заполнится объединением
+            powerful: []
         };
         keywords.powerful = [...keywords.quantum, ...keywords.void];
-
         const activeKeywords = keywords[mode];
 
         while (!found && attempts < maxAttempts) {
             attempts++;
             const a = Math.random() * Math.PI * 2;
-            // Распределение точек внутри круга (равномерное)
             const d = (Math.sqrt(Math.random()) * radius) / 111;
             const pt = [searchOrigin[0] + d * Math.cos(a), searchOrigin[1] + d * Math.sin(a)];
             
             try {
-                // Запрос к Nominatim
-                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pt[1]}&lon=${pt[0]}&zoom=16&addressdetails=1`);
+                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pt[1]}&lon=${pt[0]}&zoom=16&addressdetails=1`, {
+                    headers: { 'User-Agent': 'KiwiWay/1.0' }
+                });
                 const data = await res.json();
                 
                 if (data && data.address) {
-                    // Проверяем название объекта или тип местности
                     const name = (data.display_name || "").toLowerCase();
                     const type = Object.values(data.address).join(" ").toLowerCase();
-                    
                     const match = activeKeywords.some(k => name.includes(k) || type.includes(k));
                     
-                    // Если совпадение найдено или это просто "пустое место" (нет четкого адреса дома)
                     if (match || (!data.address.house_number && !data.address.building)) {
-                         // Дополнительный фильтр: если это просто дорога в городе, пропускаем (для режима пустоты)
                         if (mode !== 'quantum' && (name.includes('улица') || name.includes('проспект'))) continue;
-                        
-                        found = { coords: pt,  data };
+                        found = { coords: pt, data: data };
                     }
                 }
-            } catch(e) { console.error(e); }
+            } catch(e) { 
+                console.log('Search attempt', attempts, 'failed'); 
+            }
         }
 
-        // Если API не нашло ничего интересного за время поиска, генерируем "Аномалию" в случайной точке
         if (!found) {
             const a = Math.random() * Math.PI * 2;
             const d = (radius * 0.7) / 111;
             found = { 
                 coords: [searchOrigin[0] + d * Math.cos(a), searchOrigin[1] + d * Math.sin(a)],
-                 { display_name: "Неопознанная зона (" + mode.toUpperCase() + ")" }
+                data: { display_name: "Неопознанная зона (" + mode.toUpperCase() + ")" }
             };
         }
 
-        setTimeout(() => {
+        setTimeout(function() {
             document.getElementById('scan-box').style.display = 'none';
             document.getElementById('searchPulse').style.display = 'none';
             targetPoint = found.coords;
@@ -351,7 +388,9 @@
         const anomalyPower = parseInt(document.getElementById('powerIn').value);
         document.getElementById('radar-ui').style.display = 'block';
         
-        radarInterval = setInterval(() => {
+        radarInterval = setInterval(function() {
+            if (!userPos || !targetPoint) return;
+            
             const dist = getDistance(userPos, targetPoint);
             const maxR = document.getElementById('radiusIn').value * 1000;
             
@@ -361,18 +400,20 @@
             
             if (anomalyPower > 70 && currentSignal < 5) currentSignal = 10;
 
-            document.getElementById('radar-arrow').style.transform = `translate(-50%, -100%) rotate(${currentSignal * 3.6}deg)`;
-            document.getElementById('distance-text').innerText = `СИГНАЛ: ${currentSignal.toFixed(0)}%`;
+            document.getElementById('radar-arrow').style.transform = 'translate(-50%, -100%) rotate(' + (currentSignal * 3.6) + 'deg)';
+            document.getElementById('distance-text').innerText = 'СИГНАЛ: ' + currentSignal.toFixed(0) + '%';
             
             if (currentSignal > 90) playBeep(1200, 0.05);
         }, 600);
     }
 
     function showTarget(obj) {
-        const modeName = document.getElementById('searchMode').options[document.getElementById('searchMode').selectedIndex].text;
+        const modeSelect = document.getElementById('searchMode');
+        const modeName = modeSelect.options[modeSelect.selectedIndex].text;
+        
         document.getElementById('anomalyName').innerText = "ОБЪЕКТ #" + Math.floor(Math.random()*999);
-        document.getElementById('infoBody').innerHTML = `<b>ТИП:</b> ${modeName}<br><b>АДРЕС:</b> ${obj.data.display_name}`;
-        document.getElementById('coordsBox').innerText = `${targetPoint[1].toFixed(6)}, ${targetPoint[0].toFixed(6)}`;
+        document.getElementById('infoBody').innerHTML = '<b>ТИП:</b> ' + modeName + '<br><b>АДРЕС:</b> ' + obj.data.display_name;
+        document.getElementById('coordsBox').innerText = targetPoint[1].toFixed(6) + ', ' + targetPoint[0].toFixed(6);
         
         if (window.targetMarker) window.targetMarker.remove();
         const el = document.createElement('div');
@@ -383,11 +424,11 @@
     }
 
     function buildRoute() {
-        // Логика выбора профиля маршрута в зависимости от стиля карты
+        initAudio();
         const profile = (currentMapStyle === 'sat') ? 'driving' : 'foot';
-        const url = `https://router.project-osrm.org/route/v1/${profile}/${userPos[0]},${userPos[1]};${targetPoint[0]},${targetPoint[1]}?geometries=geojson`;
+        const url = 'https://router.project-osrm.org/route/v1/' + profile + '/' + userPos[0] + ',' + userPos[1] + ';' + targetPoint[0] + ',' + targetPoint[1] + '?geometries=geojson';
         
-        fetch(url).then(r => r.json()).then(data => {
+        fetch(url).then(function(r) { return r.json(); }).then(function(data) {
             if (map.getLayer('route')) { map.removeLayer('route'); map.removeSource('route'); }
             if(data.code === 'Ok') {
                 map.addSource('route', { type: 'geojson', data: data.routes[0].geometry });
@@ -396,7 +437,7 @@
                     type: 'line', 
                     source: 'route', 
                     paint: { 
-                        'line-color': (currentMapStyle === 'sat') ? '#30D158' : '#0A84FF', // Зеленый для спутника, синий для темной
+                        'line-color': (currentMapStyle === 'sat') ? '#30D158' : '#0A84FF',
                         'line-width': 6, 
                         'line-cap': 'round' 
                     } 
@@ -405,6 +446,9 @@
             } else {
                 showAlert("ПУТЬ НЕ НАЙДЕН");
             }
+        }).catch(function(err) {
+            console.error('Route error:', err);
+            showAlert("ОШИБКА МАРШРУТА");
         });
     }
 
@@ -421,6 +465,7 @@
     function copyCoords() {
         navigator.clipboard.writeText(document.getElementById('coordsBox').innerText);
         showAlert("СКОПИРОВАНО");
+        playBeep(600, 0.05);
     }
 
     function genCircle(c, km) {
@@ -442,13 +487,34 @@
         return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     }
 
-    function openM(id) { document.getElementById(id).classList.add('active'); playBeep(600, 0.05); }
-    function closeM() { document.querySelectorAll('.modal').forEach(m => m.classList.remove('active')); }
+    function openM(id) { 
+        initAudio();
+        document.getElementById(id).classList.add('active'); 
+        playBeep(600, 0.05); 
+    }
+    
+    function closeM() { 
+        document.querySelectorAll('.modal').forEach(function(m) { m.classList.remove('active'); }); 
+    }
+    
     function setMapStyle(t) { 
         map.setStyle(STYLES[t]); 
         currentMapStyle = t;
         closeM(); 
     }
+    
+    // Обработчик клика по карте для выбора точки
+    map.on('click', function(e) {
+        if (isSelecting) {
+            searchOrigin = [e.lngLat.lng, e.lngLat.lat];
+            toggleSelect();
+            syncUI();
+            const b = document.getElementById('mainBtn');
+            b.innerText = "НАЙТИ АНОМАЛИЮ"; 
+            b.style.background = "";
+            b.onclick = executeScan;
+        }
+    });
 </script>
 </body>
 </html>
