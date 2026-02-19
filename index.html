@@ -1,743 +1,408 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
-    <title>KiwiWay - Anomaly Radar</title>
-    <script src='https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.js'></script>
-    <link href='https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.css' rel='stylesheet' />
-    <style>
-        :root { 
-            --ios-blue: #0A84FF; 
-            --ios-green: #30D158;
-            --ios-red: #FF453A;
-            --glass-bg: rgba(35, 35, 40, 0.45);
-            --glass-border: rgba(255, 255, 255, 0.15);
-            --blur: blur(35px) saturate(200%);
-        }
-        
-        body { margin: 0; padding: 0; background: #000; font-family: -apple-system, system-ui, sans-serif; color: #fff; overflow: hidden; }
-        
-        #map { position: absolute; top: 0; bottom: 0; width: 100%; z-index: 1; filter: brightness(0.85) contrast(1.1); transition: filter 0.5s ease; }
-        
-        /* UI Panel */
-        .ui-panel {
-            position: absolute; bottom: 35px; left: 50%; transform: translateX(-50%);
-            width: 92%; max-width: 400px; 
-            background: var(--glass-bg);
-            backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
-            border: 1px solid var(--glass-border); 
-            border-top: 1px solid rgba(255, 255, 255, 0.3);
-            border-radius: 36px;
-            padding: 22px; box-sizing: border-box; z-index: 100;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.05);
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no"/>
+  <title>KiwiWay - Anomaly Radar</title>
 
-        .btn {
-            width: 100%; padding: 16px; margin: 6px 0; border: none; border-radius: 20px;
-            font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
-            background: rgba(10, 132, 255, 0.6); color: #fff;
-            backdrop-filter: blur(10px); border: 1px solid var(--glass-border);
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-        }
-        .btn-sec { background: rgba(255, 255, 255, 0.1); color: #fff; }
-        .btn:active { transform: scale(0.95); opacity: 0.8; }
+  <script src="https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.js"></script>
+  <link href="https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.css" rel="stylesheet"/>
 
-        /* Sliders */
-        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; height: 35px; }
-        input[type=range]::-webkit-slider-runnable-track { height: 6px; background: rgba(255,255,255,0.15); border-radius: 4px; }
-        input[type=range]::-webkit-slider-thumb {
-            -webkit-appearance: none; height: 26px; width: 26px; border-radius: 50%;
-            background: #fff; margin-top: -10px; box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-            transition: transform 0.1s;
-        }
-        input[type=range]::-webkit-slider-thumb:active { transform: scale(1.1); }
+  <style>
+    :root {
+      --ios-blue: #0A84FF;
+      --ios-green: #30D158;
+      --ios-red: #FF453A;
+      --glass-bg: rgba(35, 35, 40, 0.45);
+      --glass-border: rgba(255, 255, 255, 0.15);
+      --blur: blur(35px) saturate(200%);
+    }
 
-        /* Radar Unit */
-        #radar-ui { margin-bottom: 15px; }
-        #radar {
-            width: 75px; height: 75px; margin: 0 auto 12px; border: 1px solid rgba(255,255,255,0.25);
-            border-radius: 50%; position: relative; 
-            background: radial-gradient(circle, rgba(48, 209, 88, 0.15) 0%, transparent 70%);
-            box-shadow: inset 0 0 20px rgba(48, 209, 88, 0.1);
-        }
-        #radar-arrow {
-            position: absolute; top: 50%; left: 50%; width: 2.5px; height: 34px;
-            background: var(--ios-green); transform-origin: bottom center;
-            transform: translate(-50%, -100%) rotate(0deg); 
-            transition: transform 1.2s cubic-bezier(0.25, 0.1, 0.25, 1);
-            border-radius: 2px;
-            box-shadow: 0 0 8px var(--ios-green);
-        }
+    body {
+      margin: 0;
+      padding: 0;
+      background: #000;
+      font-family: -apple-system, system-ui, sans-serif;
+      color: #fff;
+      overflow: hidden;
+    }
 
-        /* Modals & Alerts */
-        .modal {
-            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.95);
-            width: 85%; max-width: 320px; 
-            background: var(--glass-bg);
-            backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
-            border-radius: 32px; padding: 25px;
-            display: none; z-index: 1000; 
-            border: 1px solid var(--glass-border);
-            border-top: 1px solid rgba(255, 255, 255, 0.3);
-            box-shadow: 0 25px 50px rgba(0,0,0,0.6);
-            opacity: 0; transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        .custom-alert {
-            position: fixed; top: 40px; left: 50%; transform: translateX(-50%) translateY(-20px);
-            background: rgba(255, 69, 58, 0.85); padding: 14px 28px; border-radius: 24px;
-            z-index: 2000; font-size: 14px; font-weight: 600; display: none;
-            backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.2);
-            box-shadow: 0 12px 30px rgba(255, 69, 58, 0.3);
-            opacity: 0; transition: all 0.3s ease;
-        }
-        
-        .active { display: block; opacity: 1; transform: translate(-50%, -50%) scale(1); }
-        .alert-active { display: block; opacity: 1; transform: translateX(-50%) translateY(0); }
+    #map {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 100%;
+      z-index: 1;
+      filter: brightness(0.85) contrast(1.1);
+    }
 
-        #crosshair {
-            display: none; position: absolute; top: 50%; left: 50%;
-            transform: translate(-50%, -50%); width: 30px; height: 30px;
-            z-index: 50; border: 1.5px solid var(--ios-green); border-radius: 50%;
-            box-shadow: 0 0 10px rgba(48, 209, 88, 0.5);
-        }
+    .ui-panel {
+      position: absolute;
+      bottom: 35px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 92%;
+      max-width: 400px;
+      background: var(--glass-bg);
+      backdrop-filter: var(--blur);
+      -webkit-backdrop-filter: var(--blur);
+      border: 1px solid var(--glass-border);
+      border-radius: 36px;
+      padding: 22px;
+      z-index: 100;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+    }
 
-        /* Анимация импульса поиска - УДАЛЕНО ПО ЗАПРОСУ */
-        
-        @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
-        
-        select { appearance: none; -webkit-appearance: none; }
-        
-        /* Новый прогресс-сканер */
-        #scan-progress {
-            display: none;
-            background: rgba(20, 20, 25, 0.9);
-            border-radius: 20px;
-            padding: 15px;
-            margin: 10px 0;
-            border: 1px solid var(--glass-border);
-        }
-        
-        .scan-step {
-            display: flex;
-            align-items: center;
-            padding: 8px 0;
-            font-size: 13px;
-            color: rgba(255,255,255,0.7);
-            transition: all 0.3s ease;
-        }
-        
-        .scan-step.active {
-            color: var(--ios-blue);
-            font-weight: 600;
-        }
-        
-        .scan-step.completed {
-            color: var(--ios-green);
-        }
-        
-        .step-icon {
-            width: 20px;
-            height: 20px;
-            margin-right: 10px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 12px;
-            background: rgba(255,255,255,0.1);
-            flex-shrink: 0;
-        }
-        
-        .scan-step.active .step-icon {
-            background: var(--ios-blue);
-            animation: pulse 1s infinite;
-        }
-        
-        .scan-step.completed .step-icon {
-            background: var(--ios-green);
-        }
-        
-        .step-icon.check::after {
-            content: "✓";
-            color: #000;
-            font-weight: bold;
-        }
-        
-        .step-loader {
-            width: 14px;
-            height: 14px;
-            border: 2px solid rgba(255,255,255,0.3);
-            border-top-color: var(--ios-blue);
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-            display: none;
-        }
-        
-        .scan-step.active .step-loader {
-            display: block;
-        }
-        
-        .scan-step.completed .step-loader {
-            display: none;
-        }
-        
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        
-        .progress-bar {
-            height: 4px;
-            background: rgba(255,255,255,0.1);
-            border-radius: 2px;
-            margin: 12px 0 8px;
-            overflow: hidden;
-        }
-        
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, var(--ios-blue), var(--ios-green));
-            width: 0%;
-            transition: width 0.4s ease;
-            border-radius: 2px;
-        }
-        
-        .scan-status {
-            font-size: 11px;
-            color: rgba(255,255,255,0.5);
-            text-align: center;
-            margin-top: 8px;
-            min-height: 16px;
-        }
-    </style>
+    .btn {
+      width: 100%;
+      padding: 16px;
+      margin: 6px 0;
+      border: none;
+      border-radius: 20px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      background: rgba(10, 132, 255, 0.6);
+      color: #fff;
+      border: 1px solid var(--glass-border);
+    }
+
+    .btn-sec {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .btn:active {
+      transform: scale(0.96);
+    }
+
+    input[type=range] {
+      width: 100%;
+    }
+
+    #radar {
+      width: 75px;
+      height: 75px;
+      margin: 0 auto 12px;
+      border: 1px solid rgba(255,255,255,0.25);
+      border-radius: 50%;
+      position: relative;
+      background: radial-gradient(circle, rgba(48, 209, 88, 0.15) 0%, transparent 70%);
+    }
+
+    #radar-arrow {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 2.5px;
+      height: 34px;
+      background: var(--ios-green);
+      transform-origin: bottom center;
+      transform: translate(-50%, -100%) rotate(0deg);
+      transition: transform 1s ease;
+      border-radius: 2px;
+    }
+
+    .modal {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 85%;
+      max-width: 320px;
+      background: var(--glass-bg);
+      backdrop-filter: var(--blur);
+      border-radius: 32px;
+      padding: 25px;
+      display: none;
+      z-index: 1000;
+      border: 1px solid var(--glass-border);
+    }
+
+    .active {
+      display: block;
+    }
+
+    #crosshair {
+      display: none;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 30px;
+      height: 30px;
+      border: 1.5px solid var(--ios-green);
+      border-radius: 50%;
+      z-index: 50;
+    }
+  </style>
 </head>
+
 <body>
 
 <div id="map"></div>
 <div id="crosshair"></div>
-<div id="iosAlert" class="custom-alert"></div>
 
 <div class="ui-panel">
-    <div id="radar-ui" style="display:none; text-align: center;">
-        <div id="radar"><div id="radar-arrow"></div></div>
-        <div id="distance-text" style="font-size: 11px; letter-spacing: 2px; color: var(--ios-green); font-weight: 800; text-shadow: 0 0 8px rgba(48,209,88,0.4);">СИГНАЛ: 0%</div>
+
+  <div id="radar-ui" style="display:none; text-align:center;">
+    <div id="radar"><div id="radar-arrow"></div></div>
+    <div id="distance-text" style="font-size:12px; color:var(--ios-green); font-weight:700;">
+      СИГНАЛ: 0%
+    </div>
+  </div>
+
+  <!-- ПОШАГОВОЕ СКАНИРОВАНИЕ -->
+  <div id="scan-box" style="display:none; text-align:left; padding:15px; font-size:14px;">
+    <div id="step1">🎲 Генерация точек...</div>
+    <div id="step2" style="opacity:0.3;">🔍 Фильтрация...</div>
+    <div id="step3" style="opacity:0.3;">⚡ Настройка мощности...</div>
+    <div id="step4" style="opacity:0.3;">🎯 Выбор аномалии...</div>
+    <div id="step5" style="opacity:0.3;">📡 Запуск радара...</div>
+  </div>
+
+  <div id="ui-idle">
+    <div style="display:flex; gap:10px;">
+      <button class="btn btn-sec" onclick="openM('settings')">Настройки</button>
+      <button class="btn btn-sec" onclick="openM('map-styles')">Слои</button>
     </div>
 
-    <!-- Новый прогресс сканирования -->
-    <div id="scan-box" style="display:none; text-align:center; padding: 15px 0;">
-        <div style="font-size: 13px; color: var(--ios-blue); letter-spacing: 2px; font-weight: 700; margin-bottom: 12px;">СКАНИРОВАНИЕ СЕКТОРА</div>
-        
-        <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
-        
-        <div id="scan-progress">
-            <div class="scan-step" id="step1">
-                <div class="step-icon"><div class="step-loader"></div></div>
-                <span>Генерация точек (<span id="pointsCount">0</span>/350)</span>
-            </div>
-            <div class="scan-step" id="step2">
-                <div class="step-icon"><div class="step-loader"></div></div>
-                <span>Фильтрация: <span id="filterType">категория</span></span>
-            </div>
-            <div class="scan-step" id="step3">
-                <div class="step-icon"><div class="step-loader"></div></div>
-                <span>Расчёт мощности сигнала</span>
-            </div>
-            <div class="scan-step" id="step4">
-                <div class="step-icon"><div class="step-loader"></div></div>
-                <span>Синхронизация с детектором</span>
-            </div>
-        </div>
-        
-        <div class="scan-status" id="scanStatus">Инициализация...</div>
+    <div style="display:flex; gap:10px;">
+      <button class="btn btn-sec" id="selectBtn" onclick="toggleSelect()">📍 Указать точку</button>
+      <button class="btn btn-sec" onclick="resetToLocation()">🎯 Моя позиция</button>
     </div>
 
-    <div id="ui-idle">
-        <div style="display: flex; gap: 10px;">
-            <button class="btn btn-sec" onclick="openM('settings')">Настройки</button>
-            <button class="btn btn-sec" onclick="openM('map-styles')">Слои</button>
-        </div>
-        <div style="display: flex; gap: 10px;">
-            <button class="btn btn-sec" style="flex: 1; font-size: 13px;" id="selectBtn" onclick="toggleSelect()">📍 Указать точку</button>
-            <button class="btn btn-sec" style="flex: 1; font-size: 13px; color: var(--ios-blue);" onclick="resetToLocation()">🎯 Моя позиция</button>
-        </div>
-        <button class="btn" id="mainBtn" onclick="executeScan()">НАЙТИ АНОМАЛИЮ</button>
-    </div>
+    <button class="btn" id="mainBtn" onclick="executeScan()">НАЙТИ АНОМАЛИЮ</button>
+  </div>
 
-    <div id="ui-found" style="display: none;">
-        <button class="btn" style="background: rgba(48, 209, 88, 0.8); color: #fff;" onclick="buildRoute()">ПОСТРОИТЬ МАРШРУТ</button>
-        <div style="display: flex; gap: 10px;">
-            <button class="btn btn-sec" style="flex: 1;" onclick="openM('info')">ДАННЫЕ</button>
-            <button class="btn btn-sec" style="flex: 1; color: var(--ios-red);" onclick="resetSystem()">СБРОС</button>
-        </div>
-    </div>
+  <div id="ui-found" style="display:none;">
+    <button class="btn" style="background:rgba(48,209,88,0.8);" onclick="buildRoute()">
+      ПОСТРОИТЬ МАРШРУТ
+    </button>
+    <button class="btn btn-sec" onclick="resetSystem()" style="color:var(--ios-red);">
+      СБРОС
+    </button>
+  </div>
 </div>
 
+<!-- SETTINGS -->
 <div id="settings" class="modal">
-    <h3 style="text-align:center; margin-top:0; font-weight: 600;">Настройки</h3>
-    <label style="font-size: 12px; opacity: 0.6; font-weight: 600;">КАТЕГОРИЯ</label>
-    <select id="catSelect" style="width:100%; background:rgba(255,255,255,0.1); color:#fff; border:1px solid var(--glass-border); padding:14px; border-radius:16px; margin: 8px 0 20px; font-size: 15px;">
-        <option value="quantum">Квантовый</option>
-        <option value="power">Мощный</option>
-        <option value="void">Пустота</option>
-    </select>
-    
-    <label style="font-size: 12px; opacity: 0.6; font-weight: 600;">РАДИУС: <span id="rL" style="color:var(--ios-blue)">5</span> км</label>
-    <input type="range" id="radiusIn" min="1" max="15" value="5" oninput="syncUI()">
-    
-    <label style="font-size: 12px; opacity: 0.6; margin-top: 15px; display: block; font-weight: 600;">ЦЕЛЕВАЯ МОЩНОСТЬ: <span id="pL" style="color:var(--ios-green)">25</span>%</label>
-    <input type="range" id="powerIn" min="1" max="100" value="25" oninput="syncUI()">
-    <div style="font-size: 10px; opacity: 0.5; margin-top: 4px; text-align: center;">
-        Чем точнее настройка — тем «чище» аномалия
-    </div>
-    
-    <div style="display:flex; justify-content: space-between; align-items: center; margin-top:20px; font-size: 15px; font-weight: 500;">
-        <span>Звук системы</span>
-        <input type="checkbox" id="soundToggle" checked style="width: 20px; height: 20px;">
-    </div>
-    <button class="btn" style="margin-top:25px" onclick="closeM()">ГОТОВО</button>
+  <h3>Настройки</h3>
+
+  <label>Категория</label>
+  <select id="catSelect" style="width:100%; padding:12px; border-radius:12px;">
+    <option value="quantum">Квантовый</option>
+    <option value="power">Мощный</option>
+    <option value="void">Пустота</option>
+  </select>
+
+  <label>Радиус: <span id="rL">5</span> км</label>
+  <input type="range" id="radiusIn" min="1" max="15" value="5" oninput="syncUI()" />
+
+  <label>Мощность: <span id="pL">25</span>%</label>
+  <input type="range" id="powerIn" min="1" max="100" value="25" oninput="syncUI()" />
+
+  <button class="btn" onclick="closeM()">ГОТОВО</button>
 </div>
 
-<div id="info" class="modal">
-    <h3 id="anomalyName" style="color: var(--ios-green); margin-bottom:8px; font-weight: 700;">Объект</h3>
-    <div id="infoBody" style="font-size: 14px; opacity: 0.8; line-height: 1.6;"></div>
-    <div id="coordsBox" style="margin-top:15px; font-family: ui-monospace, monospace; background:rgba(0,0,0,0.3); padding:12px; border-radius:14px; text-align:center; color: var(--ios-blue); border: 1px solid rgba(255,255,255,0.05);"></div>
-    <div id="powerMatch" style="margin-top:10px; font-size: 13px; color: var(--ios-green); text-align: center; font-weight: 600;"></div>
-    <div class="btn btn-sec" style="font-size: 13px; margin-top: 12px;" onclick="copyCoords()">СКОПИРОВАТЬ КООРДИНАТЫ</div>
-    <button class="btn" style="margin-top:10px" onclick="closeM()">ЗАКРЫТЬ</button>
-</div>
-
+<!-- MAP STYLES -->
 <div id="map-styles" class="modal">
-    <button class="btn btn-sec" onclick="setMapStyle('dark')">ТЕМНАЯ МАТЕРИЯ</button>
-    <button class="btn btn-sec" onclick="setMapStyle('sat')">СПУТНИК</button>
-    <button class="btn" style="margin-top:15px" onclick="closeM()">ЗАКРЫТЬ</button>
+  <button class="btn btn-sec" onclick="setMapStyle('dark')">ТЁМНАЯ</button>
+  <button class="btn btn-sec" onclick="setMapStyle('sat')">СПУТНИК</button>
+  <button class="btn" onclick="closeM()">ЗАКРЫТЬ</button>
 </div>
 
 <script>
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    let map, userPos, searchOrigin, targetPoint, isSelecting = false;
-    let radarInterval;
+  let map, userPos, searchOrigin, targetPoint;
+  let radarInterval;
 
-    function showAlert(text) {
-        const el = document.getElementById('iosAlert');
-        el.innerText = text;
-        el.classList.add('alert-active');
-        setTimeout(() => el.classList.remove('alert-active'), 3000);
-    }
-
-    function playSound(type) {
-        if (!document.getElementById('soundToggle').checked) return;
-        const osc = ctx.createOscillator();
-        const g = ctx.createGain();
-        osc.connect(g); g.connect(ctx.destination);
-        const now = ctx.currentTime;
-        
-        if (type === 'tap') {
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(800, now);
-            g.gain.setValueAtTime(0.05, now);
-            g.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
-            osc.start(now); osc.stop(now + 0.15);
-        } else if (type === 'found') {
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(120, now);
-            osc.frequency.exponentialRampToValueAtTime(60, now + 3.0);
-            g.gain.setValueAtTime(0, now);
-            g.gain.linearRampToValueAtTime(0.4, now + 0.8);
-            g.gain.exponentialRampToValueAtTime(0.001, now + 3.5);
-            osc.start(now); osc.stop(now + 3.5);
+  const STYLES = {
+    dark: "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json",
+    sat: {
+      version: 8,
+      sources: {
+        s: {
+          type: "raster",
+          tiles: ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"],
+          tileSize: 256
         }
+      },
+      layers: [{ id: "s", type: "raster", source: "s" }]
+    }
+  };
+
+  map = new maplibregl.Map({
+    container: "map",
+    style: STYLES.dark,
+    center: [37.6, 55.7],
+    zoom: 11,
+    attributionControl: false
+  });
+
+  navigator.geolocation.getCurrentPosition(pos => {
+    userPos = [pos.coords.longitude, pos.coords.latitude];
+    searchOrigin = [...userPos];
+    map.setCenter(userPos);
+    new maplibregl.Marker({ color: "#0A84FF" }).setLngLat(userPos).addTo(map);
+    syncUI();
+  });
+
+  function syncUI() {
+    document.getElementById("rL").innerText = radiusIn.value;
+    document.getElementById("pL").innerText = powerIn.value;
+  }
+
+  function activateStep(i, text) {
+    const el = document.getElementById("step" + i);
+    el.style.opacity = 1;
+    el.innerHTML = text + " ⏳";
+  }
+
+  function completeStep(i, text) {
+    const el = document.getElementById("step" + i);
+    el.innerHTML = text + " ✅";
+  }
+
+  async function executeScan() {
+
+    document.getElementById("ui-idle").style.display = "none";
+    document.getElementById("scan-box").style.display = "block";
+
+    const mode = catSelect.value;
+    const radius = parseInt(radiusIn.value);
+    const targetPower = parseInt(powerIn.value);
+
+    let pool = [];
+    let valid = [];
+
+    // 1) Генерация точек
+    activateStep(1, "🎲 Генерация точек");
+
+    for (let i = 0; i < 350; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const d = (Math.sqrt(Math.random()) * radius) / 111;
+      pool.push([
+        searchOrigin[0] + d * Math.cos(a),
+        searchOrigin[1] + d * Math.sin(a)
+      ]);
     }
 
-    const STYLES = {
-        dark: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
-        sat: { "version": 8, "sources": { "s": { "type": "raster", "tiles": ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"], "tileSize": 256 }}, "layers": [{ "id": "s", "type": "raster", "source": "s" }] }
-    };
+    completeStep(1, "🎲 Генерация точек");
+    await new Promise(r => setTimeout(r, 500));
 
-    map = new maplibregl.Map({
-        container: 'map',
-        style: STYLES.dark,
-        center: [37.6, 55.7],
-        zoom: 11,
-        attributionControl: false
-    });
+    // 2) Фильтрация
+    activateStep(2, "🔍 Фильтрация");
 
-    navigator.geolocation.getCurrentPosition(pos => {
-        userPos = [pos.coords.longitude, pos.coords.latitude];
-        searchOrigin = [...userPos];
-        map.setCenter(userPos);
-        new maplibregl.Marker({ color: '#0A84FF' }).setLngLat(userPos).addTo(map);
-        syncUI();
-    }, () => {
-        // Fallback if geolocation fails
-        userPos = [37.6, 55.7];
-        searchOrigin = [...userPos];
-        syncUI();
-    });
+    for (let pt of pool) {
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pt[1]}&lon=${pt[0]}&zoom=18`);
+        const data = await res.json();
 
-    function syncUI() {
-        document.getElementById('rL').innerText = document.getElementById('radiusIn').value;
-        document.getElementById('pL').innerText = document.getElementById('powerIn').value;
-        if (searchOrigin) {
-            const r = document.getElementById('radiusIn').value;
-            const circle = genCircle(searchOrigin, r);
-            if (map.getSource('rad')) {
-                map.getSource('rad').setData(circle);
-            } else {
-                map.addSource('rad', { type: 'geojson', data: circle });
-                map.addLayer({ id: 'rad-l', type: 'fill', source: 'rad', paint: { 'fill-color': '#0A84FF', 'fill-opacity': 0.05 } });
-                map.addLayer({ id: 'rad-line', type: 'line', source: 'rad', paint: { 'line-color': '#0A84FF', 'line-width': 1.5, 'line-dasharray': [3, 4] } });
-            }
-        }
+        let ok = false;
+        if (mode === "quantum") ok = data.type === "cemetery";
+        if (mode === "power") ok = data.type === "construction";
+        if (mode === "void") ok = !data.address?.road;
+
+        if (ok) valid.push({ coords: pt, data });
+      } catch(e) {}
     }
 
-    function resetToLocation() {
-        if (!userPos) return showAlert("ГЕОПОЗИЦИЯ НЕ НАЙДЕНА");
-        searchOrigin = [...userPos];
-        map.flyTo({ center: userPos, zoom: 11, duration: 1500 });
-        syncUI();
-        playSound('tap');
-        showAlert("ИСХОДНАЯ ТОЧКА: МОЯ ПОЗИЦИЯ");
+    if (!valid.length) {
+      resetSystem();
+      return;
     }
 
-    function toggleSelect() {
-        isSelecting = !isSelecting;
-        document.getElementById('crosshair').style.display = isSelecting ? 'block' : 'none';
-        const b = document.getElementById('mainBtn');
-        const sBtn = document.getElementById('selectBtn');
-        
-        if (isSelecting) {
-            b.innerText = "ПОДТВЕРДИТЬ ТОЧКУ";
-            b.style.background = "rgba(48, 209, 88, 0.7)";
-            sBtn.innerText = "ОТМЕНА";
-            b.onclick = () => {
-                searchOrigin = [map.getCenter().lng, map.getCenter().lat];
-                toggleSelect(); syncUI(); playSound('tap');
-                b.innerText = "НАЙТИ АНОМАЛИЮ"; b.style.background = "rgba(10, 132, 255, 0.6)";
-                b.onclick = executeScan;
-            };
-        } else {
-            b.innerText = "НАЙТИ АНОМАЛИЮ";
-            b.style.background = "rgba(10, 132, 255, 0.6)";
-            sBtn.innerText = "📍 Указать точку";
-            b.onclick = executeScan;
-        }
-    }
+    completeStep(2, "🔍 Фильтрация");
+    await new Promise(r => setTimeout(r, 500));
 
-    // === НОВЫЙ АЛГОРИТМ СКАНИРОВАНИЯ ===
-    
-    // Проверка точки по категории
-    function isValidPoint(data, category) {
-        if (!data || !data.address) return false;
-        
-        if (category === 'quantum') {
-            return data.addresstype === 'historic' || 
-                   data.type === 'cemetery' || 
-                   data.addresstype === 'place_of_worship' ||
-                   data.type === 'archaeological_site' ||
-                   data.address.amenity === 'monastery';
-        }
-        if (category === 'power') {
-            return data.address.industrial || 
-                   data.type === 'construction' || 
-                   data.type === 'ruins' ||
-                   data.address.power ||
-                   data.address.man_made === 'tower';
-        }
-        if (category === 'void') {
-            return !data.address.road && 
-                   !data.address.house_number &&
-                   (!data.address.suburb || data.address.suburb.toLowerCase().includes('field') || data.address.suburb.toLowerCase().includes('forest'));
-        }
-        return false;
-    }
+    // 3) Мощность
+    activateStep(3, "⚡ Настройка мощности");
+    valid.forEach(p => p.power = Math.floor(Math.random() * 100) + 1);
+    completeStep(3, "⚡ Настройка мощности");
+    await new Promise(r => setTimeout(r, 500));
 
-    // Генерация случайной точки в круге
-    function randomPointInCircle(center, radiusKm) {
-        const angle = Math.random() * Math.PI * 2;
-        const distance = Math.sqrt(Math.random()) * radiusKm;
-        const dx = (distance / 111.32) / Math.cos(center[1] * Math.PI / 180);
-        const dy = distance / 110.574;
-        return [center[0] + dx * Math.cos(angle), center[1] + dy * Math.sin(angle)];
-    }
+    // 4) Выбор
+    activateStep(4, "🎯 Выбор аномалии");
 
-    // Обновление шага прогресса
-    function updateStep(stepNum, completed = false, progress = 0) {
-        for (let i = 1; i <= 4; i++) {
-            const step = document.getElementById(`step${i}`);
-            const icon = step.querySelector('.step-icon');
-            if (i < stepNum) {
-                step.classList.add('completed');
-                step.classList.remove('active');
-                icon.classList.add('check');
-            } else if (i === stepNum) {
-                step.classList.add('active');
-                step.classList.remove('completed');
-                if (completed) {
-                    step.classList.add('completed');
-                    step.classList.remove('active');
-                    icon.classList.add('check');
-                }
-            } else {
-                step.classList.remove('active', 'completed');
-                icon.classList.remove('check');
-            }
-        }
-        document.getElementById('progressFill').style.width = `${progress}%`;
-    }
+    valid.sort((a, b) =>
+      Math.abs(a.power - targetPower) - Math.abs(b.power - targetPower)
+    );
 
-    async function executeScan() {
-        // Центрируем карту на точке поиска
-        map.flyTo({ center: searchOrigin, zoom: 11, duration: 1000 });
-        
-        // Показываем UI сканирования
-        document.getElementById('ui-idle').style.display = 'none';
-        document.getElementById('scan-box').style.display = 'block';
-        document.getElementById('scan-progress').style.display = 'block';
-        
-        playSound('tap');
-        
-        const category = document.getElementById('catSelect').value;
-        const radius = parseFloat(document.getElementById('radiusIn').value);
-        const targetPower = parseInt(document.getElementById('powerIn').value);
-        
-        // Обновляем текст фильтра
-        const filterNames = { quantum: 'КВАНТОВЫЙ', power: 'МОЩНЫЙ', void: 'ПУСТОТА' };
-        document.getElementById('filterType').innerText = filterNames[category];
-        
-        let allPoints = [];
-        const TOTAL_POINTS = 350;
-        
-        // === ШАГ 1: Генерация точек ===
-        document.getElementById('scanStatus').innerText = 'Генерация пула координат...';
-        updateStep(1, false, 0);
-        
-        for (let i = 0; i < TOTAL_POINTS; i++) {
-            const pt = randomPointInCircle(searchOrigin, radius);
-            allPoints.push({ coords: pt, power: Math.floor(Math.random() * 100) + 1 });
-            
-            // Обновляем счётчик каждые 50 точек для плавности
-            if (i % 50 === 0) {
-                document.getElementById('pointsCount').innerText = i;
-                updateStep(1, false, (i / TOTAL_POINTS) * 25);
-                await new Promise(r => setTimeout(r, 30));
-            }
-        }
-        document.getElementById('pointsCount').innerText = TOTAL_POINTS;
-        updateStep(1, true, 25);
-        await new Promise(r => setTimeout(r, 200));
-        
-        // === ШАГ 2: Фильтрация по категории ===
-        document.getElementById('scanStatus').innerText = 'Фильтрация по сигнатуре...';
-        updateStep(2, false, 25);
-        
-        let validPoints = [];
-        const batchSize = 50;
-        
-        for (let i = 0; i < allPoints.length; i += batchSize) {
-            const batch = allPoints.slice(i, i + batchSize);
-            const results = await Promise.all(batch.map(async (point) => {
-                try {
-                    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${point.coords[1]}&lon=${point.coords[0]}&zoom=18&addressdetails=1`, {
-                        headers: { 'User-Agent': 'KiwiWay-AnomalyRadar/1.0' }
-                    });
-                    const data = await res.json();
-                    return { ...point, data, valid: isValidPoint(data, category) };
-                } catch(e) {
-                    return { ...point, valid: false };
-                }
-            }));
-            
-            validPoints.push(...results.filter(p => p.valid));
-            const progress = 25 + ((i + batchSize) / allPoints.length) * 25;
-            updateStep(2, false, Math.min(progress, 50));
-            await new Promise(r => setTimeout(r, 50));
-        }
-        
-        updateStep(2, true, 50);
-        document.getElementById('scanStatus').innerText = `Найдено ${validPoints.length} потенциальных объектов`;
-        await new Promise(r => setTimeout(r, 300));
-        
-        if (validPoints.length === 0) {
-            resetSystem();
-            showAlert("СИГНАЛ ПОТЕРЯН: СОВПАДЕНИЙ НЕ НАЙДЕНО");
-            return;
-        }
-        
-        // === ШАГ 3: Расчёт мощности и выбор цели ===
-        document.getElementById('scanStatus').innerText = 'Синхронизация с детектором...';
-        updateStep(3, false, 50);
-        
-        // Находим точку, чья мощность ближе всего к целевой
-        let bestPoint = null;
-        let minDiff = 101;
-        
-        for (const point of validPoints) {
-            const diff = Math.abs(point.power - targetPower);
-            // Добавляем бонус за близость к центру (опционально)
-            const distance = getDistance(searchOrigin, point.coords);
-            const weightedDiff = diff + (distance / (radius * 1000)) * 10;
-            
-            if (weightedDiff < minDiff) {
-                minDiff = weightedDiff;
-                bestPoint = point;
-            }
-        }
-        
-        updateStep(3, true, 75);
-        await new Promise(r => setTimeout(r, 200));
-        
-        // === ШАГ 4: Финализация ===
-        document.getElementById('scanStatus').innerText = 'Фиксация сигнала...';
-        updateStep(4, false, 75);
-        
-        // Имитация финальной синхронизации
-        await new Promise(r => setTimeout(r, 400));
-        
-        updateStep(4, true, 100);
-        document.getElementById('scanStatus').innerText = 'СИГНАЛ ЗАФИКСИРОВАН ✓';
-        
-        // Задержка перед показом результата
-        setTimeout(() => {
-            document.getElementById('scan-box').style.display = 'none';
-            
-            if (bestPoint) {
-                targetPoint = bestPoint.coords;
-                startRadar(targetPower, bestPoint.power);
-                showTarget(bestPoint, category, targetPower);
-                playSound('found');
-            } else {
-                resetSystem();
-                showAlert("СИГНАЛ ПОТЕРЯН: АНОМАЛИЙ НЕ НАЙДЕНО");
-            }
-        }, 600);
-    }
+    const best = valid[0];
+    targetPoint = best.coords;
 
-    function startRadar(targetPower, actualPower) {
-        document.getElementById('radar-ui').style.display = 'block';
-        
-        // Рассчитываем "чистоту" сигнала на основе близости мощностей
-        const signalQuality = 100 - Math.abs(targetPower - actualPower);
-        
-        radarInterval = setInterval(() => {
-            const dist = getDistance(userPos, targetPoint);
-            const maxR = document.getElementById('radiusIn').value * 1000;
-            
-            // Базовая сила сигнала зависит от расстояния
-            let baseStrength = Math.max(0, (1 - dist / maxR) * 100);
-            
-            // Дрейф сигнала с учётом качества настройки
-            const driftRange = (100 - signalQuality) * 0.3;
-            let drift = Math.sin(Date.now() / 600) * driftRange;
-            
-            // Добавляем "помехи" если настройка неточная
-            let noise = signalQuality < 70 ? (Math.random() - 0.5) * (100 - signalQuality) * 0.4 : 0;
-            
-            let currentSignal = Math.max(0, Math.min(100, baseStrength + drift + noise));
-            
-            // Редкие "пропадания" сигнала при низкой точности
-            if (signalQuality < 50 && Math.random() > 0.95) currentSignal = 0;
+    completeStep(4, "🎯 Выбор аномалии");
+    await new Promise(r => setTimeout(r, 500));
 
-            document.getElementById('radar-arrow').style.transform = `translate(-50%, -100%) rotate(${currentSignal * 3.6}deg)`;
-            document.getElementById('distance-text').innerText = `СИГНАЛ: ${currentSignal.toFixed(0)}%`;
-        }, 700);
-    }
+    // 5) Радар
+    activateStep(5, "📡 Запуск радара");
 
-    function showTarget(obj, category, targetPower) {
-        const names = {
-            quantum: ["Разрыв 404", "Нулевой Храм", "Эхо Времени"],
-            power: ["Сектор Гробо", "Сталь-9", "Зона Распада"],
-            void: ["Тихая Топь", "Мертвый Квадрат", "Шепот Ветра"]
-        };
-        
-        const matchQuality = 100 - Math.abs(obj.power - targetPower);
-        const qualityText = matchQuality >= 90 ? 'ИДЕАЛЬНО' : matchQuality >= 70 ? 'ВЫСОКОЕ' : matchQuality >= 50 ? 'СРЕДНЕЕ' : 'НИЗКОЕ';
-        const qualityColor = matchQuality >= 90 ? 'var(--ios-green)' : matchQuality >= 70 ? '#5AC8FA' : matchQuality >= 50 ? '#FF9F0A' : 'var(--ios-red)';
-        
-        document.getElementById('anomalyName').innerText = names[category][Math.floor(Math.random()*3)];
-        document.getElementById('infoBody').innerHTML = `
-            <b>ТИП:</b> ${category.toUpperCase()}<br>
-            <b>ЛОКАЦИЯ:</b> ${obj.data?.display_name || 'Неизвестная территория'}<br>
-            <b>МОЩНОСТЬ:</b> ${obj.power}% (цель: ${targetPower}%)
-        `;
-        document.getElementById('powerMatch').innerHTML = `
-            <span style="color: ${qualityColor}">●</span> 
-            ТОЧНОСТЬ НАСТРОЙКИ: ${qualityText} (${matchQuality.toFixed(0)}%)
-        `;
-        document.getElementById('coordsBox').innerText = `${targetPoint[1].toFixed(6)}, ${targetPoint[0].toFixed(6)}`;
-        
-        if (window.m) window.m.remove();
-        const el = document.createElement('div');
-        el.style.cssText = "width:18px; height:18px; background:var(--ios-red); border-radius:50%; box-shadow: 0 0 20px var(--ios-red), inset 0 0 5px rgba(255,255,255,0.5);";
-        window.m = new maplibregl.Marker(el).setLngLat(targetPoint).addTo(map);
-        map.flyTo({ center: targetPoint, zoom: 16, duration: 3000, curve: 1.5 });
-        document.getElementById('ui-found').style.display = 'block';
-    }
+    setTimeout(() => {
+      document.getElementById("scan-box").style.display = "none";
+      startRadar();
+      showTarget();
+      completeStep(5, "📡 Запуск радара");
+    }, 700);
+  }
 
-    async function buildRoute() {
-        try {
-            const res = await fetch(`https://router.project-osrm.org/route/v1/foot/${userPos[0]},${userPos[1]};${targetPoint[0]},${targetPoint[1]}?geometries=geojson`);
-            const data = await res.json();
-            if (map.getLayer('route')) { map.removeLayer('route'); map.removeSource('route'); }
-            map.addSource('route', { type: 'geojson',  data.routes[0].geometry });
-            map.addLayer({ id: 'route', type: 'line', source: 'route', paint: { 'line-color': '#0A84FF', 'line-width': 5, 'line-opacity': 0.8 } });
-            playSound('tap');
-        } catch (e) {
-            showAlert("ОШИБКА ПОСТРОЕНИЯ МАРШРУТА");
-        }
-    }
+  function startRadar() {
+    document.getElementById("radar-ui").style.display = "block";
 
-    function resetSystem() {
-        clearInterval(radarInterval);
-        if (window.m) window.m.remove();
-        if (map.getLayer('route')) { map.removeLayer('route'); map.removeSource('route'); }
-        document.getElementById('ui-found').style.display = 'none';
-        document.getElementById('radar-ui').style.display = 'none';
-        document.getElementById('scan-box').style.display = 'none';
-        document.getElementById('ui-idle').style.display = 'block';
-        map.flyTo({ center: searchOrigin, zoom: 11, duration: 2000 });
-        playSound('tap');
-    }
+    radarInterval = setInterval(() => {
+      const dist = getDistance(userPos, targetPoint);
+      const maxR = radiusIn.value * 1000;
 
-    function copyCoords() {
-        navigator.clipboard.writeText(document.getElementById('coordsBox').innerText);
-        showAlert("КООРДИНАТЫ СКОПИРОВАНЫ");
-        playSound('tap');
-    }
+      let signal = Math.max(0, (1 - dist / maxR) * 100);
+      document.getElementById("distance-text").innerText = "СИГНАЛ: " + signal.toFixed(0) + "%";
 
-    function genCircle(c, km) {
-        const p = 64; const res = [];
-        const dx = km / (111.32 * Math.cos(c[1] * Math.PI / 180));
-        const dy = km / 110.574;
-        for (let i = 0; i <= p; i++) {
-            const a = (i / p) * (Math.PI * 2);
-            res.push([c[0] + dx * Math.cos(a), c[1] + dy * Math.sin(a)]);
-        }
-        return { type: 'Feature', geometry: { type: 'Polygon', coordinates: [res] } };
-    }
+      document.getElementById("radar-arrow").style.transform =
+        `translate(-50%, -100%) rotate(${signal * 3.6}deg)`;
 
-    function getDistance(p1, p2) {
-        const R = 6371000;
-        const dLat = (p2[1]-p1[1]) * Math.PI/180;
-        const dLon = (p2[0]-p1[0]) * Math.PI/180;
-        const a = Math.sin(dLat/2)**2 + Math.cos(p1[1]*Math.PI/180)*Math.cos(p2[1]*Math.PI/180)*Math.sin(dLon/2)**2;
-        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    }
+    }, 800);
+  }
 
-    function openM(id) { 
-        document.getElementById(id).classList.add('active'); 
-        playSound('tap'); 
-    }
-    
-    function closeM() { 
-        document.querySelectorAll('.modal').forEach(m => m.classList.remove('active')); 
-        playSound('tap'); 
-    }
-    
-    function setMapStyle(t) { 
-        map.setStyle(STYLES[t]); 
-        closeM(); 
-    }
+  function showTarget() {
+    new maplibregl.Marker({ color: "#FF453A" })
+      .setLngLat(targetPoint)
+      .addTo(map);
+
+    map.flyTo({ center: targetPoint, zoom: 15 });
+
+    document.getElementById("ui-found").style.display = "block";
+  }
+
+  function resetSystem() {
+    clearInterval(radarInterval);
+    document.getElementById("ui-idle").style.display = "block";
+    document.getElementById("scan-box").style.display = "none";
+  }
+
+  function getDistance(p1, p2) {
+    const R = 6371000;
+    const dLat = (p2[1] - p1[1]) * Math.PI / 180;
+    const dLon = (p2[0] - p1[0]) * Math.PI / 180;
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos(p1[1] * Math.PI / 180) *
+      Math.cos(p2[1] * Math.PI / 180) *
+      Math.sin(dLon / 2) ** 2;
+
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  }
+
+  function openM(id) {
+    document.getElementById(id).classList.add("active");
+  }
+
+  function closeM() {
+    document.querySelectorAll(".modal").forEach(m => m.classList.remove("active"));
+  }
+
+  function setMapStyle(t) {
+    map.setStyle(STYLES[t]);
+    closeM();
+  }
 </script>
+
 </body>
 </html>
-
