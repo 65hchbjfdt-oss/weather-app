@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
-    <title>KiwiWay - Minimalist OS</title>
+    <title>KiwiWay - Минималистичная ОС</title>
     <script src='https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.js'></script>
     <link href='https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.css' rel='stylesheet' />
     <style>
@@ -71,64 +71,63 @@
 <div class="ui-panel">
     <div id="scan-box">
         <div class="line"></div>
-        <div style="font-size: 10px; margin-top: 10px; color: #555; letter-spacing: 2px;">SEARCHING...</div>
+        <div style="font-size: 10px; margin-top: 10px; color: #555; letter-spacing: 2px;">СКАНИРОВАНИЕ...</div>
     </div>
 
     <div id="ui-idle">
         <div style="display: flex; gap: 8px;">
-            <button class="btn btn-sec" onclick="uiTap(); openM('settings')">⚙ OPTIONS</button>
-            <button class="btn btn-sec" onclick="uiTap(); openM('map-styles')">🗺 LAYERS</button>
+            <button class="btn btn-sec" onclick="uiTap(); openM('settings')">⚙ НАСТРОЙКИ</button>
+            <button class="btn btn-sec" onclick="uiTap(); openM('map-styles')">🗺 СЛОИ</button>
         </div>
-        <button class="btn btn-sec" onclick="uiTock(); togglePointSelection()" id="selectBtn" style="background: rgba(120,0,255,0.1); border: 1px solid rgba(120,0,255,0.2);">📍 SET ORIGIN</button>
-        <button class="btn" id="mainActionBtn" onclick="executeScan()">START SCAN</button>
+        <button class="btn btn-sec" onclick="uiTock(); togglePointSelection()" id="selectBtn" style="background: rgba(120,0,255,0.1); border: 1px solid rgba(120,0,255,0.2);">📍 ВЫБРАТЬ ЦЕНТР</button>
+        <button class="btn" id="mainActionBtn" onclick="executeScan()">ЗАПУСТИТЬ ПОИСК</button>
     </div>
 
     <div id="ui-found" style="display: none;">
-        <button class="btn" style="background: var(--green); color: #000;" onclick="uiRoute(); buildRoute()">VIEW ROUTE</button>
+        <button class="btn" style="background: var(--green); color: #000;" onclick="uiRoute(); buildRoute()">ПОСТРОИТЬ МАРШРУТ</button>
         <div style="display: flex; gap: 8px;">
-            <button class="btn btn-sec" style="flex: 1;" onclick="uiTap(); openM('info')">DATA</button>
-            <button class="btn btn-sec" style="flex: 1;" onclick="uiReset(); resetSystem()">RESET</button>
+            <button class="btn btn-sec" style="flex: 1;" onclick="uiTap(); openM('info')">ДАННЫЕ</button>
+            <button class="btn btn-sec" style="flex: 1;" onclick="uiReset(); resetSystem()">СБРОС</button>
         </div>
     </div>
 </div>
 
 <div id="map-styles" class="modal">
-    <h3 style="margin:0 0 15px 0; font-size: 16px;">MAP STYLE</h3>
-    <button class="btn btn-sec" onclick="uiTap(); setMapStyle('dark')">DARK MATTER</button>
-    <button class="btn btn-sec" onclick="uiTap(); setMapStyle('sat')">SATELLITE</button>
-    <button class="btn btn-sec" onclick="uiTap(); setMapStyle('street')">STREETS</button>
-    <button class="btn" style="margin-top:10px" onclick="uiTap(); closeM()">CLOSE</button>
+    <h3 style="margin:0 0 15px 0; font-size: 16px;">СТИЛЬ КАРТЫ</h3>
+    <button class="btn btn-sec" onclick="uiTap(); setMapStyle('dark')">ТЕМНАЯ МАТЕРИЯ</button>
+    <button class="btn btn-sec" onclick="uiTap(); setMapStyle('sat')">СПУТНИК</button>
+    <button class="btn btn-sec" onclick="uiTap(); setMapStyle('street')">УЛИЦЫ</button>
+    <button class="btn" style="margin-top:10px" onclick="uiTap(); closeM()">ЗАКРЫТЬ</button>
 </div>
 
 <div id="settings" class="modal">
-    <h3 style="margin:0 0 15px 0; font-size: 16px;">ENGINE CONFIG</h3>
+    <h3 style="margin:0 0 15px 0; font-size: 16px;">КОНФИГУРАЦИЯ ДВИЖКА</h3>
     
-    <label style="font-size: 10px; color: #555;">CATEGORY</label>
+    <label style="font-size: 10px; color: #555;">КАТЕГОРИЯ АНОМАЛИЙ</label>
     <select id="catSelect" onchange="uiTap()" style="width:100%; background:#111; color:#fff; border:1px solid #333; padding:15px; border-radius:15px; margin: 8px 0;">
-        <option value="void">VOID (EMPTY AREAS)</option>
-        <option value="quantum">QUANTUM (ANOMALIES)</option>
-        <option value="power">POWER (INDUSTRIAL)</option>
+        <option value="void">ПУСТОТА (БЕЗЛЮДНЫЕ МЕСТА)</option>
+        <option value="quantum">КВАНТ (ДОСТОПРИМЕЧАТЕЛЬНОСТИ)</option>
+        <option value="power">ЭНЕРГИЯ (ПРОМЗОНЫ)</option>
     </select>
 
-    <label style="font-size: 10px; color: #555;">RADIUS: <span id="rL" style="color:var(--accent)">5 km</span></label>
+    <label style="font-size: 10px; color: #555;">РАДИУС: <span id="rL" style="color:var(--accent)">5 км</span></label>
     <input type="range" id="radiusIn" min="1" max="15" value="5" style="width:100%; margin:10px 0;" oninput="uiTick(); syncUI()">
     
-    <label style="font-size: 10px; color: #555;">POWER: <span id="pL" style="color:var(--accent)">5</span></label>
+    <label style="font-size: 10px; color: #555;">МОЩНОСТЬ: <span id="pL" style="color:var(--accent)">5</span></label>
     <input type="range" id="powerIn" min="1" max="10" value="5" style="width:100%; margin:10px 0;" oninput="uiTick(); syncUI()">
     
-    <button class="btn" style="margin-top:15px" onclick="uiTap(); closeM()">APPLY</button>
+    <button class="btn" style="margin-top:15px" onclick="uiTap(); closeM()">ПРИМЕНИТЬ</button>
 </div>
 
 <div id="info" class="modal">
-    <h3 style="margin:0 0 15px 0; font-size: 16px;">OBJECT LOG</h3>
+    <h3 style="margin:0 0 15px 0; font-size: 16px;">ЛОГ ОБЪЕКТА</h3>
     <div id="infoBody" style="font-size: 13px; color: #888; line-height: 1.6;"></div>
     <div id="coordsBox" style="margin-top:15px; padding:12px; background:#000; border-radius:12px; font-family:monospace; color:var(--green); border:1px solid #222; text-align: center;"></div>
-    <div class="copy-btn" onclick="uiTock(); copyCoords()">COPY COORDINATES</div>
-    <button class="btn btn-sec" style="margin-top:15px" onclick="uiTap(); closeM()">CLOSE</button>
+    <div class="copy-btn" onclick="uiTock(); copyCoords()">КОПИРОВАТЬ КООРДИНАТЫ</div>
+    <button class="btn btn-sec" style="margin-top:15px" onclick="uiTap(); closeM()">ЗАКРЫТЬ</button>
 </div>
 
 <script>
-    // Minimalist SFX Engine
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
     
     function playTone(freq, type, dur, vol) {
@@ -137,6 +136,7 @@
         osc.type = type;
         osc.frequency.setValueAtTime(freq, ctx.currentTime);
         g.gain.setValueAtTime(vol, ctx.currentTime);
+        g.gain.exponential_rampToValueAtTime = g.gain.exponentialRampToValueAtTime;
         g.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + dur);
         osc.connect(g);
         g.connect(ctx.destination);
@@ -183,18 +183,18 @@
         document.getElementById('crosshair').style.display = isSelecting ? 'block' : 'none';
         const b = document.getElementById('mainActionBtn');
         if (isSelecting) {
-            b.innerText = "CONFIRM ORIGIN";
+            b.innerText = "ПОДТВЕРДИТЬ ТОЧКУ";
             b.style.background = "var(--green)";
             b.style.color = "#000";
             b.onclick = () => { uiTap(); searchOrigin = [map.getCenter().lng, map.getCenter().lat]; togglePointSelection(); syncUI(); };
         } else {
-            b.innerText = "START SCAN"; b.style.background = ""; b.style.color = ""; b.onclick = executeScan;
+            b.innerText = "ЗАПУСТИТЬ ПОИСК"; b.style.background = ""; b.style.color = ""; b.onclick = executeScan;
         }
     }
 
     function syncUI() {
         const r = document.getElementById('radiusIn').value;
-        document.getElementById('rL').innerText = r + ' km';
+        document.getElementById('rL').innerText = r + ' км';
         document.getElementById('pL').innerText = document.getElementById('powerIn').value;
         if (searchOrigin) {
             const circle = genCircle(searchOrigin, r);
@@ -226,11 +226,11 @@
         document.getElementById('ui-idle').style.display = 'none';
         document.getElementById('scan-box').style.display = 'block';
 
-        // Звук поиска во время работы
         const searchLoop = setInterval(uiSearch, 400);
 
         let found = null;
         let bestScore = -1;
+        let currentAddress = "";
 
         for (let i = 0; i < 12; i++) {
             const a = Math.random() * Math.PI * 2;
@@ -242,6 +242,8 @@
                 const data = await res.json();
                 const addr = data.address;
                 let score = 0;
+
+                const catLabels = { 'void': 'ПУСТОТА', 'quantum': 'КВАНТ', 'power': 'ЭНЕРГИЯ' };
 
                 if (cat === 'void') {
                     if (!addr.house_number) score += 10;
@@ -262,7 +264,7 @@
             clearInterval(searchLoop);
             document.getElementById('scan-box').style.display = 'none';
             if (found) {
-                uiTap(); // Тонкий звук успеха
+                uiTap();
                 targetPoint = found;
                 if (window.m) window.m.remove();
                 const el = document.createElement('div');
@@ -271,7 +273,9 @@
                 window.m = new maplibregl.Marker(el).setLngLat(found).addTo(map);
                 map.flyTo({ center: found, zoom: 15 });
                 document.getElementById('ui-found').style.display = 'block';
-                document.getElementById('infoBody').innerHTML = `<b>TYPE:</b> ${cat.toUpperCase()}<br><b>DENSITY:</b> ${bestScore}<br><br>${currentAddress}`;
+                
+                const catName = (cat === 'void') ? "ПУСТОТА" : (cat === 'quantum' ? "КВАНТ" : "ЭНЕРГИЯ");
+                document.getElementById('infoBody').innerHTML = `<b>ТИП:</b> ${catName}<br><b>ПЛОТНОСТЬ:</b> ${bestScore}<br><br>${currentAddress}`;
                 document.getElementById('coordsBox').innerText = `${found[1].toFixed(6)}, ${found[0].toFixed(6)}`;
             } else {
                 uiReset();
@@ -283,8 +287,8 @@
     function copyCoords() {
         navigator.clipboard.writeText(document.getElementById('coordsBox').innerText);
         const b = document.querySelector('.copy-btn');
-        b.innerText = "COPIED";
-        setTimeout(() => b.innerText = "COPY COORDINATES", 1500);
+        b.innerText = "СКОПИРОВАНО";
+        setTimeout(() => b.innerText = "КОПИРОВАТЬ КООРДИНАТЫ", 1500);
     }
 
     async function buildRoute() {
