@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
-    <title>KiwiWay - Final Fixed</title>
+    <title>KiwiWay - Multi-Map Edition</title>
     <script src='https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.js'></script>
     <link href='https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.css' rel='stylesheet' />
     <style>
-        :root { --glass: rgba(12, 12, 12, 0.9); --accent: #7800ff; --green: #00ff66; }
+        :root { --glass: rgba(12, 12, 12, 0.9); --accent: #7800ff; --green: #00ff66; --red: #ff0055; }
         body { margin: 0; padding: 0; background: #000; font-family: sans-serif; color: #fff; overflow: hidden; }
         #map { position: absolute; top: 0; bottom: 0; width: 100%; z-index: 1; }
         
@@ -20,19 +20,19 @@
         #crosshair::after { content: ""; position: absolute; left: 19px; height: 40px; width: 2px; background: var(--green); box-shadow: 0 0 10px var(--green); }
 
         .ui-panel {
-            position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
-            width: 92%; max-width: 400px; background: var(--glass);
+            position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
+            width: 94%; max-width: 420px; background: var(--glass);
             backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px);
-            border: 1px solid rgba(255,255,255,0.1); border-radius: 35px;
-            padding: 24px; box-sizing: border-box; z-index: 100;
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 30px;
+            padding: 20px; box-sizing: border-box; z-index: 100;
         }
 
         .btn {
-            width: 100%; padding: 18px; margin: 6px 0; border: none; border-radius: 20px;
-            font-size: 14px; font-weight: 800; cursor: pointer; transition: 0.2s;
+            width: 100%; padding: 16px; margin: 5px 0; border: none; border-radius: 18px;
+            font-size: 13px; font-weight: 800; cursor: pointer; transition: 0.2s;
             background: var(--accent); color: #fff; text-transform: uppercase;
         }
-        .btn-sec { background: rgba(255,255,255,0.08); font-size: 12px; }
+        .btn-sec { background: rgba(255,255,255,0.08); font-size: 11px; }
         .btn:active { transform: scale(0.96); }
 
         #scan-box { display: none; text-align: center; padding: 10px 0; }
@@ -42,17 +42,20 @@
         .modal {
             position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
             width: 85%; background: #0a0a0a; border: 1px solid #333;
-            border-radius: 30px; padding: 25px; display: none; z-index: 1000;
+            border-radius: 25px; padding: 25px; display: none; z-index: 1000;
         }
         .active { display: block; }
-        .copy-btn { background: #222; color: var(--green); border: 1px solid #333; padding: 12px; border-radius: 12px; font-size: 11px; cursor: pointer; margin-top: 15px; width: 100%; text-align: center; }
         
+        .copy-btn { background: #1a1a1a; color: var(--green); border: 1px solid #333; padding: 12px; border-radius: 15px; font-size: 11px; cursor: pointer; margin-top: 10px; text-align: center; font-weight: bold; }
+        
+        .map-opt { background: #111; border: 1px solid #333; padding: 15px; margin: 8px 0; border-radius: 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+        .map-opt:hover { border-color: var(--accent); }
+
         .switch { position: relative; display: inline-block; width: 40px; height: 20px; float: right; }
         .switch input { opacity: 0; width: 0; height: 0; }
         .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #333; transition: .4s; border-radius: 20px; }
         .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
         input:checked + .slider { background-color: var(--accent); }
-        input:checked + .slider:before { transform: translateX(20px); }
     </style>
 </head>
 <body>
@@ -61,74 +64,85 @@
 <div id="crosshair"></div>
 
 <div class="ui-panel">
-    <div id="status-log" style="font-size: 10px; color: #555; text-align: center; margin-bottom: 8px;">СИСТЕМА АКТИВНА</div>
+    <div id="status-log" style="font-size: 9px; color: #555; text-align: center; margin-bottom: 8px; letter-spacing: 2px;">SYSTEM V3.0 ONLINE</div>
     
     <div id="scan-box">
         <div class="line"></div>
-        <div style="font-size: 11px; margin-top: 10px; color: var(--accent);">СКАНИРОВАНИЕ...</div>
+        <div style="font-size: 11px; margin-top: 10px; color: var(--accent);">АНАЛИЗ ЭФИРА...</div>
     </div>
 
     <div id="ui-idle">
-        <div style="display: flex; gap: 10px;">
+        <div style="display: flex; gap: 8px;">
             <button class="btn btn-sec" onclick="openM('settings')">⚙ ОПЦИИ</button>
-            <button class="btn btn-sec" style="flex: 1.5;" onclick="togglePointSelection()" id="selectBtn">📍 ВЫБОР ЦЕНТРА</button>
+            <button class="btn btn-sec" onclick="openM('map-styles')">🗺 КАРТА</button>
+            <button class="btn btn-sec" style="flex: 1.5;" onclick="togglePointSelection()" id="selectBtn">📍 ЦЕНТР</button>
         </div>
-        <button class="btn" id="mainActionBtn" onclick="executeScan()">НАЧАТЬ ПОИСК</button>
+        <button class="btn" id="mainActionBtn" onclick="executeScan()">ЗАПУСК ПОИСКА</button>
     </div>
 
     <div id="ui-found" style="display: none;">
         <button class="btn" style="background: var(--green); color: #000;" onclick="playRouteSound(); buildRoute()">ПРОЛОЖИТЬ ПУТЬ</button>
-        <div style="display: flex; gap: 10px;">
+        <div style="display: flex; gap: 8px;">
             <button class="btn btn-sec" style="flex: 1;" onclick="openM('info')">ДАННЫЕ</button>
             <button class="btn btn-sec" style="flex: 1;" onclick="resetSystem()">СБРОС</button>
         </div>
     </div>
 </div>
 
-<div id="settings" class="modal">
-    <h3 style="margin:0 0 15px 0">НАСТРОЙКИ</h3>
-    
-    <div style="margin-bottom: 15px;">
-        <span style="font-size: 14px;">Фоновая музыка</span>
-        <label class="switch">
-            <input type="checkbox" id="musicToggle" onchange="toggleMusic()">
-            <span class="slider"></span>
-        </label>
-    </div>
+<div id="map-styles" class="modal">
+    <h3 style="margin:0 0 15px 0">РЕЖИМ ВИЗУАЛИЗАЦИИ</h3>
+    <div class="map-opt" onclick="setMapStyle('dark')">ТЕМНАЯ СХЕМА <span>●</span></div>
+    <div class="map-opt" onclick="setMapStyle('sat')">СПУТНИК (ARCGIS) <span>🛰</span></div>
+    <div class="map-opt" onclick="setMapStyle('street')">УЛИЧНАЯ СЕТЬ <span>🏙</span></div>
+    <button class="btn btn-sec" style="margin-top:15px" onclick="closeM()">ЗАКРЫТЬ</button>
+</div>
 
+<div id="settings" class="modal">
+    <h3 style="margin:0 0 15px 0">ПАРАМЕТРЫ</h3>
+    <div style="margin-bottom: 15px;">
+        <span style="font-size: 14px;">Музыка</span>
+        <label class="switch"><input type="checkbox" id="musicToggle" onchange="toggleMusic()"><span class="slider"></span></label>
+    </div>
     <label style="font-size: 11px; color: #777;">РАДИУС: <span id="rL" style="color:var(--accent)">5 км</span></label>
-    <input type="range" id="radiusIn" min="1" max="15" value="5" style="width:100%; margin:12px 0;" oninput="syncUI()">
-    
+    <input type="range" id="radiusIn" min="1" max="15" value="5" style="width:100%; margin:10px 0;" oninput="syncUI()">
     <label style="font-size: 11px; color: #777;">МОЩНОСТЬ: <span id="pL" style="color:var(--accent)">5</span></label>
-    <input type="range" id="powerIn" min="1" max="10" value="5" style="width:100%; margin:12px 0;" oninput="syncUI()">
-    
-    <select id="catSelect" style="width:100%; background:#111; color:#fff; border:1px solid #333; padding:15px; border-radius:18px;">
-        <option value="Пустота">ПУСТОТА</option>
-        <option value="Квантовая">КВАНТОВАЯ</option>
-        <option value="Мощная">МОЩНАЯ</option>
+    <input type="range" id="powerIn" min="1" max="10" value="5" style="width:100%; margin:10px 0;" oninput="syncUI()">
+    <select id="catSelect" style="width:100%; background:#111; color:#fff; border:1px solid #333; padding:15px; border-radius:15px; outline:none;">
+        <option value="Пустота">ПУСТОТА (БЕЗ ДОМОВ)</option>
+        <option value="Квантовая">КВАНТОВАЯ (ЛЮБАЯ)</option>
+        <option value="Мощная">МОЩНАЯ (ДОРОГИ)</option>
     </select>
     <button class="btn" style="margin-top:20px" onclick="closeM()">ПРИМЕНИТЬ</button>
 </div>
 
 <div id="info" class="modal">
     <h3 style="margin:0 0 15px 0">ЛОГ ОБЪЕКТА</h3>
-    <div id="infoBody" style="font-size: 13px; line-height: 1.6; color: #ccc;"></div>
-    <div id="coordsBox" style="margin-top:10px; padding:10px; background:#111; border-radius:10px; font-family:monospace; font-size:11px; color:var(--green); border:1px dashed #333;"></div>
+    <div id="infoBody" style="font-size: 12px; line-height: 1.5; color: #ccc; max-height: 100px; overflow: auto;"></div>
+    <div id="coordsBox" style="margin-top:10px; padding:12px; background:#000; border-radius:12px; font-family:monospace; font-size:11px; color:var(--green); border:1px solid #222; text-align: center;"></div>
     <div class="copy-btn" id="copyBtn" onclick="copyCoords()">СКОПИРОВАТЬ КООРДИНАТЫ</div>
     <button class="btn btn-sec" style="margin-top:15px" onclick="closeM()">ЗАКРЫТЬ</button>
 </div>
 
 <script>
-    const routeSound = new Audio('iOS-3.wav');
     const bgMusic = new Audio('https://www.chosic.com/wp-content/uploads/2021/07/The-Void.mp3'); 
     bgMusic.loop = true;
 
     let map, userPos, searchOrigin, targetPoint, isSelecting = false;
-    let currentAddress = "";
+    let currentAddress = "", currentMarkerColor = "#ff0055";
+
+    const STYLES = {
+        dark: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
+        street: 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json',
+        sat: {
+            "version": 8,
+            "sources": { "sat-tiles": { "type": "raster", "tiles": ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"], "tileSize": 256, "attribution": "Esri" }},
+            "layers": [{ "id": "sat-layer", "type": "raster", "source": "sat-tiles", "minzoom": 0, "maxzoom": 22 }]
+        }
+    };
 
     map = new maplibregl.Map({
         container: 'map',
-        style: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
+        style: STYLES.dark,
         center: [37.6, 55.7],
         zoom: 11,
         attributionControl: false
@@ -144,40 +158,44 @@
         });
     });
 
+    function setMapStyle(type) {
+        map.setStyle(STYLES[type]);
+        // Ждем перерисовки, чтобы восстановить слои радиуса и маршрута
+        map.once('styledata', () => {
+            syncUI();
+            if (targetPoint) {
+                // Восстанавливаем маркер цели
+                if (window.m) window.m.addTo(map);
+            }
+        });
+        closeM();
+    }
+
     function toggleMusic() {
-        const isChecked = document.getElementById('musicToggle').checked;
-        if (isChecked) bgMusic.play().catch(() => {});
+        if (document.getElementById('musicToggle').checked) bgMusic.play().catch(() => {});
         else bgMusic.pause();
     }
 
     function togglePointSelection() {
         isSelecting = !isSelecting;
-        const crosshair = document.getElementById('crosshair');
+        document.getElementById('crosshair').style.display = isSelecting ? 'block' : 'none';
         const mainBtn = document.getElementById('mainActionBtn');
-        const selectBtn = document.getElementById('selectBtn');
-        
         if (isSelecting) {
-            crosshair.style.display = 'block';
-            selectBtn.innerText = "ОТМЕНА";
-            mainBtn.innerText = "ПОДТВЕРДИТЬ ЦЕНТР";
-            mainBtn.style.background = "#00ff66";
+            mainBtn.innerText = "ПОДТВЕРДИТЬ";
+            mainBtn.style.background = "var(--green)";
             mainBtn.style.color = "#000";
-            mainBtn.onclick = confirmNewCenter;
+            mainBtn.onclick = () => {
+                const c = map.getCenter();
+                searchOrigin = [c.lng, c.lat];
+                togglePointSelection();
+                syncUI();
+            };
         } else {
-            crosshair.style.display = 'none';
-            selectBtn.innerText = "📍 ВЫБОР ЦЕНТРА";
-            mainBtn.innerText = "НАЧАТЬ ПОИСК";
+            mainBtn.innerText = "ЗАПУСК ПОИСКА";
             mainBtn.style.background = "";
             mainBtn.style.color = "";
             mainBtn.onclick = executeScan;
         }
-    }
-
-    function confirmNewCenter() {
-        const center = map.getCenter();
-        searchOrigin = [center.lng, center.lat];
-        togglePointSelection();
-        syncUI();
     }
 
     function syncUI() {
@@ -185,17 +203,17 @@
         document.getElementById('rL').innerText = r + ' км';
         document.getElementById('pL').innerText = document.getElementById('powerIn').value;
         if (searchOrigin) {
-            if (map.getSource('rad')) map.getSource('rad').setData(genCircle(searchOrigin, r));
+            const data = genCircle(searchOrigin, r);
+            if (map.getSource('rad')) map.getSource('rad').setData(data);
             else {
-                map.addSource('rad', { type: 'geojson', data: genCircle(searchOrigin, r) });
-                map.addLayer({ id: 'rad-l', type: 'fill', source: 'rad', paint: { 'fill-color': '#7800ff', 'fill-opacity': 0.12 } });
+                map.addSource('rad', { type: 'geojson', data: data });
+                map.addLayer({ id: 'rad-l', type: 'fill', source: 'rad', paint: { 'fill-color': '#7800ff', 'fill-opacity': 0.15 } });
             }
         }
     }
 
     function genCircle(center, km) {
-        const points = 64;
-        const ret = [];
+        const points = 64; const ret = [];
         const dx = km / (111.32 * Math.cos(center[1] * Math.PI / 180));
         const dy = km / 110.574;
         for (let i = 0; i < points; i++) {
@@ -207,84 +225,66 @@
     }
 
     async function executeScan() {
-        const power = parseInt(document.getElementById('powerIn').value);
-        const radius = parseInt(document.getElementById('radiusIn').value);
+        const p = parseInt(document.getElementById('powerIn').value);
+        const r = parseInt(document.getElementById('radiusIn').value);
         const cat = document.getElementById('catSelect').value;
         
-        // Расчет цвета: от ярко-красного (#ff0055) до темно-бордового (#440011)
-        const redChan = Math.max(60, 255 - (power * 18));
-        const finalColor = `rgb(${redChan}, 0, ${Math.max(10, 85 - power * 8)})`;
+        // Цвет от мощности
+        const redChan = Math.max(50, 255 - (p * 20));
+        currentMarkerColor = `rgb(${redChan}, 0, 40)`;
 
         document.getElementById('ui-idle').style.display = 'none';
         document.getElementById('scan-box').style.display = 'block';
 
         let found = null;
-        let attempts = power * 4;
-
-        for (let i = 0; i < attempts; i++) {
+        for (let i = 0; i < p * 5; i++) {
             const angle = Math.random() * Math.PI * 2;
-            const d = Math.random() * (radius / 111);
-            const pt = [searchOrigin[0] + d * Math.cos(angle), searchOrigin[1] + d * Math.sin(angle)];
+            const dist = Math.random() * (r / 111);
+            const pt = [searchOrigin[0] + dist * Math.cos(angle), searchOrigin[1] + dist * Math.sin(angle)];
             try {
                 const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pt[1]}&lon=${pt[0]}&zoom=18`);
                 const data = await res.json();
-                if (power === 1 || (cat === "Пустота" && !data.address.house_number) || (cat === "Мощная" && data.address.road) || cat === "Квантовая") {
-                    found = pt;
-                    targetPoint = pt;
-                    currentAddress = data.display_name || "Неизвестная локация";
-                    break;
+                if (p === 1 || (cat === "Пустота" && !data.address.house_number) || cat === "Квантовая" || (cat === "Мощная" && data.address.road)) {
+                    found = pt; currentAddress = data.display_name; break;
                 }
-            } catch (e) {}
+            } catch(e) {}
         }
 
         setTimeout(() => {
             document.getElementById('scan-box').style.display = 'none';
             if (found) {
+                targetPoint = found;
                 if (window.m) window.m.remove();
-                window.m = new maplibregl.Marker({ color: finalColor }).setLngLat(found).addTo(map);
+                window.m = new maplibregl.Marker({ color: currentMarkerColor }).setLngLat(found).addTo(map);
                 map.flyTo({ center: found, zoom: 15 });
-                
                 document.getElementById('ui-found').style.display = 'block';
-                document.getElementById('infoBody').innerHTML = `<b>ТИП:</b> ${cat}<br><b>АДРЕС:</b><br><span style="font-size:11px">${currentAddress}</span>`;
+                document.getElementById('infoBody').innerHTML = `<b>ОБЪЕКТ ОБНАРУЖЕН</b><br>${currentAddress}`;
                 document.getElementById('coordsBox').innerText = `${found[1].toFixed(6)}, ${found[0].toFixed(6)}`;
             } else {
-                alert("Ничего не найдено.");
+                alert("СИГНАЛ ПОТЕРЯН. ПОПРОБУЙТЕ СНОВА.");
                 document.getElementById('ui-idle').style.display = 'block';
             }
-        }, 2000);
+        }, 1500);
     }
 
     function copyCoords() {
-        const text = document.getElementById('coordsBox').innerText;
-        navigator.clipboard.writeText(text).then(() => {
-            const btn = document.getElementById('copyBtn');
-            const original = btn.innerText;
-            btn.innerText = "СКОПИРОВАНО!";
-            btn.style.color = "#fff";
-            setTimeout(() => { 
-                btn.innerText = original; 
-                btn.style.color = "var(--green)";
-            }, 2000);
-        });
-    }
-
-    function playRouteSound() {
-        routeSound.currentTime = 0;
-        routeSound.play().catch(() => {});
+        navigator.clipboard.writeText(document.getElementById('coordsBox').innerText);
+        const b = document.getElementById('copyBtn'); b.innerText = "ГОТОВО!";
+        setTimeout(() => b.innerText = "СКОПИРОВАТЬ КООРДИНАТЫ", 2000);
     }
 
     async function buildRoute() {
-        const url = `https://router.project-osrm.org/route/v1/foot/${userPos[0]},${userPos[1]};${targetPoint[0]},${targetPoint[1]}?geometries=geojson`;
-        const res = await fetch(url);
+        const res = await fetch(`https://router.project-osrm.org/route/v1/foot/${userPos[0]},${userPos[1]};${targetPoint[0]},${targetPoint[1]}?geometries=geojson`);
         const data = await res.json();
         if (map.getLayer('route')) { map.removeLayer('route'); map.removeSource('route'); }
         map.addSource('route', { type: 'geojson', data: data.routes[0].geometry });
-        map.addLayer({ id: 'route', type: 'line', source: 'route', paint: { 'line-color': '#00ff66', 'line-width': 5 } });
+        map.addLayer({ id: 'route', type: 'line', source: 'route', paint: { 'line-color': '#00ff66', 'line-width': 4 } });
     }
 
     function resetSystem() {
         if (window.m) window.m.remove();
         if (map.getLayer('route')) { map.removeLayer('route'); map.removeSource('route'); }
+        targetPoint = null;
         document.getElementById('ui-found').style.display = 'none';
         document.getElementById('ui-idle').style.display = 'block';
         map.flyTo({ center: searchOrigin, zoom: 11 });
