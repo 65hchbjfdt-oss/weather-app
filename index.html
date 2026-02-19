@@ -11,7 +11,6 @@
             --ios-blue: #0A84FF; 
             --ios-green: #30D158;
             --ios-red: #FF453A;
-            /* Жидкое стекло: глубокий блюр, прозрачность и светлые грани */
             --glass-bg: rgba(35, 35, 40, 0.45);
             --glass-border: rgba(255, 255, 255, 0.15);
             --blur: blur(35px) saturate(200%);
@@ -19,10 +18,9 @@
         
         body { margin: 0; padding: 0; background: #000; font-family: -apple-system, system-ui, sans-serif; color: #fff; overflow: hidden; }
         
-        /* Карта стала ярче, но сохранила атмосферу */
         #map { position: absolute; top: 0; bottom: 0; width: 100%; z-index: 1; filter: brightness(0.85) contrast(1.1); transition: filter 0.5s ease; }
         
-        /* UI Panel (Стеклянная панель) */
+        /* UI Panel */
         .ui-panel {
             position: absolute; bottom: 35px; left: 50%; transform: translateX(-50%);
             width: 92%; max-width: 400px; 
@@ -35,7 +33,6 @@
             box-shadow: 0 20px 50px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.05);
         }
 
-        /* Кнопки в стиле жидкого стекла */
         .btn {
             width: 100%; padding: 16px; margin: 6px 0; border: none; border-radius: 20px;
             font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
@@ -43,10 +40,7 @@
             backdrop-filter: blur(10px); border: 1px solid var(--glass-border);
             box-shadow: 0 4px 15px rgba(0,0,0,0.2);
         }
-        .btn-sec { 
-            background: rgba(255, 255, 255, 0.1); 
-            color: #fff; 
-        }
+        .btn-sec { background: rgba(255, 255, 255, 0.1); color: #fff; }
         .btn:active { transform: scale(0.95); opacity: 0.8; }
 
         /* Sliders */
@@ -59,7 +53,7 @@
         }
         input[type=range]::-webkit-slider-thumb:active { transform: scale(1.1); }
 
-        /* Radar Unit (Плавный и тягучий) */
+        /* Radar Unit */
         #radar-ui { margin-bottom: 15px; }
         #radar {
             width: 75px; height: 75px; margin: 0 auto 12px; border: 1px solid rgba(255,255,255,0.25);
@@ -71,7 +65,6 @@
             position: absolute; top: 50%; left: 50%; width: 2.5px; height: 34px;
             background: var(--ios-green); transform-origin: bottom center;
             transform: translate(-50%, -100%) rotate(0deg); 
-            /* Супер-плавная, тягучая анимация вращения */
             transition: transform 1.2s cubic-bezier(0.25, 0.1, 0.25, 1);
             border-radius: 2px;
             box-shadow: 0 0 8px var(--ios-green);
@@ -108,6 +101,22 @@
             z-index: 50; border: 1.5px solid var(--ios-green); border-radius: 50%;
             box-shadow: 0 0 10px rgba(48, 209, 88, 0.5);
         }
+
+        /* Анимация импульса поиска */
+        #searchPulse {
+            display: none; position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%); width: 0px; height: 0px;
+            z-index: 40; border: 2px solid var(--ios-blue); border-radius: 50%;
+            pointer-events: none;
+            box-shadow: 0 0 20px var(--ios-blue), inset 0 0 20px var(--ios-blue);
+            animation: radarWave 1.5s infinite cubic-bezier(0.25, 1, 0.5, 1);
+        }
+        
+        @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
+        @keyframes radarWave {
+            0% { width: 0px; height: 0px; opacity: 1; }
+            100% { width: 400px; height: 400px; opacity: 0; }
+        }
         
         select { appearance: none; -webkit-appearance: none; }
     </style>
@@ -116,7 +125,7 @@
 
 <div id="map"></div>
 <div id="crosshair"></div>
-<div id="iosAlert" class="custom-alert"></div>
+<div id="searchPulse"></div> <div id="iosAlert" class="custom-alert"></div>
 
 <div class="ui-panel">
     <div id="radar-ui" style="display:none; text-align: center;">
@@ -133,7 +142,10 @@
             <button class="btn btn-sec" onclick="openM('settings')">Настройки</button>
             <button class="btn btn-sec" onclick="openM('map-styles')">Слои</button>
         </div>
-        <button class="btn btn-sec" id="selectBtn" onclick="toggleSelect()">📍 Указать точку поиска</button>
+        <div style="display: flex; gap: 10px;">
+            <button class="btn btn-sec" style="flex: 1; font-size: 13px;" id="selectBtn" onclick="toggleSelect()">📍 Указать точку</button>
+            <button class="btn btn-sec" style="flex: 1; font-size: 13px; color: var(--ios-blue);" onclick="resetToLocation()">🎯 Моя позиция</button>
+        </div>
         <button class="btn" id="mainBtn" onclick="executeScan()">НАЙТИ АНОМАЛИЮ</button>
     </div>
 
@@ -182,10 +194,6 @@
     <button class="btn" style="margin-top:15px" onclick="closeM()">ЗАКРЫТЬ</button>
 </div>
 
-<style>
-    @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
-</style>
-
 <script>
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
     let map, userPos, searchOrigin, targetPoint, isSelecting = false;
@@ -212,15 +220,12 @@
             g.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
             osc.start(now); osc.stop(now + 0.15);
         } else if (type === 'found') {
-            // Минималистичный, таинственный и кинематографичный звук нахождения
             osc.type = 'sine';
-            osc.frequency.setValueAtTime(120, now); // Очень низкий гул
+            osc.frequency.setValueAtTime(120, now);
             osc.frequency.exponentialRampToValueAtTime(60, now + 3.0);
-            
             g.gain.setValueAtTime(0, now);
-            g.gain.linearRampToValueAtTime(0.4, now + 0.8); // Медленное нарастание звука
-            g.gain.exponentialRampToValueAtTime(0.001, now + 3.5); // Долгое затухание
-            
+            g.gain.linearRampToValueAtTime(0.4, now + 0.8);
+            g.gain.exponentialRampToValueAtTime(0.001, now + 3.5);
             osc.start(now); osc.stop(now + 3.5);
         }
     }
@@ -240,7 +245,7 @@
 
     navigator.geolocation.getCurrentPosition(pos => {
         userPos = [pos.coords.longitude, pos.coords.latitude];
-        searchOrigin = userPos;
+        searchOrigin = [...userPos];
         map.setCenter(userPos);
         new maplibregl.Marker({ color: '#0A84FF' }).setLngLat(userPos).addTo(map);
         syncUI();
@@ -252,33 +257,62 @@
         if (searchOrigin) {
             const r = document.getElementById('radiusIn').value;
             const circle = genCircle(searchOrigin, r);
-            if (map.getSource('rad')) map.getSource('rad').setData(circle);
-            else {
+            if (map.getSource('rad')) {
+                map.getSource('rad').setData(circle);
+            } else {
                 map.addSource('rad', { type: 'geojson', data: circle });
-                map.addLayer({ id: 'rad-l', type: 'fill', source: 'rad', paint: { 'fill-color': '#0A84FF', 'fill-opacity': 0.08 } });
+                // Слегка прозрачная заливка
+                map.addLayer({ id: 'rad-l', type: 'fill', source: 'rad', paint: { 'fill-color': '#0A84FF', 'fill-opacity': 0.05 } });
+                // Добавлена четкая пунктирная граница радиуса (как на радаре)
+                map.addLayer({ id: 'rad-line', type: 'line', source: 'rad', paint: { 'line-color': '#0A84FF', 'line-width': 1.5, 'line-dasharray': [3, 4] } });
             }
         }
+    }
+
+    // Возврат к геолокации
+    function resetToLocation() {
+        if (!userPos) return showAlert("ГЕОПОЗИЦИЯ НЕ НАЙДЕНА");
+        searchOrigin = [...userPos];
+        map.flyTo({ center: userPos, zoom: 11, duration: 1500 });
+        syncUI();
+        playSound('tap');
+        showAlert("ИСХОДНАЯ ТОЧКА: МОЯ ПОЗИЦИЯ");
     }
 
     function toggleSelect() {
         isSelecting = !isSelecting;
         document.getElementById('crosshair').style.display = isSelecting ? 'block' : 'none';
         const b = document.getElementById('mainBtn');
+        const sBtn = document.getElementById('selectBtn');
+        
         if (isSelecting) {
             b.innerText = "ПОДТВЕРДИТЬ ТОЧКУ";
             b.style.background = "rgba(48, 209, 88, 0.7)";
+            sBtn.innerText = "ОТМЕНА";
             b.onclick = () => {
                 searchOrigin = [map.getCenter().lng, map.getCenter().lat];
                 toggleSelect(); syncUI(); playSound('tap');
                 b.innerText = "НАЙТИ АНОМАЛИЮ"; b.style.background = "rgba(10, 132, 255, 0.6)";
                 b.onclick = executeScan;
             };
+        } else {
+            b.innerText = "НАЙТИ АНОМАЛИЮ";
+            b.style.background = "rgba(10, 132, 255, 0.6)";
+            sBtn.innerText = "📍 Указать точку";
+            b.onclick = executeScan;
         }
     }
 
     async function executeScan() {
+        // Камера центрируется на точке старта поиска
+        map.flyTo({ center: searchOrigin, zoom: 11, duration: 1000 });
+        
         document.getElementById('ui-idle').style.display = 'none';
         document.getElementById('scan-box').style.display = 'block';
+        
+        // Включаем импульс поиска
+        setTimeout(() => document.getElementById('searchPulse').style.display = 'block', 500);
+        
         playSound('tap');
         
         const mode = document.getElementById('catSelect').value;
@@ -302,6 +336,8 @@
 
         setTimeout(() => {
             document.getElementById('scan-box').style.display = 'none';
+            document.getElementById('searchPulse').style.display = 'none'; // Выключаем импульс
+            
             if (found) {
                 targetPoint = found.coords;
                 startRadar();
@@ -311,31 +347,26 @@
                 resetSystem();
                 showAlert("СИГНАЛ ПОТЕРЯН: АНОМАЛИЙ НЕ НАЙДЕНО");
             }
-        }, 2000);
+        }, 3000); // Увеличил время сканирования для красоты анимации
     }
 
     function startRadar() {
         const power = parseInt(document.getElementById('powerIn').value);
         document.getElementById('radar-ui').style.display = 'block';
         
-        // Увеличен интервал для плавной, тягучей работы радара
         radarInterval = setInterval(() => {
             const dist = getDistance(userPos, targetPoint);
             const maxR = document.getElementById('radiusIn').value * 1000;
             
             let baseStrength = Math.max(0, (1 - dist / maxR) * 100);
-            
-            // Плавный дрейф сигнала вместо резких скачков (jitter)
             let drift = Math.sin(Date.now() / 800) * (power * 1.2); 
             let currentSignal = Math.max(0, Math.min(100, baseStrength + drift));
             
-            // Редкое пропадание сигнала
             if (Math.random() > 0.98) currentSignal = 0;
 
-            // Вращение плавно анимируется благодаря CSS transition
             document.getElementById('radar-arrow').style.transform = `translate(-50%, -100%) rotate(${currentSignal * 3.6}deg)`;
             document.getElementById('distance-text').innerText = `СИГНАЛ: ${currentSignal.toFixed(0)}%`;
-        }, 800); // Интервал синхронизирован с тягучей CSS-анимацией
+        }, 800);
     }
 
     function showTarget(obj, mode) {
