@@ -3,59 +3,63 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
-    <title>KiwiWay - Multi-Map Edition</title>
+    <title>KiwiWay - OS Audio & Entropy V2</title>
     <script src='https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.js'></script>
     <link href='https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.css' rel='stylesheet' />
     <style>
-        :root { --glass: rgba(12, 12, 12, 0.9); --accent: #7800ff; --green: #00ff66; --red: #ff0055; }
-        body { margin: 0; padding: 0; background: #000; font-family: sans-serif; color: #fff; overflow: hidden; }
+        :root { --glass: rgba(10, 10, 10, 0.85); --accent: #7800ff; --green: #00ff66; --red: #ff0055; }
+        body { margin: 0; padding: 0; background: #000; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #fff; overflow: hidden; }
         #map { position: absolute; top: 0; bottom: 0; width: 100%; z-index: 1; }
         
         #crosshair {
             display: none; position: absolute; top: 50%; left: 50%;
-            transform: translate(-50%, -50%); width: 40px; height: 40px;
+            transform: translate(-50%, -50%); width: 44px; height: 44px;
             z-index: 50; pointer-events: none;
         }
-        #crosshair::before { content: ""; position: absolute; top: 19px; width: 40px; height: 2px; background: var(--green); box-shadow: 0 0 10px var(--green); }
-        #crosshair::after { content: ""; position: absolute; left: 19px; height: 40px; width: 2px; background: var(--green); box-shadow: 0 0 10px var(--green); }
+        #crosshair::before { content: ""; position: absolute; top: 21px; width: 44px; height: 1.5px; background: var(--green); box-shadow: 0 0 15px var(--green); }
+        #crosshair::after { content: ""; position: absolute; left: 21px; height: 44px; width: 1.5px; background: var(--green); box-shadow: 0 0 15px var(--green); }
 
         .ui-panel {
             position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
             width: 94%; max-width: 420px; background: var(--glass);
-            backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px);
-            border: 1px solid rgba(255,255,255,0.1); border-radius: 30px;
-            padding: 20px; box-sizing: border-box; z-index: 100;
+            backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
+            border: 1px solid rgba(255,255,255,0.08); border-radius: 32px;
+            padding: 22px; box-sizing: border-box; z-index: 100;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6);
         }
 
         .btn {
-            width: 100%; padding: 16px; margin: 5px 0; border: none; border-radius: 18px;
-            font-size: 13px; font-weight: 800; cursor: pointer; transition: 0.2s;
-            background: var(--accent); color: #fff; text-transform: uppercase;
+            width: 100%; padding: 18px; margin: 6px 0; border: none; border-radius: 20px;
+            font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            background: var(--accent); color: #fff; text-transform: uppercase; letter-spacing: 1px;
         }
-        .btn-sec { background: rgba(255,255,255,0.08); font-size: 11px; }
-        .btn:active { transform: scale(0.96); }
+        .btn-sec { background: rgba(255,255,255,0.06); font-size: 11px; color: #aaa; }
+        .btn:active { transform: scale(0.95); opacity: 0.8; }
 
-        #scan-box { display: none; text-align: center; padding: 10px 0; }
-        .line { width: 100%; height: 2px; background: var(--accent); box-shadow: 0 0 15px var(--accent); animation: scan 1.5s infinite; position: relative; }
-        @keyframes scan { 0% { top: -10px; opacity: 0; } 50% { opacity: 1; } 100% { top: 10px; opacity: 0; } }
+        #scan-box { display: none; text-align: center; padding: 15px 0; }
+        .line { width: 100%; height: 2px; background: var(--green); box-shadow: 0 0 20px var(--green); animation: scan 1.2s infinite ease-in-out; position: relative; }
+        @keyframes scan { 0% { transform: translateY(-15px); opacity: 0; } 50% { opacity: 1; } 100% { transform: translateY(15px); opacity: 0; } }
 
         .modal {
             position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 85%; background: #0a0a0a; border: 1px solid #333;
-            border-radius: 25px; padding: 25px; display: none; z-index: 1000;
+            width: 88%; background: #0f0f0f; border: 1px solid #222;
+            border-radius: 28px; padding: 25px; display: none; z-index: 1000;
+            box-shadow: 0 0 100px rgba(0,0,0,0.9);
         }
-        .active { display: block; }
+        .active { display: block; animation: modalIn 0.3s ease-out; }
+        @keyframes modalIn { from { opacity: 0; transform: translate(-50%, -45%); } to { opacity: 1; transform: translate(-50%, -50%); } }
         
-        .copy-btn { background: #1a1a1a; color: var(--green); border: 1px solid #333; padding: 12px; border-radius: 15px; font-size: 11px; cursor: pointer; margin-top: 10px; text-align: center; font-weight: bold; }
+        .copy-btn { background: #1a1a1a; color: var(--green); padding: 14px; border-radius: 16px; font-size: 11px; cursor: pointer; margin-top: 10px; text-align: center; border: 1px solid #333; }
         
-        .map-opt { background: #111; border: 1px solid #333; padding: 15px; margin: 8px 0; border-radius: 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
-        .map-opt:hover { border-color: var(--accent); }
+        .map-opt { background: #181818; border: 1px solid #222; padding: 18px; margin: 10px 0; border-radius: 18px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: 0.2s; }
+        .map-opt:active { background: #222; }
 
-        .switch { position: relative; display: inline-block; width: 40px; height: 20px; float: right; }
+        .switch { position: relative; display: inline-block; width: 42px; height: 24px; float: right; }
         .switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #333; transition: .4s; border-radius: 20px; }
-        .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
-        input:checked + .slider { background-color: var(--accent); }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #333; transition: .3s; border-radius: 24px; }
+        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--green); }
+        input:checked + .slider:before { transform: translateX(18px); }
     </style>
 </head>
 <body>
@@ -64,80 +68,89 @@
 <div id="crosshair"></div>
 
 <div class="ui-panel">
-    <div id="status-log" style="font-size: 9px; color: #555; text-align: center; margin-bottom: 8px; letter-spacing: 2px;">SYSTEM V3.0 ONLINE</div>
+    <div id="status-log" style="font-size: 10px; color: #444; text-align: center; margin-bottom: 12px; letter-spacing: 3px; font-weight: 900;">QUANTUM NAVIGATOR</div>
     
     <div id="scan-box">
         <div class="line"></div>
-        <div style="font-size: 11px; margin-top: 10px; color: var(--accent);">АНАЛИЗ ЭФИРА...</div>
+        <div id="scan-text" style="font-size: 10px; margin-top: 15px; color: var(--green); letter-spacing: 1px;">ДЕКОДИРОВАНИЕ СИГНАЛА...</div>
     </div>
 
     <div id="ui-idle">
         <div style="display: flex; gap: 8px;">
-            <button class="btn btn-sec" onclick="openM('settings')">⚙ ОПЦИИ</button>
-            <button class="btn btn-sec" onclick="openM('map-styles')">🗺 КАРТА</button>
-            <button class="btn btn-sec" style="flex: 1.5;" onclick="togglePointSelection()" id="selectBtn">📍 ЦЕНТР</button>
+            <button class="btn btn-sec" onclick="playSound('pop'); openM('settings')">⚙ НАСТРОЙКИ</button>
+            <button class="btn btn-sec" onclick="playSound('pop'); openM('map-styles')">🗺 СЛОИ</button>
         </div>
-        <button class="btn" id="mainActionBtn" onclick="executeScan()">ЗАПУСК ПОИСКА</button>
+        <button class="btn btn-sec" onclick="playSound('tock'); togglePointSelection()" id="selectBtn" style="color: #fff; background: rgba(120,0,255,0.15); border: 1px solid rgba(120,0,255,0.3);">📍 УСТАНОВИТЬ ЦЕНТР ПОИСКА</button>
+        <button class="btn" id="mainActionBtn" onclick="executeScan()">НАЧАТЬ СКАНИРОВАНИЕ</button>
     </div>
 
     <div id="ui-found" style="display: none;">
-        <button class="btn" style="background: var(--green); color: #000;" onclick="playRouteSound(); buildRoute()">ПРОЛОЖИТЬ ПУТЬ</button>
-        <div style="display: flex; gap: 8px;">
-            <button class="btn btn-sec" style="flex: 1;" onclick="openM('info')">ДАННЫЕ</button>
-            <button class="btn btn-sec" style="flex: 1;" onclick="resetSystem()">СБРОС</button>
+        <button class="btn" style="background: var(--green); color: #000;" onclick="playSound('route'); buildRoute()">ПОСТРОИТЬ МАРШРУТ</button>
+        <div style="display: flex; gap: 10px;">
+            <button class="btn btn-sec" style="flex: 1;" onclick="playSound('pop'); openM('info')">ЛОГ</button>
+            <button class="btn btn-sec" style="flex: 1;" onclick="playSound('reset'); resetSystem()">СБРОС</button>
         </div>
     </div>
 </div>
 
 <div id="map-styles" class="modal">
-    <h3 style="margin:0 0 15px 0">РЕЖИМ ВИЗУАЛИЗАЦИИ</h3>
-    <div class="map-opt" onclick="setMapStyle('dark')">ТЕМНАЯ СХЕМА <span>●</span></div>
-    <div class="map-opt" onclick="setMapStyle('sat')">СПУТНИК (ARCGIS) <span>🛰</span></div>
-    <div class="map-opt" onclick="setMapStyle('street')">УЛИЧНАЯ СЕТЬ <span>🏙</span></div>
-    <button class="btn btn-sec" style="margin-top:15px" onclick="closeM()">ЗАКРЫТЬ</button>
+    <h3 style="margin:0 0 15px 0; font-size: 16px;">ТИП КАРТЫ</h3>
+    <div class="map-opt" onclick="playSound('pop'); setMapStyle('dark')">NIGHT MODE 🌙</div>
+    <div class="map-opt" onclick="playSound('pop'); setMapStyle('sat')">SATELLITE 🛰</div>
+    <div class="map-opt" onclick="playSound('pop'); setMapStyle('street')">NAVIGATION 🏙</div>
+    <button class="btn btn-sec" style="margin-top:10px" onclick="closeM()">ЗАКРЫТЬ</button>
 </div>
 
 <div id="settings" class="modal">
-    <h3 style="margin:0 0 15px 0">ПАРАМЕТРЫ</h3>
-    <div style="margin-bottom: 15px;">
-        <span style="font-size: 14px;">Музыка</span>
+    <h3 style="margin:0 0 15px 0; font-size: 16px;">КОНФИГУРАЦИЯ</h3>
+    <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-size: 14px; color: #eee;">Музыкальное сопровождение</span>
         <label class="switch"><input type="checkbox" id="musicToggle" onchange="toggleMusic()"><span class="slider"></span></label>
     </div>
-    <label style="font-size: 11px; color: #777;">РАДИУС: <span id="rL" style="color:var(--accent)">5 км</span></label>
-    <input type="range" id="radiusIn" min="1" max="15" value="5" style="width:100%; margin:10px 0;" oninput="syncUI()">
-    <label style="font-size: 11px; color: #777;">МОЩНОСТЬ: <span id="pL" style="color:var(--accent)">5</span></label>
-    <input type="range" id="powerIn" min="1" max="10" value="5" style="width:100%; margin:10px 0;" oninput="syncUI()">
-    <select id="catSelect" style="width:100%; background:#111; color:#fff; border:1px solid #333; padding:15px; border-radius:15px; outline:none;">
-        <option value="Пустота">ПУСТОТА (БЕЗ ДОМОВ)</option>
-        <option value="Квантовая">КВАНТОВАЯ (ЛЮБАЯ)</option>
-        <option value="Мощная">МОЩНАЯ (ДОРОГИ)</option>
-    </select>
-    <button class="btn" style="margin-top:20px" onclick="closeM()">ПРИМЕНИТЬ</button>
+    <label style="font-size: 10px; color: #555; text-transform: uppercase;">Радиус захвата: <span id="rL" style="color:var(--accent)">5 км</span></label>
+    <input type="range" id="radiusIn" min="1" max="15" value="5" style="width:100%; margin:12px 0;" oninput="syncUI()">
+    
+    <label style="font-size: 10px; color: #555; text-transform: uppercase;">Энтропия (Мощность): <span id="pL" style="color:var(--accent)">5</span></label>
+    <input type="range" id="powerIn" min="1" max="10" value="5" style="width:100%; margin:12px 0;" oninput="syncUI()">
+    
+    <button class="btn" style="margin-top:15px" onclick="playSound('pop'); closeM()">СОХРАНИТЬ</button>
 </div>
 
 <div id="info" class="modal">
-    <h3 style="margin:0 0 15px 0">ЛОГ ОБЪЕКТА</h3>
-    <div id="infoBody" style="font-size: 12px; line-height: 1.5; color: #ccc; max-height: 100px; overflow: auto;"></div>
-    <div id="coordsBox" style="margin-top:10px; padding:12px; background:#000; border-radius:12px; font-family:monospace; font-size:11px; color:var(--green); border:1px solid #222; text-align: center;"></div>
-    <div class="copy-btn" id="copyBtn" onclick="copyCoords()">СКОПИРОВАТЬ КООРДИНАТЫ</div>
+    <h3 style="margin:0 0 15px 0; font-size: 16px;">ДАННЫЕ ОБЪЕКТА</h3>
+    <div id="infoBody" style="font-size: 13px; line-height: 1.6; color: #888;"></div>
+    <div id="coordsBox" style="margin-top:15px; padding:15px; background:#050505; border-radius:14px; font-family:monospace; font-size:12px; color:var(--green); border:1px solid #111; text-align: center;"></div>
+    <div class="copy-btn" id="copyBtn" onclick="playSound('tock'); copyCoords()">СКОПИРОВАТЬ КООРДИНАТЫ</div>
     <button class="btn btn-sec" style="margin-top:15px" onclick="closeM()">ЗАКРЫТЬ</button>
 </div>
 
 <script>
+    // Звуковой движок (iOS Style)
+    const sfx = {
+        pop: new Audio('https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3'),
+        tock: new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3'),
+        reset: new Audio('https://assets.mixkit.co/active_storage/sfx/2569/2569-preview.mp3'),
+        route: new Audio('https://assets.mixkit.co/active_storage/sfx/2040/2040-preview.mp3'),
+        success: new Audio('https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3')
+    };
+
+    function playSound(id) {
+        sfx[id].currentTime = 0;
+        sfx[id].volume = 0.4;
+        sfx[id].play().catch(() => {});
+        if (navigator.vibrate) navigator.vibrate(10);
+    }
+
     const bgMusic = new Audio('https://www.chosic.com/wp-content/uploads/2021/07/The-Void.mp3'); 
     bgMusic.loop = true;
 
     let map, userPos, searchOrigin, targetPoint, isSelecting = false;
-    let currentAddress = "", currentMarkerColor = "#ff0055";
+    let currentAddress = "";
 
     const STYLES = {
         dark: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
         street: 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json',
-        sat: {
-            "version": 8,
-            "sources": { "sat-tiles": { "type": "raster", "tiles": ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"], "tileSize": 256, "attribution": "Esri" }},
-            "layers": [{ "id": "sat-layer", "type": "raster", "source": "sat-tiles", "minzoom": 0, "maxzoom": 22 }]
-        }
+        sat: { "version": 8, "sources": { "s": { "type": "raster", "tiles": ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"], "tileSize": 256 }}, "layers": [{ "id": "s", "type": "raster", "source": "s" }] }
     };
 
     map = new maplibregl.Map({
@@ -160,19 +173,12 @@
 
     function setMapStyle(type) {
         map.setStyle(STYLES[type]);
-        // Ждем перерисовки, чтобы восстановить слои радиуса и маршрута
-        map.once('styledata', () => {
-            syncUI();
-            if (targetPoint) {
-                // Восстанавливаем маркер цели
-                if (window.m) window.m.addTo(map);
-            }
-        });
+        map.once('styledata', () => { syncUI(); if (window.m) window.m.addTo(map); });
         closeM();
     }
 
     function toggleMusic() {
-        if (document.getElementById('musicToggle').checked) bgMusic.play().catch(() => {});
+        if (document.getElementById('musicToggle').checked) bgMusic.play();
         else bgMusic.pause();
     }
 
@@ -181,17 +187,18 @@
         document.getElementById('crosshair').style.display = isSelecting ? 'block' : 'none';
         const mainBtn = document.getElementById('mainActionBtn');
         if (isSelecting) {
-            mainBtn.innerText = "ПОДТВЕРДИТЬ";
+            mainBtn.innerText = "ПОДТВЕРДИТЬ ТОЧКУ";
             mainBtn.style.background = "var(--green)";
             mainBtn.style.color = "#000";
             mainBtn.onclick = () => {
                 const c = map.getCenter();
                 searchOrigin = [c.lng, c.lat];
+                playSound('success');
                 togglePointSelection();
                 syncUI();
             };
         } else {
-            mainBtn.innerText = "ЗАПУСК ПОИСКА";
+            mainBtn.innerText = "НАЧАТЬ СКАНИРОВАНИЕ";
             mainBtn.style.background = "";
             mainBtn.style.color = "";
             mainBtn.onclick = executeScan;
@@ -207,7 +214,7 @@
             if (map.getSource('rad')) map.getSource('rad').setData(data);
             else {
                 map.addSource('rad', { type: 'geojson', data: data });
-                map.addLayer({ id: 'rad-l', type: 'fill', source: 'rad', paint: { 'fill-color': '#7800ff', 'fill-opacity': 0.15 } });
+                map.addLayer({ id: 'rad-l', type: 'fill', source: 'rad', paint: { 'fill-color': '#7800ff', 'fill-opacity': 0.1 } });
             }
         }
     }
@@ -224,28 +231,35 @@
         return { type: 'Feature', geometry: { type: 'Polygon', coordinates: [ret] } };
     }
 
+    // Энтропийный Алгоритм Поиска V2
     async function executeScan() {
+        playSound('tock');
         const p = parseInt(document.getElementById('powerIn').value);
         const r = parseInt(document.getElementById('radiusIn').value);
-        const cat = document.getElementById('catSelect').value;
         
-        // Цвет от мощности
-        const redChan = Math.max(50, 255 - (p * 20));
-        currentMarkerColor = `rgb(${redChan}, 0, 40)`;
-
         document.getElementById('ui-idle').style.display = 'none';
         document.getElementById('scan-box').style.display = 'block';
 
-        let found = null;
-        for (let i = 0; i < p * 5; i++) {
+        let candidates = [];
+        // Фаза 1: Генерация квантовых кандидатов
+        for (let i = 0; i < p * 3; i++) {
             const angle = Math.random() * Math.PI * 2;
-            const dist = Math.random() * (r / 111);
-            const pt = [searchOrigin[0] + dist * Math.cos(angle), searchOrigin[1] + dist * Math.sin(angle)];
+            const dist = (Math.sqrt(Math.random()) * r) / 111; // Плотность к краям
+            candidates.push([searchOrigin[0] + dist * Math.cos(angle), searchOrigin[1] + dist * Math.sin(angle)]);
+        }
+
+        let found = null;
+        // Фаза 2: Анализ энтропии (через Reverse Geocoding)
+        for (let pt of candidates) {
             try {
                 const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pt[1]}&lon=${pt[0]}&zoom=18`);
                 const data = await res.json();
-                if (p === 1 || (cat === "Пустота" && !data.address.house_number) || cat === "Квантовая" || (cat === "Мощная" && data.address.road)) {
-                    found = pt; currentAddress = data.display_name; break;
+                
+                // Алгоритм "Странности": ищем места, где нет четких индексов или странные типы зданий
+                if (p > 5) {
+                    if (!data.address.house_number || data.address.amenity) { found = pt; currentAddress = data.display_name; break; }
+                } else {
+                    if (data.address.road) { found = pt; currentAddress = data.display_name; break; }
                 }
             } catch(e) {}
         }
@@ -253,23 +267,27 @@
         setTimeout(() => {
             document.getElementById('scan-box').style.display = 'none';
             if (found) {
+                playSound('success');
                 targetPoint = found;
+                const red = Math.max(40, 255 - (p * 22));
                 if (window.m) window.m.remove();
-                window.m = new maplibregl.Marker({ color: currentMarkerColor }).setLngLat(found).addTo(map);
-                map.flyTo({ center: found, zoom: 15 });
+                window.m = new maplibregl.Marker({ color: `rgb(${red}, 0, 70)` }).setLngLat(found).addTo(map);
+                map.flyTo({ center: found, zoom: 15, duration: 2000 });
+                
                 document.getElementById('ui-found').style.display = 'block';
-                document.getElementById('infoBody').innerHTML = `<b>ОБЪЕКТ ОБНАРУЖЕН</b><br>${currentAddress}`;
+                document.getElementById('infoBody').innerHTML = `СИГНАЛ СТАБИЛИЗИРОВАН. ОБЪЕКТ ТИПА "ЭНТРОПИЯ-${p}" ОБНАРУЖЕН В ДАННОМ СЕКТОРЕ.`;
                 document.getElementById('coordsBox').innerText = `${found[1].toFixed(6)}, ${found[0].toFixed(6)}`;
             } else {
-                alert("СИГНАЛ ПОТЕРЯН. ПОПРОБУЙТЕ СНОВА.");
+                playSound('reset');
+                alert("ОШИБКА: НИЗКИЙ УРОВЕНЬ ЭНТРОПИИ");
                 document.getElementById('ui-idle').style.display = 'block';
             }
-        }, 1500);
+        }, 2000);
     }
 
     function copyCoords() {
         navigator.clipboard.writeText(document.getElementById('coordsBox').innerText);
-        const b = document.getElementById('copyBtn'); b.innerText = "ГОТОВО!";
+        const b = document.getElementById('copyBtn'); b.innerText = "СКОПИРОВАННО В БУФЕР";
         setTimeout(() => b.innerText = "СКОПИРОВАТЬ КООРДИНАТЫ", 2000);
     }
 
@@ -278,7 +296,7 @@
         const data = await res.json();
         if (map.getLayer('route')) { map.removeLayer('route'); map.removeSource('route'); }
         map.addSource('route', { type: 'geojson', data: data.routes[0].geometry });
-        map.addLayer({ id: 'route', type: 'line', source: 'route', paint: { 'line-color': '#00ff66', 'line-width': 4 } });
+        map.addLayer({ id: 'route', type: 'line', source: 'route', paint: { 'line-color': '#00ff66', 'line-width': 5, 'line-blur': 2 } });
     }
 
     function resetSystem() {
