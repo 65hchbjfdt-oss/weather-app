@@ -39,9 +39,9 @@
             border: none; border-radius: 22px;
             font-size: 16px; font-weight: 600;
             cursor: pointer;
-            background: rgba(255, 255, 255, 0.1); color: #fff;
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
         }
-
         .btn-main { background: var(--ios-blue); }
 
         #radar {
@@ -51,7 +51,6 @@
             border-radius: 50%;
             position: relative;
         }
-
         #radar-arrow {
             position: absolute;
             top: 50%; left: 50%;
@@ -59,7 +58,7 @@
             background: var(--ios-green);
             transform-origin: bottom center;
             transform: translate(-50%, -100%) rotate(0deg);
-            transition: 0.6s;
+            transition: transform 0.6s;
         }
 
         .modal {
@@ -72,7 +71,6 @@
             display: none;
             z-index: 1000;
         }
-
         .modal.active { display: block; }
 
         #crosshair {
@@ -107,7 +105,6 @@
             transform: translateX(-50%);
             padding: 12px 25px;
             border-radius: 20px;
-            font-size: 14px;
             display: none;
             z-index: 2000;
         }
@@ -121,54 +118,53 @@
 <div id="iosAlert" class="alert glass"></div>
 
 <div class="ui-panel glass">
-
-    <div id="radar-ui" style="display:none; text-align:center;">
+    <div id="radar-ui" style="display:none; text-align: center;">
         <div id="radar"><div id="radar-arrow"></div></div>
         <div id="distance-text">СИГНАЛ: 0%</div>
     </div>
 
     <div id="scan-box" style="display:none; text-align:center;">
-        <div style="color:var(--ios-blue); font-weight:800;">ПОИСК...</div>
+        <div>ПОИСК...</div>
     </div>
 
     <div id="ui-idle">
         <button class="btn" onclick="openM('settings')">Настройки</button>
-        <button class="btn btn-main" onclick="executeScan()">НАЙТИ</button>
+        <button class="btn btn-main" onclick="executeScan()">НАЙТИ АНОМАЛИЮ</button>
     </div>
 
     <div id="ui-found" style="display:none;">
         <button class="btn btn-main" style="background:var(--ios-green)" onclick="buildRoute()">ПРОЛОЖИТЬ ПУТЬ</button>
-        <button class="btn" onclick="openM('info')">ИНФО</button>
-        <button class="btn" style="color:var(--ios-red)" onclick="resetSystem()">СБРОС</button>
+        <button class="btn" onclick="resetSystem()">СБРОС</button>
     </div>
 </div>
 
-<!-- SETTINGS -->
 <div id="settings" class="modal glass">
     <h2>Режим поиска</h2>
 
     <select id="modeSelect" class="btn">
-        <option value="quantum">⚛ Квантовый</option>
+        <option value="quantum">⚡ Квантовый</option>
         <option value="void">🌑 Пустота</option>
-        <option value="powerful">🔥 Мощный</option>
+        <option value="powerful">💥 Мощный</option>
     </select>
+
+    <label>Радиус: <span id="rL">5</span> км</label>
+    <input type="range" id="radiusIn" min="1" max="20" value="5" oninput="syncUI()">
+
+    <div style="margin-top:15px;">
+        <span>Звуковой отклик</span>
+        <input type="checkbox" id="soundToggle" checked>
+    </div>
 
     <button class="btn btn-main" onclick="closeM()">OK</button>
 </div>
 
-<!-- INFO -->
-<div id="info" class="modal glass">
-    <h2 id="anomalyName"></h2>
-    <div id="infoBody"></div>
-    <div id="coordsBox"></div>
-    <button class="btn btn-main" onclick="closeM()">ЗАКРЫТЬ</button>
-</div>
-
 <script>
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-let map, userPos, targetPoint;
+let map, userPos, searchOrigin, targetPoint;
+let radarInterval;
 
 function playBeep(freq, dur) {
+    if (!document.getElementById("soundToggle").checked) return;
     const osc = audioCtx.createOscillator();
     const g = audioCtx.createGain();
     osc.connect(g); g.connect(audioCtx.destination);
@@ -178,116 +174,153 @@ function playBeep(freq, dur) {
     osc.start(); osc.stop(audioCtx.currentTime + dur);
 }
 
-const OBJECTS = {
-    quantum: [
-        "Заброшенное место",
-        "Старая дорога",
-        "Неизвестный объект",
-        "Заброшенный мост",
-        "Промышленная зона"
-    ],
-    void: [
-        "Овраг",
-        "Пустой парк",
-        "Скрытый двор",
-        "Родник",
-        "Необычный ручей"
-    ],
-    powerful: [
-        "Заброшенное место",
-        "Овраг",
-        "Старая дорога",
-        "Родник",
-        "Неизвестная зона"
-    ]
+const STYLES = {
+    dark: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
+    sat: {
+        "version": 8,
+        "sources": {
+            "s": {
+                "type": "raster",
+                "tiles": ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"],
+                "tileSize": 256
+            }
+        },
+        "layers": [{ "id": "s", "type": "raster", "source": "s" }]
+    }
 };
 
 map = new maplibregl.Map({
-    container: 'map',
-    style: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
+    container: "map",
+    style: STYLES.dark,
     center: [37.6, 55.7],
     zoom: 12
 });
 
 navigator.geolocation.getCurrentPosition(pos => {
     userPos = [pos.coords.longitude, pos.coords.latitude];
+    searchOrigin = [...userPos];
     map.setCenter(userPos);
     new maplibregl.Marker().setLngLat(userPos).addTo(map);
 });
 
-async function executeScan() {
-
-    document.getElementById("ui-idle").style.display="none";
-    document.getElementById("scan-box").style.display="block";
-    document.getElementById("searchPulse").style.display="block";
-
-    const mode = document.getElementById("modeSelect").value;
-    const list = OBJECTS[mode];
-
-    setTimeout(()=>{
-        targetPoint = [
-            userPos[0] + (Math.random()-0.5)*0.02,
-            userPos[1] + (Math.random()-0.5)*0.02
-        ];
-
-        const objName = list[Math.floor(Math.random()*list.length)];
-
-        showTarget(objName);
-
-        document.getElementById("scan-box").style.display="none";
-        document.getElementById("searchPulse").style.display="none";
-        document.getElementById("ui-found").style.display="block";
-
-        playBeep(500,0.3);
-
-    },2500);
+function syncUI() {
+    document.getElementById("rL").innerText = document.getElementById("radiusIn").value;
 }
 
-function showTarget(name) {
-    document.getElementById("anomalyName").innerText = name;
-    document.getElementById("infoBody").innerHTML =
-        `<b>ОБЪЕКТ:</b> ${name}<br><b>РЕЖИМ:</b> ${document.getElementById("modeSelect").value}`;
+async function executeScan() {
 
-    document.getElementById("coordsBox").innerText =
-        `${targetPoint[1].toFixed(6)}, ${targetPoint[0].toFixed(6)}`;
+    document.getElementById("ui-idle").style.display = "none";
+    document.getElementById("scan-box").style.display = "block";
+    document.getElementById("searchPulse").style.display = "block";
 
+    // ❌ ЗВУК ПОИСКА УДАЛЕН ПОЛНОСТЬЮ
+
+    const mode = document.getElementById("modeSelect").value;
+    const radius = document.getElementById("radiusIn").value;
+
+    let keywords = [];
+
+    if (mode === "quantum") {
+        keywords = ["abandoned", "ruins", "railway", "industrial"];
+    }
+    if (mode === "void") {
+        keywords = ["park", "ravine", "spring", "stream", "meadow"];
+    }
+    if (mode === "powerful") {
+        keywords = ["abandoned", "ruins", "railway", "spring", "stream", "ravine"];
+    }
+
+    let found = null;
+
+    for (let i = 0; i < 15; i++) {
+        const a = Math.random() * Math.PI * 2;
+        const d = (Math.sqrt(Math.random()) * radius) / 111;
+        const pt = [
+            searchOrigin[0] + d * Math.cos(a),
+            searchOrigin[1] + d * Math.sin(a)
+        ];
+
+        try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pt[1]}&lon=${pt[0]}&zoom=18`);
+            const data = await res.json();
+
+            if (data.display_name) {
+                found = { coords: pt, data };
+                break;
+            }
+
+        } catch(e) {}
+    }
+
+    if (!found) {
+        found = {
+            coords: searchOrigin,
+            data: { display_name: "Неизвестная пустая зона" }
+        };
+    }
+
+    setTimeout(() => {
+        document.getElementById("scan-box").style.display = "none";
+        document.getElementById("searchPulse").style.display = "none";
+
+        targetPoint = found.coords;
+        showTarget(found);
+
+        playBeep(400, 0.4);
+
+    }, 2500);
+}
+
+function showTarget(obj) {
     new maplibregl.Marker({color:"red"}).setLngLat(targetPoint).addTo(map);
-    map.flyTo({center:targetPoint, zoom:16});
+    map.flyTo({center: targetPoint, zoom: 15});
+
+    document.getElementById("ui-found").style.display = "block";
 }
 
 function buildRoute() {
-    const url = `https://router.project-osrm.org/route/v1/foot/${userPos[0]},${userPos[1]};${targetPoint[0]},${targetPoint[1]}?geometries=geojson`;
+    const url = `https://router.project-osrm.org/route/v1/foot/${userPos[0]},${userPos[1]};${targetPoint[0]},${targetPoint[1]}?geometries=geojson&overview=full`;
 
-    fetch(url).then(r=>r.json()).then(data=>{
-        if(map.getLayer("route")){
+    fetch(url).then(r => r.json()).then(data => {
+
+        if (map.getLayer("route")) {
             map.removeLayer("route");
             map.removeSource("route");
         }
 
         map.addSource("route", {
-            type:"geojson",
-            data:data.routes[0].geometry
+            type: "geojson",
+            data: data.routes[0].geometry
         });
 
         map.addLayer({
-            id:"route",
-            type:"line",
-            source:"route",
-            paint:{
-                "line-width":6,
-                "line-color":"#0A84FF"
+            id: "route",
+            type: "line",
+            source: "route",
+            paint: {
+                "line-width": 6,
+                "line-color": "#0A84FF"
             }
         });
+
+        playBeep(900, 0.1);
     });
 }
 
-function resetSystem(){
-    location.reload();
+function resetSystem() {
+    clearInterval(radarInterval);
+    document.getElementById("ui-found").style.display = "none";
+    document.getElementById("ui-idle").style.display = "block";
 }
 
-function openM(id){ document.getElementById(id).classList.add("active"); }
-function closeM(){ document.querySelectorAll(".modal").forEach(m=>m.classList.remove("active")); }
-</script>
+function openM(id) {
+    document.getElementById(id).classList.add("active");
+    playBeep(600, 0.05);
+}
 
+function closeM() {
+    document.querySelectorAll(".modal").forEach(m => m.classList.remove("active"));
+}
+</script>
 </body>
 </html>
