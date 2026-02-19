@@ -142,9 +142,9 @@
     
     <label style="font-size: 12px; opacity: 0.6; font-weight: 700; display:block; margin-bottom:5px;">РЕЖИМ ПОИСКА:</label>
     <select id="searchMode" class="mode-select">
-        <option value="quantum">Квантовый (Руины/Дороги)</option>
-        <option value="void">Пустота (Овраги/Родники)</option>
-        <option value="powerful">Мощный (Комбо)</option>
+        <option value="quantum">Квантовый</option>
+        <option value="void">Пустошь</option>
+        <option value="powerful">Мощный</option>
     </select>
 
     <label style="font-size: 12px; opacity: 0.6; font-weight: 700;">МОЩНОСТЬ АНОМАЛИИ: <span id="pL" style="color:var(--ios-green)">50</span>%</label>
@@ -195,6 +195,7 @@
         setTimeout(() => el.style.display = 'none', 3000);
     }
 
+    // Простой звук клика
     function playBeep(freq, dur) {
         initAudio();
         if (!document.getElementById('soundToggle').checked || !audioCtx) return;
@@ -205,6 +206,39 @@
         g.gain.setValueAtTime(0.1, audioCtx.currentTime);
         g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + dur);
         osc.start(); osc.stop(audioCtx.currentTime + dur);
+    }
+
+    // Таинственный звук (iOS Style Sci-Fi Sweep)
+    function playMysterySound() {
+        initAudio();
+        if (!document.getElementById('soundToggle').checked || !audioCtx) return;
+        
+        const t = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        const filter = audioCtx.createBiquadFilter();
+
+        osc.type = 'sine';
+        // Частота плавно меняется от низкой к высокой (свист)
+        osc.frequency.setValueAtTime(200, t);
+        osc.frequency.exponentialRampToValueAtTime(800, t + 1.5);
+
+        // Фильтр для мягкости
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(400, t);
+        filter.frequency.linearRampToValueAtTime(2000, t + 1);
+
+        // Громкость (появляется и исчезает)
+        gain.gain.setValueAtTime(0, t);
+        gain.gain.linearRampToValueAtTime(0.3, t + 0.5);
+        gain.gain.linearRampToValueAtTime(0, t + 2);
+
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        osc.start(t);
+        osc.stop(t + 2);
     }
 
     const STYLES = {
@@ -328,35 +362,26 @@
         const radius = parseFloat(document.getElementById('radiusIn').value);
         let found = null;
         let attempts = 0;
-        const maxAttempts = 50;
-
-        const keywords = {
-            quantum: ['abandoned', 'ruin', 'dump', 'garbage', 'factory', 'plant', 'railway', 'track', 'road', 'quarry', 'mine', 'bunker', 'fortification', 'заброшенный', 'свалка', 'руины', 'развалины', 'ангар', 'склад', 'карьер'],
-            void: ['ravine', 'park', 'forest', 'meadow', 'field', 'spring', 'stream', 'river', 'pond', 'lake', 'cemetery', 'wood', 'scrubland', 'ovrag', 'пустошь', 'парк', 'лес', 'родник', 'ручей', 'овраг', 'поляна', 'пруд', 'озеро'],
-            powerful: []
-        };
-        keywords.powerful = [...keywords.quantum, ...keywords.void];
-        const activeKeywords = keywords[mode];
+        const maxAttempts = 100; // Увеличено количество попыток для точности
 
         while (!found && attempts < maxAttempts) {
             attempts++;
+            // Генерируем случайную точку внутри круга
             const a = Math.random() * Math.PI * 2;
-            const d = (Math.sqrt(Math.random()) * radius) / 111;
+            const d = (Math.sqrt(Math.random()) * radius) / 111; // Конвертация в градусы
             const pt = [searchOrigin[0] + d * Math.cos(a), searchOrigin[1] + d * Math.sin(a)];
             
             try {
-                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pt[1]}&lon=${pt[0]}&zoom=16&addressdetails=1`, {
+                // Запрос к OSM Nominatim
+                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pt[1]}&lon=${pt[0]}&zoom=17&addressdetails=1`, {
                     headers: { 'User-Agent': 'KiwiWay/1.0' }
                 });
                 const data = await res.json();
                 
                 if (data && data.address) {
-                    const name = (data.display_name || "").toLowerCase();
-                    const type = Object.values(data.address).join(" ").toLowerCase();
-                    const match = activeKeywords.some(k => name.includes(k) || type.includes(k));
+                    const isValid = validatePoint(data, mode);
                     
-                    if (match || (!data.address.house_number && !data.address.building)) {
-                        if (mode !== 'quantum' && (name.includes('улица') || name.includes('проспект'))) continue;
+                    if (isValid) {
                         found = { coords: pt, data: data };
                     }
                 }
@@ -365,12 +390,13 @@
             }
         }
 
+        // Если ничего не найдено после множества попыток, берем последнюю точку как "неизвестную"
         if (!found) {
             const a = Math.random() * Math.PI * 2;
             const d = (radius * 0.7) / 111;
             found = { 
                 coords: [searchOrigin[0] + d * Math.cos(a), searchOrigin[1] + d * Math.sin(a)],
-                data: { display_name: "Неопознанная зона (" + mode.toUpperCase() + ")" }
+                 { display_name: "Неопознанная зона (" + mode.toUpperCase() + ")" }
             };
         }
 
@@ -380,8 +406,65 @@
             targetPoint = found.coords;
             startRadar();
             showTarget(found);
-            playBeep(400, 0.5);
+            playMysterySound(); // Таинственный звук при находке
         }, 2500);
+    }
+
+    // Алгоритм проверки соответствия точки категории
+    function validatePoint(osmData, mode) {
+        const addr = osmData.address;
+        const typeName = (osmData.type || "").toLowerCase();
+        const category = (osmData.category || "").toLowerCase();
+        
+        // Получаем все значения адреса в одну строку для проверки ключевых слов
+        const fullText = Object.values(addr).join(" ").toLowerCase() + " " + (osmData.display_name || "").toLowerCase();
+
+        // --- КВАНТОВЫЙ РЕЖИМ ---
+        // Цель: Заброшенные здания, промзоны, свалки, ангары.
+        // Исключаем: Жилые дома, магазины, обычные офисы.
+        if (mode === 'quantum') {
+            const badKeywords = ['house', 'residential', 'apartments', 'shop', 'cafe', 'restaurant', 'school', 'kindergarten', 'hospital', 'hotel'];
+            const goodKeywords = ['abandoned', 'industrial', 'waste', 'dump', 'quarry', 'mine', 'bunker', 'ruins', 'construction', 'factory', 'plant', 'warehouse', 'garage', 'hangar', 'railway', 'station', 'depot', 'заброшенный', 'промзона', 'свалка', 'ангар', 'склад', 'гараж', 'депо', 'разрушен', 'бетон', 'стройматериалы'];
+            
+            // Если есть плохие слова - сразу нет
+            if (badKeywords.some(k => fullText.includes(k))) return false;
+            
+            // Если есть хорошие слова И это здание или промзона - да
+            const isBuildingOrInd = (addr.building || addr.industrial || addr.amenity === 'parking' || category === 'industrial' || category === 'man_made');
+            if (isBuildingOrInd && goodKeywords.some(k => fullText.includes(k))) return true;
+            
+            // Также подходят любые безымянные здания далеко от центра (условно заброшки)
+            if (addr.building && !addr.house_number && !addr.name) return true;
+
+            return false;
+        }
+
+        // --- ПУСТОШЬ ---
+        // Цель: Природа, парки, поля, овраги, вода.
+        // Исключаем: Здания, дороги, города.
+        if (mode === 'void') {
+            const badKeywords = ['house', 'building', 'road', 'street', 'avenue', 'highway', 'city', 'town', 'village', 'district', 'quarter', 'дом', 'улица', 'проспект', 'город', 'поселок'];
+            const goodKeywords = ['park', 'forest', 'meadow', 'field', 'spring', 'stream', 'river', 'pond', 'lake', 'cemetery', 'wood', 'scrubland', 'ravine', 'gully', 'nature_reserve', 'allotments', 'парк', 'лес', 'поле', 'родник', 'ручей', 'река', 'пруд', 'озеро', 'кладбище', 'овраг', 'болото', 'пустошь', 'сквер'];
+
+            if (badKeywords.some(k => fullText.includes(k))) return false;
+
+            const isNature = (addr.natural || addr.leisure || addr.waterway || addr.landuse === 'forest' || addr.landuse === 'meadow' || addr.landuse === 'grass' || category === 'natural' || category === 'leisure' || category === 'waterway');
+            
+            if (isNature && goodKeywords.some(k => fullText.includes(k))) return true;
+            
+            // Лес или поле без названия тоже подходит
+            if ((addr.landuse === 'forest' || addr.landuse === 'meadow' || addr.natural === 'wood') && !addr.name) return true;
+
+            return false;
+        }
+
+        // --- МОЩНЫЙ ---
+        // Комбинация обоих
+        if (mode === 'powerful') {
+            return validatePoint(osmData, 'quantum') || validatePoint(osmData, 'void');
+        }
+
+        return false;
     }
 
     function startRadar() {
@@ -394,15 +477,23 @@
             const dist = getDistance(userPos, targetPoint);
             const maxR = document.getElementById('radiusIn').value * 1000;
             
+            // Базовый сигнал зависит от расстояния
             let baseSignal = Math.max(0, (1 - dist / maxR) * 100);
-            let noise = (Math.random() - 0.5) * (110 - anomalyPower);
+            
+            // Шум зависит от мощности аномалии (чем мощнее, тем стабильнее сигнал, но выше пики)
+            // Если мощность 100%, шум минимален. Если 10%, шум большой.
+            let noiseLevel = (100 - anomalyPower) * 0.4; 
+            let noise = (Math.random() - 0.5) * noiseLevel;
+            
             let currentSignal = Math.max(0, Math.min(100, baseSignal + noise));
             
-            if (anomalyPower > 70 && currentSignal < 5) currentSignal = 10;
+            // Если аномалия очень мощная, сигнал никогда не падает в ноль полностью рядом с целью
+            if (anomalyPower > 80 && currentSignal < 5 && dist < maxR * 0.2) currentSignal = 15;
 
             document.getElementById('radar-arrow').style.transform = 'translate(-50%, -100%) rotate(' + (currentSignal * 3.6) + 'deg)';
             document.getElementById('distance-text').innerText = 'СИГНАЛ: ' + currentSignal.toFixed(0) + '%';
             
+            // Звук при высоком сигнале
             if (currentSignal > 90) playBeep(1200, 0.05);
         }, 600);
     }
@@ -410,9 +501,10 @@
     function showTarget(obj) {
         const modeSelect = document.getElementById('searchMode');
         const modeName = modeSelect.options[modeSelect.selectedIndex].text;
+        const powerVal = document.getElementById('powerIn').value;
         
         document.getElementById('anomalyName').innerText = "ОБЪЕКТ #" + Math.floor(Math.random()*999);
-        document.getElementById('infoBody').innerHTML = '<b>ТИП:</b> ' + modeName + '<br><b>АДРЕС:</b> ' + obj.data.display_name;
+        document.getElementById('infoBody').innerHTML = '<b>ТИП:</b> ' + modeName + '<br><b>АДРЕС:</b> ' + obj.data.display_name + '<br><b>МОЩНОСТЬ:</b> <span style="color:var(--ios-red)">' + powerVal + '%</span>';
         document.getElementById('coordsBox').innerText = targetPoint[1].toFixed(6) + ', ' + targetPoint[0].toFixed(6);
         
         if (window.targetMarker) window.targetMarker.remove();
@@ -431,7 +523,7 @@
         fetch(url).then(function(r) { return r.json(); }).then(function(data) {
             if (map.getLayer('route')) { map.removeLayer('route'); map.removeSource('route'); }
             if(data.code === 'Ok') {
-                map.addSource('route', { type: 'geojson', data: data.routes[0].geometry });
+                map.addSource('route', { type: 'geojson',  data.routes[0].geometry });
                 map.addLayer({ 
                     id: 'route', 
                     type: 'line', 
