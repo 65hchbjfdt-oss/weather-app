@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
-    <title>KiwiWay - Final Fixed</title>
+    <title>KiwiWay - Enhanced</title>
     <script src='https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.js'></script>
     <link href='https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.css' rel='stylesheet' />
     <style>
@@ -11,6 +11,18 @@
         body { margin: 0; padding: 0; background: #000; font-family: sans-serif; color: #fff; overflow: hidden; }
         #map { position: absolute; top: 0; bottom: 0; width: 100%; z-index: 1; }
         
+        /* Кнопки переключения слоев */
+        .map-style-picker {
+            position: absolute; top: 20px; right: 20px; z-index: 100;
+            display: flex; flex-direction: column; gap: 8px;
+        }
+        .style-btn {
+            background: var(--glass); border: 1px solid rgba(255,255,255,0.2);
+            color: white; padding: 8px 12px; border-radius: 12px; cursor: pointer;
+            font-size: 10px; backdrop-filter: blur(10px); transition: 0.3s;
+        }
+        .style-btn.active { border-color: var(--green); color: var(--green); }
+
         #crosshair {
             display: none; position: absolute; top: 50%; left: 50%;
             transform: translate(-50%, -50%); width: 40px; height: 40px;
@@ -45,9 +57,12 @@
             border-radius: 30px; padding: 25px; display: none; z-index: 1000;
         }
         .active { display: block; }
-        .copy-btn { background: #222; color: var(--green); border: 1px solid #333; padding: 8px 12px; border-radius: 12px; font-size: 11px; cursor: pointer; margin-top: 15px; display: inline-block; }
+        .copy-badge { 
+            background: #1a1a1a; border: 1px solid #333; padding: 10px; 
+            border-radius: 12px; margin-top: 10px; display: flex; 
+            justify-content: space-between; align-items: center; 
+        }
         
-        /* Переключатель музыки */
         .switch { position: relative; display: inline-block; width: 40px; height: 20px; float: right; }
         .switch input { opacity: 0; width: 0; height: 0; }
         .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #333; transition: .4s; border-radius: 20px; }
@@ -60,6 +75,11 @@
 
 <div id="map"></div>
 <div id="crosshair"></div>
+
+<div class="map-style-picker">
+    <button class="style-btn active" id="s-dark" onclick="setStyle('dark')">СХЕМА</button>
+    <button class="style-btn" id="s-sat" onclick="setStyle('sat')">СПУТНИК</button>
+</div>
 
 <div class="ui-panel">
     <div id="status-log" style="font-size: 10px; color: #555; text-align: center; margin-bottom: 8px;">СИСТЕМА АКТИВНА</div>
@@ -88,7 +108,6 @@
 
 <div id="settings" class="modal">
     <h3 style="margin:0 0 15px 0">НАСТРОЙКИ</h3>
-    
     <div style="margin-bottom: 15px;">
         <span style="font-size: 14px;">Фоновая музыка</span>
         <label class="switch">
@@ -96,13 +115,10 @@
             <span class="slider"></span>
         </label>
     </div>
-
     <label style="font-size: 11px; color: #777;">РАДИУС: <span id="rL" style="color:var(--accent)">5 км</span></label>
     <input type="range" id="radiusIn" min="1" max="15" value="5" style="width:100%; margin:12px 0;" oninput="syncUI()">
-    
     <label style="font-size: 11px; color: #777;">МОЩНОСТЬ: <span id="pL" style="color:var(--accent)">5</span></label>
     <input type="range" id="powerIn" min="1" max="10" value="5" style="width:100%; margin:12px 0;" oninput="syncUI()">
-    
     <select id="catSelect" style="width:100%; background:#111; color:#fff; border:1px solid #333; padding:15px; border-radius:18px;">
         <option value="Пустота">ПУСТОТА</option>
         <option value="Квантовая">КВАНТОВАЯ</option>
@@ -114,6 +130,12 @@
 <div id="info" class="modal">
     <h3 style="margin:0 0 15px 0">ЛОГ ОБЪЕКТА</h3>
     <div id="infoBody" style="font-size: 13px; line-height: 1.6; color: #ccc;"></div>
+    
+    <div class="copy-badge">
+        <span id="coordTxt" style="font-family: monospace; font-size: 11px; color: var(--green);">0.000, 0.000</span>
+        <button onclick="copyCoords()" style="background:var(--accent); border:none; color:white; padding:5px 10px; border-radius:8px; font-size:10px; cursor:pointer;">КОПИРОВАТЬ</button>
+    </div>
+
     <button class="btn btn-sec" style="margin-top:20px" onclick="closeM()">ЗАКРЫТЬ</button>
 </div>
 
@@ -123,10 +145,20 @@
     bgMusic.loop = true;
 
     let map, userPos, searchOrigin, targetPoint, isSelecting = false;
+    let currentAddress = "";
+
+    const styles = {
+        dark: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
+        sat: {
+            "version": 8,
+            "sources": { "s": { "type": "raster", "tiles": ["https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"], "tileSize": 256 } },
+            "layers": [{ "id": "s", "type": "raster", "source": "s", "minzoom": 0, "maxzoom": 20 }]
+        }
+    };
 
     map = new maplibregl.Map({
         container: 'map',
-        style: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
+        style: styles.dark,
         center: [37.6, 55.7],
         zoom: 11,
         attributionControl: false
@@ -142,31 +174,39 @@
         });
     });
 
+    function setStyle(type) {
+        map.setStyle(styles[type]);
+        document.getElementById('s-dark').classList.toggle('active', type === 'dark');
+        document.getElementById('s-sat').classList.toggle('active', type === 'sat');
+        
+        // После смены стиля нужно восстановить слои (круг, маршрут) через событие style.load
+        map.once('style.load', () => {
+            syncUI(); 
+            if (targetPoint && window.m) window.m.addTo(map);
+        });
+    }
+
     function toggleMusic() {
-        const isChecked = document.getElementById('musicToggle').checked;
-        if (isChecked) bgMusic.play().catch(() => {});
+        if (document.getElementById('musicToggle').checked) bgMusic.play().catch(() => {});
         else bgMusic.pause();
     }
 
     function togglePointSelection() {
         isSelecting = !isSelecting;
-        const crosshair = document.getElementById('crosshair');
-        const mainBtn = document.getElementById('mainActionBtn');
+        document.getElementById('crosshair').style.display = isSelecting ? 'block' : 'none';
         const selectBtn = document.getElementById('selectBtn');
+        const mainBtn = document.getElementById('mainActionBtn');
         
         if (isSelecting) {
-            crosshair.style.display = 'block';
             selectBtn.innerText = "ОТМЕНА";
             mainBtn.innerText = "ПОДТВЕРДИТЬ ЦЕНТР";
             mainBtn.style.background = "#00ff66";
             mainBtn.style.color = "#000";
             mainBtn.onclick = confirmNewCenter;
         } else {
-            crosshair.style.display = 'none';
             selectBtn.innerText = "📍 ВЫБОР ЦЕНТРА";
             mainBtn.innerText = "НАЧАТЬ ПОИСК";
-            mainBtn.style.background = "";
-            mainBtn.style.color = "";
+            mainBtn.style.background = ""; mainBtn.style.color = "";
             mainBtn.onclick = executeScan;
         }
     }
@@ -192,8 +232,7 @@
     }
 
     function genCircle(center, km) {
-        const points = 64;
-        const ret = [];
+        const points = 64; const ret = [];
         const dx = km / (111.32 * Math.cos(center[1] * Math.PI / 180));
         const dy = km / 110.574;
         for (let i = 0; i < points; i++) {
@@ -238,11 +277,19 @@
                 map.flyTo({ center: found, zoom: 15 });
                 document.getElementById('ui-found').style.display = 'block';
                 document.getElementById('infoBody').innerHTML = `<b>ТИП:</b> ${cat}<br><b>АДРЕС:</b><br><span style="font-size:11px">${currentAddress}</span>`;
+                document.getElementById('coordTxt').innerText = `${found[1].toFixed(6)}, ${found[0].toFixed(6)}`;
             } else {
                 alert("Ничего не найдено.");
                 document.getElementById('ui-idle').style.display = 'block';
             }
         }, 2000);
+    }
+
+    function copyCoords() {
+        const txt = document.getElementById('coordTxt').innerText;
+        navigator.clipboard.writeText(txt).then(() => {
+            alert("Координаты скопированы!");
+        });
     }
 
     function playRouteSound() {
