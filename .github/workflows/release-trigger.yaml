@@ -1,0 +1,24 @@
+name: Release Trigger
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: v1.0.0
+        name: v1.0.0
+        body: |
+          Release for enhanced interactivity with click zones and tooltips
+
+    - name: Success message
