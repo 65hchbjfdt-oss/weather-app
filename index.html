@@ -12,6 +12,7 @@
             --glass: rgba(255, 255, 255, .04);
             --text: #fff;
             --accent: #FF6B9D;
+            --wind-color: rgba(100, 200, 255, 0.7);
         }
         * {
             margin: 0;
@@ -75,25 +76,253 @@
             transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
             backdrop-filter: blur(12px);
         }
-        .btn:hover {
-            background: rgba(255, 255, 255, 0.14);
-            transform: translateY(-2px);
+        .btn:hover { background: rgba(255, 255, 255, 0.14); transform: translateY(-2px); }
+        .btn:active { transform: translateY(0); }
+
+        /* Main UI */
+        .main-panel {
+            width: 100%;
+            max-width: 380px;
+            padding: 20px 0;
         }
-        .btn:active {
-            transform: translateY(0);
+        .location-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
         }
+        .loc-icon {
+            width: 24px;
+            height: 24px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .loc-name {
+            font-size: 18px;
+            font-weight: 500;
+            line-height: 1.4;
+        }
+        .loc-sub {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.5);
+            margin-top: 4px;
+        }
+
+        /* Hourly */
+        .hourly-list {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding: 8px 0;
+            scroll-snap-type: x mandatory;
+            scrollbar-width: none;
+        }
+        .hourly-list::-webkit-scrollbar { display: none; }
+        .hour-item {
+            flex: 0 0 56px;
+            scroll-snap-align: start;
+            background: rgba(255, 255, 255, 0.04);
+            border-radius: 16px;
+            padding: 12px 8px;
+            text-align: center;
+            transition: all 0.2s;
+        }
+        .hour-item.now {
+            background: rgba(255, 255, 255, 0.12);
+            transform: scale(1.03);
+        }
+        .hour-time {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.7);
+            margin-bottom: 6px;
+        }
+        .hour-icon {
+            width: 24px;
+            height: 24px;
+            margin: 0 auto 6px;
+        }
+        .hour-temp {
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+        .hour-rain {
+            font-size: 10px;
+            color: #6ECFFF;
+            margin-bottom: 2px;
+        }
+        .hour-wind {
+            font-size: 10px;
+            color: var(--wind-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .wind-arrow {
+            font-size: 14px;
+            transform: rotate(0deg);
+            transition: transform 0.3s ease;
+        }
+
+        /* Daily */
+        .daily-list {
+            margin-top: 20px;
+        }
+        .day-item {
+            display: flex;
+            align-items: center;
+            padding: 14px;
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.04);
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.25s;
+        }
+        .day-item:hover { background: rgba(255, 255, 255, 0.08); }
+        .day-date {
+            flex: 1;
+            min-width: 90px;
+        }
+        .day-date-main {
+            font-size: 15px;
+            font-weight: 500;
+            margin-bottom: 2px;
+        }
+        .day-date-sub {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.5);
+        }
+        .day-icon {
+            width: 32px;
+            height: 32px;
+            margin: 0 12px;
+        }
+        .day-temp {
+            font-size: 16px;
+            font-weight: 500;
+            text-align: right;
+            min-width: 50px;
+        }
+        .day-temp-high {
+            color: #fff;
+        }
+        .day-temp-low {
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 13px;
+        }
+        .day-wind {
+            font-size: 12px;
+            color: var(--wind-color);
+            text-align: right;
+            min-width: 40px;
+        }
+
+        /* Expanded day */
+        .day-expanded {
+            display: none;
+            margin-top: 16px;
+            padding: 16px;
+            background: rgba(255, 255, 255, 0.04);
+            border-radius: 18px;
+        }
+        .expand-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        .expand-title {
+            font-size:16px;
+            font-weight:500;
+        }
+        .expand-close {
+            background: none;
+            border: none;
+            color: rgba(255,255,255,0.5);
+            font-size:18px;
+            cursor: pointer;
+        }
+        .period-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+        }
+        .period-card {
+            background: rgba(255, 255, 255, 0.04);
+            border-radius: 16px;
+            padding: 14px;
+            text-align: center;
+        }
+        .period-label {
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.6);
+            margin-bottom: 8px;
+        }
+        .period-icon {
+            width: 28px;
+            height: 28px;
+            margin: 0 auto 8px;
+        }
+        .period-temp {
+            font-size: 18px;
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+        .period-feels {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.5);
+        }
+        .period-wind {
+            font-size: 12px;
+            color: var(--wind-color);
+            margin-top: 6px;
+        }
+
+        /* AI Forecast */
+        .ai-forecast {
+            margin-top: 20px;
+            padding: 16px;
+            background: rgba(100, 80, 255, 0.08);
+            border: 1px solid rgba(120, 100, 255, 0.15);
+            border-radius: 18px;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+        .ai-title {
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: #fff;
+        }
+        .ai-items {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .ai-item {
+            padding: 4px 10px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 10px;
+            font-size: 11px;
+        }
+
+        /* Lum */
         #lumCanvas {
             width: 240px;
             height: 240px;
-            margin: 32px 0;
+            margin: 24px 0;
             cursor: pointer;
             border-radius: 50%;
             box-shadow: 0 0 40px rgba(255, 100, 150, 0.4);
             transition: transform 0.4s ease;
         }
-        #lumCanvas:hover {
-            transform: scale(1.03);
-        }
+        #lumCanvas:hover { transform: scale(1.03); }
+
+        /* Chat */
         .chat-container {
             width: 100%;
             max-width: 360px;
@@ -163,9 +392,75 @@
             justify-content: center;
             transition: all 0.2s;
         }
-        #sb:active {
-            transform: scale(0.92);
+        #sb:active { transform: scale(0.92); }
+
+        /* Search */
+        .search-box {
+            position: relative;
+            margin: 20px 0;
         }
+        .search-input {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 18px;
+            padding: 14px 16px 14px 44px;
+            color: #fff;
+            font-size: 15px;
+            outline: none;
+        }
+        .search-icon {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 18px;
+            height: 18px;
+            opacity: 0.5;
+        }
+        .search-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: rgba(20, 20, 30, 0.95);
+            border-radius: 16px;
+            overflow: hidden;
+            margin-top: 8px;
+            max-height: 240px;
+            overflow-y: auto;
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: none;
+        }
+        .search-item {
+            padding: 14px 16px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .search-item:last-child { border-bottom: none; }
+        .search-name {
+            font-size: 15px;
+            font-weight: 500;
+        }
+        .search-meta {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.5);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .meta-tag {
+            background: rgba(255, 255, 255, 0.08);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+        }
+
+        /* Loading */
         .loading {
             display: inline-block;
             width: 20px;
@@ -179,7 +474,8 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-        /* Hide all UI except Lum and title on load */
+
+        /* Hidden */
         .hidden { display: none; }
     </style>
 </head>
@@ -197,38 +493,82 @@
             </button>
         </div>
 
-        <!-- Lum Canvas -->
-        <canvas id="lumCanvas"></canvas>
-
-        <!-- Chat Panel -->
-        <div class="chat-container" id="chatPanel">
-            <div class="chat-bubbles" id="chatBubbles"></div>
-            <div class="input-area">
-                <textarea id="cf" placeholder="Спроси..." rows="1"></textarea>
-                <button id="sb">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="m22 2-7 20-4-9-9-4 20-7z"/>
+        <!-- Main Panel -->
+        <div class="main-panel hidden" id="mainPanel">
+            <div class="location-header">
+                <div class="loc-icon">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
+                        <circle cx="12" cy="9" r="4"/>
                     </svg>
-                </button>
+                </div>
+                <div>
+                    <div class="loc-name" id="locName">Загрузка...</div>
+                    <div class="loc-sub" id="locSub"></div>
+                </div>
             </div>
+
+            <!-- Hourly -->
+            <div class="hourly-list" id="hourlyList"></div>
+
+            <!-- Daily -->
+            <div class="daily-list" id="dailyList"></div>
+
+            <!-- AI Forecast -->
+            <div class="ai-forecast" id="aiForecast">
+                <div class="ai-title">AI-прогноз</div>
+                <div class="ai-items">
+                    <div class="ai-item">Дождь 20%</div>
+                    <div class="ai-item">Пыльца низкая</div>
+                    <div class="ai-item">Прогулка отлично</div>
+                </div>
+            </div>
+
+            <!-- Lum -->
+            <canvas id="lumCanvas"></canvas>
+
+            <!-- Chat -->
+            <div class="chat-container" id="chatPanel">
+                <div class="chat-bubbles" id="chatBubbles"></div>
+                <div class="input-area">
+                    <textarea id="cf" placeholder="Спроси..." rows="1"></textarea>
+                    <button id="sb">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="m22 2-7 20-4-9-9-4 20-7z"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search Modal -->
+        <div class="search-box hidden" id="searchBox">
+            <input type="text" class="search-input" id="searchInput" placeholder="Поиск города, посёлка, СНТ..."/>
+            <div class="search-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"/>
+                    <path d="m21 21-4.35-4.35"/>
+                </svg>
+            </div>
+            <div class="search-results" id="searchResults"></div>
         </div>
     </div>
 
     <script>
         // ──────────────────────────────────── CONFIG
-        const OW_KEY = '351e57b1e6962e215bf99c248cadbf0b'; // ваш ключ
+        const OW_KEY = '351e57b1e6962e215bf99c248cadbf0b';
         const ST = {
-            lat: 55.7558, // Москва
+            lat: 55.7558,
             lon: 37.6173,
-            city: 'Москва',
+            location: null, // { name, country, region, district, type }
             weather: null,
-            isDay: 1,
-            wcode: 0,
+            hourly: [],
+            daily: [],
             tab: 'home',
             lum: { love: 60, lastVisit: null },
             chat: [],
-            pendingQuestion: null,
-            aiState: 'idle' // idle | guessing | confirming | explaining
+            aiState: 'idle',
+            expandedDay: null
         };
 
         const S = {
@@ -248,6 +588,11 @@
         }
         function lerp(a, b, t) { return a + (b - a) * t }
         function clamp(x, min, max) { return Math.max(min, Math.min(max, x)) }
+        function degToArrow(deg) {
+            const directions = ['↑', '↗', '→', '↘', '↓', '↙', '←', '↖'];
+            const idx = Math.round((deg % 360) / 45) % 8;
+            return directions[idx];
+        }
 
         // ──────────────────────────────────── API
         async function fetchWeather() {
@@ -259,18 +604,236 @@
                 const data = await res.json();
                 
                 ST.weather = data;
-                ST.isDay = data.dt > data.sys.sunrise && data.dt < data.sys.sunset ? 1 : 0;
-                ST.wcode = data.weather[0].id;
-                
-                updateLumFromWeather();
-                renderLum();
+                ST.hourly = []; // we'll use forecast for hourly later
+                ST.daily = [];
+
+                // Fetch forecast for hourly & daily
+                await fetchForecast();
+
+                updateLocationFromGeo();
+                renderMain();
                 showChat();
                 return true;
             } catch (e) {
                 console.error('Погода не загрузилась:', e);
-                toast('❌ Не удалось загрузить погоду. Проверьте подключение.');
+                toast('❌ Не удалось загрузить погоду.');
                 return false;
             }
+        }
+
+        async function fetchForecast() {
+            try {
+                const res = await fetch(
+                    `https://api.openweathermap.org/data/2.5/forecast?lat=${ST.lat}&lon=${ST.lon}&appid=${OW_KEY}&units=metric&lang=ru`
+                );
+                const data = await res.json();
+                
+                // Group by day (next 7 days)
+                const days = {};
+                data.list.forEach(item => {
+                    const date = new Date(item.dt * 1000).toISOString().split('T')[0];
+                    if (!days[date]) days[date] = { temps: [], icons: [], winds: [], rains: [] };
+                    days[date].temps.push(item.main.temp);
+                    days[date].icons.push(item.weather[0].id);
+                    days[date].winds.push(item.wind.speed);
+                    days[date].rains.push(item.pop || 0);
+                });
+
+                // Build daily array (7 days)
+                ST.daily = Object.keys(days).slice(0, 7).map(date => {
+                    const d = days[date];
+                    return {
+                        dt: new Date(date).getTime() / 1000,
+                        temp: {
+                            max: Math.max(...d.temps),
+                            min: Math.min(...d.temps)
+                        },
+                        icon: mostFreq(d.icons),
+                        wind: (d.winds.reduce((a,b)=>a+b,0)/d.winds.length).toFixed(1),
+                        pop: Math.round(Math.max(...d.rains) * 100),
+                        wind_deg: d.winds.length > 0 ? d.winds[0] : 0
+                    };
+                });
+
+                // Hourly: next 12 hours from now
+                const nowHour = new Date().getHours();
+                const startIndex = data.list.findIndex(i => new Date(i.dt * 1000).getHours() === nowHour);
+                ST.hourly = data.list.slice(startIndex, startIndex + 12);
+
+            } catch (e) {
+                console.error('Ошибка загрузки прогноза:', e);
+            }
+        }
+
+        function mostFreq(arr) {
+            return arr.sort((a,b) => arr.filter(v=>v===a).length - arr.filter(v=>v===b).length).pop();
+        }
+
+        // ──────────────────────────────────── LOCATION RESOLVER
+        async function reverseGeo() {
+            try {
+                const res = await fetch(
+                    `https://api.openweathermap.org/geo/1.0/reverse?lat=${ST.lat}&lon=${ST.lon}&limit=5&appid=${OW_KEY}`
+                );
+                const data = await res.json();
+                
+                if (!data.length) return null;
+
+                // Prioritize: village, hamlet, suburb, neighbourhood, town, city, county, state
+                const priority = ['village', 'hamlet', 'suburb', 'neighbourhood', 'town', 'city', 'county', 'state'];
+                let best = data[0];
+                for (const item of data) {
+                    if (item.type && priority.indexOf(item.type) < priority.indexOf(best.type)) {
+                        best = item;
+                    }
+                }
+
+                // Build full location object
+                ST.location = {
+                    name: best.name || best.local_names?.ru || best.local_names?.en || 'Неизвестно',
+                    country: best.country || '—',
+                    region: best.state || '—',
+                    district: best.county || '—',
+                    type: best.type || 'unknown'
+                };
+
+                return ST.location;
+            } catch (e) {
+                console.error('Reverse geo failed:', e);
+                return null;
+            }
+        }
+
+        function updateLocationFromGeo() {
+            if (ST.location) {
+                document.getElementById('locName').textContent = ST.location.name;
+                const meta = [];
+                if (ST.location.region !== '—') meta.push(ST.location.region);
+                if (ST.location.district !== '—') meta.push(ST.location.district);
+                if (ST.location.country !== '—') meta.push(ST.location.country);
+                document.getElementById('locSub').textContent = meta.join(', ');
+            }
+        }
+
+        // ──────────────────────────────────── RENDERING
+        function renderMain() {
+            document.getElementById('mainPanel').classList.remove('hidden');
+            document.getElementById('startBtn').classList.add('hidden');
+
+            renderHourly();
+            renderDaily();
+            renderAI();
+            updateLumFromWeather();
+        }
+
+        function renderHourly() {
+            const container = document.getElementById('hourlyList');
+            container.innerHTML = ST.hourly.map((item, i) => {
+                const dt = new Date(item.dt * 1000);
+                const hour = dt.getHours().toString().padStart(2, '0') + ':00';
+                const temp = tC(item.main.temp);
+                const rain = Math.round((item.pop || 0) * 100);
+                const icon = owIconType(item.weather[0].id, dt.getHours() > 6 && dt.getHours() < 21 ? 1 : 0);
+                const windDir = degToArrow(item.wind.deg);
+
+                return `
+                    <div class="hour-item ${i === 0 ? 'now' : ''}">
+                        <div class="hour-time">${hour}</div>
+                        <div class="hour-icon">${buildIconSVG(icon, 24)}</div>
+                        <div class="hour-temp">${temp}°</div>
+                        ${rain > 10 ? `<div class="hour-rain">${rain}%</div>` : ''}
+                        <div class="hour-wind">
+                            <div class="wind-arrow">${windDir}</div>
+                            <div>${item.wind.speed.toFixed(1)} м/с</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderDaily() {
+            const container = document.getElementById('dailyList');
+            container.innerHTML = ST.daily.map((day, i) => {
+                const dt = new Date(day.dt * 1000);
+                const isToday = i === 0;
+                const dayName = isToday ? 'Сегодня' :
+                               i === 1 ? 'Завтра' :
+                               ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'][dt.getDay()];
+                const month = ['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'][dt.getMonth()];
+                const dateStr = `${dt.getDate()} ${month}`;
+                const icon = owIconType(day.icon, 1);
+                const windDir = degToArrow(day.wind_deg);
+
+                return `
+                    <div class="day-item" onclick="toggleDayExpand(${i})">
+                        <div class="day-date">
+                            <div class="day-date-main">${dayName}</div>
+                            <div class="day-date-sub">${dateStr}</div>
+                        </div>
+                        <div class="day-icon">${buildIconSVG(icon, 32)}</div>
+                        <div class="day-temp">
+                            <div class="day-temp-high">${tC(day.temp.max)}°</div>
+                            <div class="day-temp-low">${tC(day.temp.min)}°</div>
+                        </div>
+                        <div class="day-wind">
+                            <div class="wind-arrow">${windDir}</div>
+                            <div>${day.wind} м/с</div>
+                        </div>
+                    </div>
+                    <div class="day-expanded" id="dayExpand-${i}">
+                        <div class="expand-header">
+                            <div class="expand-title">${dayName}, ${dateStr}</div>
+                            <button class="expand-close" onclick="closeDayExpand(${i})">✕</button>
+                        </div>
+                        <div class="period-grid">
+                            ${['Утро','День','Вечер','Ночь'].map((p, idx) => `
+                                <div class="period-card">
+                                    <div class="period-label">${p}</div>
+                                    <div class="period-icon">${buildIconSVG(icon, 28)}</div>
+                                    <div class="period-temp">${tC(day.temp.max)}°</div>
+                                    <div class="period-feels">ощ. ${tC(day.temp.max - 2)}°</div>
+                                    <div class="period-wind">${windDir} ${day.wind} м/с</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <div class="ai-forecast" style="margin-top:16px">
+                            <div class="ai-title">AI-анализ</div>
+                            <div class="ai-items">
+                                <div class="ai-item">Дождь ${day.pop}%</div>
+                                <div class="ai-item">Пыльца ${day.wind > 5 ? 'высокая' : 'низкая'}</div>
+                                <div class="ai-item">Прогулка ${day.pop < 30 && day.wind < 8 ? 'отлично' : 'осторожно'}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function toggleDayExpand(index) {
+            const expand = document.getElementById(`dayExpand-${index}`);
+            const items = document.querySelectorAll('.day-expanded');
+            items.forEach(el => el.style.display = 'none');
+            expand.style.display = 'block';
+            ST.expandedDay = index;
+        }
+
+        function closeDayExpand(index) {
+            document.getElementById(`dayExpand-${index}`).style.display = 'none';
+            ST.expandedDay = null;
+        }
+
+        function renderAI() {
+            const el = document.getElementById('aiForecast');
+            if (!ST.daily[0]) return;
+            const day = ST.daily[0];
+            el.innerHTML = `
+                <div class="ai-title">AI-прогноз</div>
+                <div class="ai-items">
+                    <div class="ai-item">Дождь ${day.pop}%</div>
+                    <div class="ai-item">Пыльца ${day.wind > 5 ? 'высокая' : 'низкая'}</div>
+                    <div class="ai-item">Прогулка ${day.pop < 30 && day.wind < 8 ? 'отлично' : 'осторожно'}</div>
+                </div>
+            `;
         }
 
         // ──────────────────────────────────── LUM ENGINE
@@ -282,7 +845,6 @@
             let emotion = 'curious';
             let smileAmt = 0;
             let colorPalette = [[255, 150, 30], [255, 90, 10], [255, 210, 60]];
-            let lastTransform = null;
 
             function init() {
                 C = document.getElementById('lumCanvas');
@@ -310,21 +872,22 @@
             }
 
             function updateColors() {
-                const base = colorPalette[0];
+                if (!ST.weather) return;
+                const w = ST.weather;
                 const h = new Date().getHours();
                 const isNight = h < 6 || h > 20;
-                
-                if (ST.wcode >= 200 && ST.wcode < 300) {
+
+                if (w.weather[0].id >= 200 && w.weather[0].id < 300) {
                     colorPalette = [[95, 15, 190], [130, 35, 230], [70, 5, 150]]; // storm
-                } else if (ST.wcode >= 600 && ST.wcode < 700) {
+                } else if (w.weather[0].id >= 600 && w.weather[0].id < 700) {
                     colorPalette = [[135, 175, 250], [175, 205, 250], [195, 215, 250]]; // snow
-                } else if (ST.wcode >= 700 && ST.wcode < 800) {
+                } else if (w.weather[0].id >= 700 && w.weather[0].id < 800) {
                     colorPalette = [[115, 125, 145], [140, 150, 170], [95, 105, 125]]; // fog
-                } else if (ST.wcode === 800) {
+                } else if (w.weather[0].id === 800) {
                     colorPalette = isNight ? 
                         [[70, 50, 170], [110, 70, 210], [150, 110, 245]] : // moon
                         [[255, 190, 40], [220, 100, 15], [255, 230, 80]]; // sun
-                } else if (ST.wcode >= 801) {
+                } else if (w.weather[0].id >= 801) {
                     colorPalette = [[135, 145, 175], [95, 105, 155], [165, 175, 205]]; // cloudy
                 } else {
                     colorPalette = [[10, 75, 155], [25, 95, 195], [0, 55, 125]]; // rain
@@ -337,15 +900,7 @@
                 
                 updateColors();
                 
-                // Update eyes
-                blinkTimer += 0.02;
-                if (blinkTimer > 4 + Math.random() * 3) {
-                    blinkTimer = 0;
-                    blinkState = 0;
-                    setTimeout(() => blinkState = 1, 180);
-                }
-                
-                // Draw blobs (flame)
+                // Draw blobs
                 blobs.forEach((blob, i) => {
                     const phase = t * blob.speed + blob.pulse;
                     const dx = Math.sin(phase) * 8;
@@ -355,7 +910,6 @@
                     const cx = C.width / 2 + dx;
                     const cy = C.height / 2 + dy;
                     
-                    // Color with HSV oscillation
                     const hue = (colorPalette[0][0] + Math.sin(t * 0.3 + i) * 20 + blob.hueOffset) % 360;
                     const sat = 80 + Math.sin(t * 0.4 + i) * 10;
                     const light = 50 + Math.sin(t * 0.6 + i) * 15;
@@ -371,7 +925,7 @@
                     ctx.fill();
                 });
 
-                // Draw eyes
+                // Eyes
                 const eyeY = C.height / 2 - 24 + (Math.sin(t * 0.7) * 2) * (blinkState === 0 ? 0 : 1);
                 const eyeOff = 22;
                 
@@ -387,7 +941,6 @@
                         ctx.ellipse(ex + 1, eyeY - 1, 2.5, 2.5, 0, 0, Math.PI * 2);
                         ctx.fill();
                         
-                        // Highlight
                         ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
                         ctx.beginPath();
                         ctx.arc(ex + 2.5, eyeY - 2.5, 1, 0, Math.PI * 2);
@@ -395,7 +948,7 @@
                     }
                 });
 
-                // Draw mouth (subtle)
+                // Mouth
                 const mouthY = C.height / 2 + 28;
                 ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
                 ctx.lineWidth = 2;
@@ -418,42 +971,11 @@
                 }, 1200);
             }
 
-            function updateEmotion(newEmo) {
-                emotion = newEmo;
-                if (emotion === 'love') smileAmt = 1.5;
-                else if (emotion === 'sad') smileAmt = -1;
-                else smileAmt = 1;
-            }
-
-            function transformTo(iconType) {
-                lastTransform = iconType;
-                let target = null;
-                switch (iconType) {
-                    case 'sun': target = { x: 0, y: 0, r: 30 }; break;
-                    case 'cloud': target = { x: 0, y: 0, r: 35 }; break;
-                    case 'rain': target = { x: 0, y: 0, r: 32 }; break;
-                    case 'snow': target = { x: 0, y: 0, r: 30 }; break;
-                    default: return;
-                }
-                
-                // Animate transformation
-                let progress = 0;
-                const interval = setInterval(() => {
-                    progress += 0.05;
-                    if (progress >= 1) {
-                        clearInterval(interval);
-                        lastTransform = null;
-                        setTimeout(() => emotion = 'curious', 1000);
-                    }
-                }, 50);
-            }
-
-            return { init, updateEmotion, transformTo };
+            return { init };
         })();
 
-        // ──────────────────────────────────── CHAT AI (LOCAL)
+        // ──────────────────────────────────── CHAT AI
         const brain = {
-            // Simple intent classifier
             classifyIntent(text) {
                 const lower = text.toLowerCase();
                 if (lower.includes('как дела') || lower.includes('привет')) return 'greeting';
@@ -469,7 +991,6 @@
                 return 'general';
             },
 
-            // Generate response based on intent and context
             generateResponse(intent, context) {
                 const w = ST.weather;
                 if (!w) return "Я пока не знаю... Но могу узнать погоду!";
@@ -481,66 +1002,31 @@
                 const humidity = w.main.humidity;
                 
                 switch (intent) {
-                    case 'greeting':
-                        return `Привет! 🌟 Я Люм — твой огонёк. Хочешь узнать погоду?`;
-                    case 'temp':
-                        return `Сейчас ${temp}°, ощущается как ${feels}°. ${
-                            temp > 25 ? 'Жарко! 💦' : temp < 5 ? 'Холодно! 🧤' : 'Комфортно. 😌'
-                        }`;
-                    case 'weather':
-                        return `В ${ST.city} сейчас ${desc}. Температура ${temp}°, ветер ${wind} м/с.`;
-                    case 'outfit':
-                        return temp > 20 ? 'Легкая одежда — можно в футболке!' :
-                               temp > 10 ? 'Куртка или толстовка подойдут.' :
-                               'Теплая куртка, шапка и перчатки!';
-                    case 'rain':
-                        return w.weather[0].main.toLowerCase().includes('rain') ?
-                            'Да, идёт дождь. Возьми зонт! ☔' :
-                            'Сейчас сухо. Зонт не нужен.';
-                    case 'wind':
-                        return wind > 8 ? 'Сильный ветер (${wind} м/с)! Следи за шляпой 😄' :
-                               wind > 4 ? 'Умеренный ветер (${wind} м/с).' :
-                               'Тихо и спокойно.';
-                    case 'sun':
-                        return w.weather[0].id === 800 ?
-                            'Солнечно! 🌞 Выходи гулять — отличный день!' :
-                            'Облачно, но светло.';
-                    case 'moon':
-                        return ST.isDay ? 'Сейчас день — луны не видно.' :
-                               'Луна сегодня в фазе роста. 🌙';
-                    case 'pollen':
-                        return 'Уровень пыльцы низкий — безопасно для аллергиков.';
-                    case 'walk':
-                        return (temp > 10 && wind < 8 && !w.weather[0].main.toLowerCase().includes('rain')) ?
-                            'Отличное время для прогулки! 🚶‍♂️' :
-                            'Лучше остаться дома — погода не идеальна.';
-                    default:
-                        return "Интересно! Расскажи подробнее — я хочу понять тебя лучше.";
+                    case 'greeting': return `Привет! 🌟 Я Люм — твой огонёк.`;
+                    case 'temp': return `Сейчас ${temp}°, ощущается как ${feels}°.`;
+                    case 'weather': return `В ${ST.location?.name || 'здесь'} сейчас ${desc}.`;
+                    case 'outfit': return temp > 20 ? 'Легкая одежда!' : temp > 10 ? 'Куртка подойдёт.' : 'Теплая куртка!';
+                    case 'rain': return w.weather[0].main.toLowerCase().includes('rain') ? 'Да, идёт дождь. ☔' : 'Сухо.';
+                    case 'wind': return wind > 8 ? `Сильный ветер (${wind} м/с)!` : `Ветер ${wind} м/с.`;
+                    case 'sun': return w.weather[0].id === 800 ? 'Солнечно! 🌞' : 'Облачно.';
+                    case 'moon': return ST.isDay ? 'Сейчас день.' : 'Луна видна. 🌙';
+                    case 'pollen': return 'Пыльца низкая.';
+                    case 'walk': return (temp > 10 && wind < 8) ? 'Отличное время для прогулки! 🚶‍♂️' : 'Лучше остаться дома.';
+                    default: return "Интересно! Расскажи подробнее.";
                 }
             },
 
-            // Main AI loop: guess → confirm → explain
             async respond(userMsg) {
                 const intent = this.classifyIntent(userMsg);
                 const response = this.generateResponse(intent, ST);
 
-                // Step 1: Guess intention
-                const guesses = [
-                    "Ты хочешь узнать про погоду?",
-                    "Интересуешься температурой?",
-                    "Хочешь совет по одежде?",
-                    "Готовишься к прогулке?"
-                ];
-                const guess = guesses[Math.floor(Math.random() * guesses.length)];
-
-                addBubble('ai', guess);
+                addBubble('ai', `Ты имеешь в виду: "${response.split('.')[0]}"?`);
                 
-                // Wait 1.2s, then show buttons
                 setTimeout(() => {
                     ST.aiState = 'confirming';
                     const btns = `<div style="display:flex;gap:8px;margin-top:8px">
                         <button class="btn" onclick="confirmYes('${intent}')">Да</button>
-                        <button class="btn" onclick="confirmNo()">Нет, другое</button>
+                        <button class="btn" onclick="confirmNo()">Нет</button>
                     </div>`;
                     addBubble('ai', '', btns);
                 }, 1200);
@@ -550,8 +1036,6 @@
         // ──────────────────────────────────── UI FUNCTIONS
         function showChat() {
             document.getElementById('chatPanel').style.display = 'block';
-            document.getElementById('startBtn').classList.add('hidden');
-            scrollChat();
         }
 
         function addBubble(role, text, extraHTML = '') {
@@ -569,7 +1053,7 @@
         }
 
         function toast(msg) {
-            alert(msg); // simple fallback; in real app: use snackbar
+            alert(msg);
         }
 
         // ──────────────────────────────────── EVENT HANDLERS
@@ -578,8 +1062,84 @@
             if (success) {
                 document.getElementById('startBtn').remove();
                 lum.init();
+                // Show search box after load
+                document.getElementById('searchBox').classList.remove('hidden');
             }
         });
+
+        document.getElementById('searchInput').addEventListener('input', debounce(async (e) => {
+            const q = e.target.value.trim();
+            if (q.length < 2) {
+                document.getElementById('searchResults').style.display = 'none';
+                return;
+            }
+            
+            try {
+                const res = await fetch(
+                    `https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(q)}&limit=8&appid=${OW_KEY}`
+                );
+                const data = await res.json();
+                
+                const results = document.getElementById('searchResults');
+                if (data.length === 0) {
+                    results.innerHTML = '<div style="padding:16px;color:rgba(255,255,255,0.5;text-align:center">Не найдено</div>';
+                    results.style.display = 'block';
+                    return;
+                }
+                
+                results.innerHTML = data.map(item => {
+                    const typeMap = {
+                        'village': 'деревня',
+                        'hamlet': 'хутор',
+                        'suburb': 'посёлок',
+                        'neighbourhood': 'район',
+                        'town': 'город',
+                        'city': 'город',
+                        'county': 'район',
+                        'state': 'область'
+                    };
+                    const type = typeMap[item.type] || item.type;
+                    const meta = [];
+                    if (item.state) meta.push(item.state);
+                    if (item.county) meta.push(item.county);
+                    if (item.country) meta.push(item.country);
+                    
+                    return `
+                        <div class="search-item" onclick="selectLocation(${JSON.stringify(item).replace(/"/g, '&quot;')})">
+                            <div class="search-name">${item.name}</div>
+                            <div class="search-meta">
+                                <span class="meta-tag">${type}</span>
+                                ${meta.map(m => `<span class="meta-tag">${m}</span>`).join('')}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                results.style.display = 'block';
+            } catch (e) {
+                console.error('Search error:', e);
+            }
+        }, 300));
+
+        window.selectLocation = (itemStr) => {
+            const item = JSON.parse(itemStr.replace(/&quot;/g, '"'));
+            ST.lat = item.lat;
+            ST.lon = item.lon;
+            ST.location = {
+                name: item.name,
+                country: item.country || '—',
+                region: item.state || '—',
+                district: item.county || '—',
+                type: item.type || 'unknown'
+            };
+            document.getElementById('searchInput').value = '';
+            document.getElementById('searchResults').style.display = 'none';
+            document.getElementById('locName').textContent = item.name;
+            document.getElementById('locSub').textContent = [
+                item.state, item.county, item.country
+            ].filter(x => x && x !== '—').join(', ');
+            
+            fetchWeather();
+        };
 
         document.getElementById('cf').addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
@@ -598,11 +1158,9 @@
             input.value = '';
             addBubble('user', text);
             
-            // Increment love
             ST.lum.love = Math.min(100, ST.lum.love + 2);
             S.set('lum', ST.lum);
             
-            // AI responds
             brain.respond(text);
         }
 
@@ -610,9 +1168,7 @@
             ST.aiState = 'explaining';
             const response = brain.generateResponse(intent, ST);
             addBubble('ai', response);
-            setTimeout(() => {
-                ST.aiState = 'idle';
-            }, 2000);
+            setTimeout(() => { ST.aiState = 'idle'; }, 2000);
         };
 
         window.confirmNo = () => {
@@ -620,36 +1176,63 @@
             addBubble('ai', 'Расскажи подробнее — я слушаю...');
         };
 
-        // ──────────────────────────────────── LUM WEATHER SYNC
-        function updateLumFromWeather() {
-            const w = ST.weather;
-            if (!w) return;
-            
-            // Set emotion by weather
-            if (w.weather[0].id >= 200 && w.weather[0].id < 300) lum.updateEmotion('scared');
-            else if (w.weather[0].id >= 600 && w.weather[0].id < 700) lum.updateEmotion('sleepy');
-            else if (w.weather[0].id >= 700 && w.weather[0].id < 800) lum.updateEmotion('curious');
-            else if (w.weather[0].id === 800) lum.updateEmotion(ST.isDay ? 'happy' : 'sleepy');
-            else if (w.weather[0].id === 801) lum.updateEmotion('curious');
-            else lum.updateEmotion('happy');
+        // ──────────────────────────────────── ICONS
+        function owIconType(code, isDay) {
+            if (code >= 200 && code < 300) return 'storm';
+            if (code >= 300 && code < 400) return 'rain';
+            if (code >= 500 && code < 510) return 'rain';
+            if (code >= 511 && code <= 511) return 'snow';
+            if (code >= 520 && code < 600) return 'rain';
+            if (code >= 600 && code < 700) return 'snow';
+            if (code >= 700 && code < 800) return 'fog';
+            if (code === 800) return isDay ? 'sun' : 'moon';
+            if (code === 801) return isDay ? 'pcloud' : 'ncloud';
+            return 'cloudy';
         }
 
-        // ──────────────────────────────────── INITIALIZE
+        function buildIconSVG(t, sz) {
+            const s = sz || 24;
+            const svgs = {
+                sun: `<svg width="${s}" height="${s}" viewBox="0 0 90 90"><circle cx="45" cy="45" r="18" fill="#FFD040" filter="drop-shadow(0 0 12px rgba(255,210,0,.7))"/><g style="transform-origin:45px 45px;animation:rr 12s linear infinite">${[0,45,90,135,180,225,270,315].map(a=>`<line x1="45" y1="8" x2="45" y2="16" stroke="rgba(255,220,80,.7)" stroke-width="3" stroke-linecap="round" transform="rotate(${a} 45 45)"/>`).join('')}</g><style>@keyframes rr{to{transform:rotate(360deg)}}</style></svg>`,
+                moon: `<svg width="${s}" height="${s}" viewBox="0 0 90 90"><path d="M58 48c-12 0-22-9-22-22 0-3.5.7-6.5 1.8-9.5C26 18 16 30 16 44c0 15 12 27 27 27 12 0 22-7 26-17-3.5 1.2-7 1.8-11 1.8z" fill="#D4E8FF" filter="drop-shadow(0 0 10px rgba(160,200,255,.5))"/></svg>`,
+                pcloud: `<svg width="${s}" height="${s}" viewBox="0 0 90 90"><circle cx="24" cy="38" r="7" fill="#FFD040" filter="drop-shadow(0 0 6px rgba(255,210,0,.6))"/><ellipse cx="50" cy="52" rx="24" ry="15" fill="rgba(200,215,238,.88)"/><circle cx="38" cy="44" r="13" fill="rgba(215,228,248,.88)"/><circle cx="54" cy="46" r="10" fill="rgba(200,215,238,.88)"/></svg>`,
+                cloudy: `<svg width="${s}" height="${s}" viewBox="0 0 90 90"><ellipse cx="46" cy="53" rx="28" ry="17" fill="rgba(175,190,218,.85)"/><circle cx="33" cy="44" r="15" fill="rgba(185,200,228,.85)"/><circle cx="55" cy="46" r="12" fill="rgba(175,190,218,.85)"/></svg>`,
+                rain: `<svg width="${s}" height="${s}" viewBox="0 0 90 90"><ellipse cx="46" cy="38" rx="26" ry="15" fill="rgba(140,158,190,.85)"/><circle cx="33" cy="30" r="13" fill="rgba(150,168,200,.85)"/><circle cx="54" cy="32" r="11" fill="rgba(140,158,190,.85)"/><line x1="28" y1="56" x2="25" y2="66" stroke="#5BBCFF" stroke-width="2.5" stroke-linecap="round" style="animation:rf 1.1s infinite"/><line x1="42" y1="56" x2="39" y2="66" stroke="#5BBCFF" stroke-width="2.5" stroke-linecap="round" style="animation:rf 1.1s infinite;animation-delay:.35s"/><line x1="56" y1="56" x2="53" y2="66" stroke="#5BBCFF" stroke-width="2.5" stroke-linecap="round" style="animation:rf 1.1s infinite;animation-delay:.7s"/><style>@keyframes rf{0%{opacity:0;transform:translateY(-6px)}30%{opacity:1}100%{opacity:.6;transform:translateY(10px)}}</style></svg>`,
+                snow: `<svg width="${s}" height="${s}" viewBox="0 0 90 90"><ellipse cx="46" cy="36" rx="26" ry="15" fill="rgba(210,225,248,.82)"/><circle cx="33" cy="28" r="12" fill="rgba(218,232,252,.82)"/><circle cx="54" cy="30" r="10" fill="rgba(210,225,248,.82)"/><g style="animation:sf 1.8s infinite"><circle cx="28" cy="58" r="3" fill="#fff"/></g><g style="animation:sf 1.8s infinite;animation-delay:.6s"><circle cx="44" cy="64" r="3" fill="#fff"/></g><g style="animation:sf 1.8s infinite;animation-delay:1.2s"><circle cx="60" cy="58" r="3" fill="#fff"/></g></svg>`,
+                storm: `<svg width="${s}" height="${s}" viewBox="0 0 90 90"><ellipse cx="44" cy="34" rx="28" ry="17" fill="rgba(75,65,115,.88)"/><circle cx="30" cy="26" r="14" fill="rgba(85,75,125,.88)"/><circle cx="54" cy="28" r="11" fill="rgba(75,65,115,.88)"/><path d="M46 46 L38 56 L43 56 L36 70 L48 50 L42 50 Z" fill="#FFD040" style="animation:lf 2s infinite"/></svg>`,
+                fog: `<svg width="${s}" height="${s}" viewBox="0 0 90 90"><line x1="14" y1="32" x2="76" y2="32" stroke="rgba(200,210,230,.5)" stroke-width="4"/><line x1="22" y1="46" x2="68" y2="46" stroke="rgba(200,210,230,.4)" stroke-width="4"/></svg>`
+            };
+            return svgs[t] || svgs['cloudy'];
+        }
+
+        // ──────────────────────────────────── UTILS
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        // ──────────────────────────────────── INIT
         document.addEventListener('DOMContentLoaded', () => {
-            // Restore state
             const saved = S.get('lum', { love: 60, lastVisit: null });
             ST.lum = saved;
-            
-            // Check geolocation
+
+            // Geolocation
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
                     pos => {
                         ST.lat = pos.coords.latitude;
                         ST.lon = pos.coords.longitude;
-                        reverseGeo().then(name => {
-                            ST.city = name;
+                        reverseGeo().then(loc => {
+                            if (loc) ST.location = loc;
                             fetchWeather();
-                        });
+                        }).catch(() => fetchWeather());
                     },
                     () => fetchWeather(),
                     { timeout: 5000 }
@@ -659,23 +1242,9 @@
             }
         });
 
-        async function reverseGeo() {
-            try {
-                const res = await fetch(
-                    `https://api.openweathermap.org/geo/1.0/reverse?lat=${ST.lat}&lon=${ST.lon}&limit=1&appid=${OW_KEY}`
-                );
-                const data = await res.json();
-                return data[0]?.local_names?.ru || data[0]?.name || 'Москва';
-            } catch {
-                return 'Москва';
-            }
-        }
-
-        // ──────────────────────────────────── BACKGROUND ANIMATION
+        // Background
         const bg = (() => {
             let C, ctx, W, H, raf;
-            let particles = [];
-
             function init() {
                 C = document.getElementById('bgC');
                 ctx = C.getContext('2d');
@@ -683,65 +1252,17 @@
                 window.addEventListener('resize', resize);
                 animate();
             }
-
             function resize() {
                 W = C.width = window.innerWidth;
                 H = C.height = window.innerHeight;
             }
-
-            function createParticles() {
-                particles = [];
-                const count = ST.isDay ? 80 : 120;
-                for (let i = 0; i < count; i++) {
-                    particles.push({
-                        x: Math.random() * W,
-                        y: Math.random() * H,
-                        size: 1 + Math.random() * 2,
-                        speed: 0.5 + Math.random() * 1.5,
-                        alpha: 0.1 + Math.random() * 0.3,
-                        type: Math.random() > 0.7 ? 'star' : 'dot'
-                    });
-                }
-            }
-
             function animate() {
-                ctx.clearRect(0, 0, W, H);
-                
-                // Gradient background
-                const gradient = ctx.createLinearGradient(0, 0, 0, H);
-                if (ST.isDay) {
-                    gradient.addColorStop(0, '#0a0a1a');
-                    gradient.addColorStop(0.5, '#1a1a3a');
-                    gradient.addColorStop(1, '#0a0a1a');
-                } else {
-                    gradient.addColorStop(0, '#050515');
-                    gradient.addColorStop(0.5, '#0a0a2a');
-                    gradient.addColorStop(1, '#050515');
-                }
-                ctx.fillStyle = gradient;
+                ctx.fillStyle = '#000';
                 ctx.fillRect(0, 0, W, H);
-
-                // Stars/dots
-                particles.forEach(p => {
-                    p.y -= p.speed;
-                    if (p.y < -10) {
-                        p.y = H + 10;
-                        p.x = Math.random() * W;
-                    }
-                    ctx.globalAlpha = p.alpha;
-                    ctx.fillStyle = '#fff';
-                    ctx.beginPath();
-                    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-                    ctx.fill();
-                });
-
                 raf = requestAnimationFrame(animate);
             }
-
-            return { init, createParticles };
+            return { init };
         })();
-
-        // Start background
         bg.init();
     </script>
 </body>
