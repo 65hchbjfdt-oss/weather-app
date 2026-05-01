@@ -2,20 +2,15 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no,maximum-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Lum</title>
+    <title>Моя Волна</title>
     <style>
         :root {
-            --st: env(safe-area-inset-top, 20px);
-            --sb: env(safe-area-inset-bottom, 16px);
-            --nav: 56px;
             --bg: #000;
-            --glass: rgba(255, 255, 255, .07);
-            --glass-border: rgba(255, 255, 255, .10);
+            --glass: rgba(255, 255, 255, .04);
             --text: #fff;
-            --secondary: rgba(255, 255, 255, .48);
             --accent: #FF6B9D;
         }
         * {
@@ -24,17 +19,15 @@
             box-sizing: border-box;
             -webkit-tap-highlight-color: transparent;
         }
-        html,
-        body {
+        html, body {
             width: 100%;
             height: 100%;
             overflow: hidden;
-            background: #000;
-            font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+            background: var(--bg);
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
             -webkit-font-smoothing: antialiased;
-            color: #fff;
+            color: var(--text);
             user-select: none;
-            transition: background .3s ease;
         }
         #bgC {
             position: fixed;
@@ -48,1646 +41,709 @@
             z-index: 1;
             display: flex;
             flex-direction: column;
-            max-width: 430px;
-            margin: 0 auto;
-            width: 100%;
-        }
-        .scr {
-            display: none;
-            flex: 1;
-            flex-direction: column;
-            overflow: hidden;
-            position: relative;
-        }
-        .scr.on {
-            display: flex;
-            animation: fadeIn .25s ease;
-        }
-        @keyframes fadeIn {
-            from {
-                opacity: .3;
-                transform: translateY(6px);
-            }
-            to {
-                opacity: 1;
-                transform: none;
-            }
-        }
-        .sa {
-            flex: 1;
-            overflow-y: auto;
-            overflow-x: hidden;
-            -webkit-overflow-scrolling: touch;
-            scrollbar-width: none;
-            padding: calc(var(--st) + 8px) 16px calc(var(--nav) + 20px);
-            transition: padding .3s;
-        }
-        .sa::-webkit-scrollbar {
-            display: none;
-        }
-
-        .glass {
-            background: var(--glass);
-            border: 1px solid var(--glass-border);
-            backdrop-filter: blur(24px) saturate(180%);
-            -webkit-backdrop-filter: blur(24px) saturate(180%);
-            border-radius: 20px;
-            transition: all .25s cubic-bezier(.22, .61, .36, 1);
-        }
-        .glass:active {
-            transform: scale(.98);
-            transition: transform .1s;
-        }
-
-        #nav {
-            position: fixed;
-            bottom: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 100%;
-            max-width: 430px;
-            height: calc(var(--nav) + var(--sb));
-            padding-bottom: var(--sb);
-            display: flex;
-            align-items: flex-start;
-            justify-content: space-around;
-            padding-top: 6px;
-            background: rgba(0, 0, 0, .8);
-            backdrop-filter: blur(30px);
-            -webkit-backdrop-filter: blur(30px);
-            border-top: 1px solid rgba(255, 255, 255, .08);
-            z-index: 100;
-            transition: all .3s;
-        }
-        .nb {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 1px;
-            cursor: pointer;
-            border: none;
-            background: none;
-            padding: 4px 14px;
-            border-radius: 16px;
-            transition: all .25s cubic-bezier(.34, 1.56, .64, 1);
-        }
-        .nb svg {
-            width: 20px;
-            height: 20px;
-            stroke: rgba(255, 255, 255, .35);
-            fill: none;
-            stroke-width: 1.6;
-            stroke-linecap: round;
-            stroke-linejoin: round;
-            transition: all .25s;
-        }
-        .nb span {
-            font-size: 9px;
-            color: rgba(255, 255, 255, .35);
-            transition: color .25s;
-        }
-        .nb.on svg {
-            stroke: rgba(255, 255, 255, .92);
-            filter: drop-shadow(0 0 6px rgba(255, 255, 255, .35));
-        }
-        .nb.on span {
-            color: rgba(255, 255, 255, .82);
-        }
-
-        .hw {
-            padding: calc(var(--st) + 4px) 8px 0;
-            text-align: center;
-        }
-        .cityrow {
-            font-size: 14px;
-            font-weight: 400;
-            color: rgba(255, 255, 255, .65);
-            display: flex;
             align-items: center;
             justify-content: center;
-            gap: 4px;
-            margin-bottom: 4px;
+            max-width: 430px;
+            margin: 0 auto;
         }
-        .tbig {
-            font-size: 96px;
-            font-weight: 200;
-            line-height: 1;
-            letter-spacing: -5px;
-            background: linear-gradient(170deg, rgba(255, 255, 255, .98) 20%, rgba(255, 255, 255, .4));
+        .center {
+            text-align: center;
+            padding: 0 24px;
+        }
+        .title {
+            font-size: 32px;
+            font-weight: 300;
+            letter-spacing: -0.5px;
+            margin-bottom: 24px;
+            background: linear-gradient(110deg, #FFD040, #FF6B9D, #D66FD5);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            animation: tIN .6s ease both;
+            text-shadow: 0 0 20px rgba(255, 210, 64, 0.3);
         }
-        @keyframes tIN {
-            from {
-                opacity: 0;
-                transform: translateY(14px) scale(.94);
-            }
-            to {
-                opacity: 1;
-                transform: none;
-            }
-        }
-        .feels {
-            font-size: 12px;
-            color: rgba(255, 255, 255, .4);
-            margin: 4px 0 12px;
-        }
-        .iconwrap {
-            width: 88px;
-            height: 88px;
-            margin: 0 auto 8px;
-        }
-        .wdesc {
-            font-size: 16px;
+        .btn {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 24px;
+            padding: 14px 28px;
+            color: #fff;
+            font-size: 15px;
             font-weight: 400;
-            color: rgba(255, 255, 255, .7);
-        }
-        .hilo {
-            font-size: 12px;
-            color: rgba(255, 255, 255, .38);
-            margin-top: 4px;
-        }
-        .todlbl {
-            font-size: 10px;
-            color: rgba(255, 255, 255, .34);
-            letter-spacing: .14em;
-            text-transform: uppercase;
-            margin: 2px 0 8px;
-        }
-
-        .sl {
-            font-size: 10px;
-            font-weight: 500;
-            color: rgba(255, 255, 255, .36);
-            letter-spacing: .12em;
-            text-transform: uppercase;
-            margin-bottom: 6px;
-            transition: all .3s;
-        }
-        .mb {
-            margin-bottom: 10px;
-        }
-
-        .hs {
-            display: flex;
-            gap: 6px;
-            overflow-x: auto;
-            padding: 2px 0 4px;
-            scroll-snap-type: x mandatory;
-            scrollbar-width: none;
-        }
-        .hs::-webkit-scrollbar {
-            display: none;
-        }
-        .hc {
-            flex: 0 0 54px;
-            scroll-snap-align: start;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 5px;
-            padding: 10px 4px;
-            border-radius: 14px;
-            background: rgba(255, 255, 255, .06);
-            border: 1px solid rgba(255, 255, 255, .08);
-            backdrop-filter: blur(10px);
-            transition: all .2s cubic-bezier(.22, .61, .36, 1);
-        }
-        .hc.now {
-            background: rgba(255, 255, 255, .12);
-            border-color: rgba(255, 255, 255, .2);
-        }
-        .ht {
-            font-size: 10px;
-            color: rgba(255, 255, 255, .36);
-        }
-        .htemp {
-            font-size: 14px;
-            font-weight: 400;
-        }
-        .hrain {
-            font-size: 9px;
-            color: #6ECFFF;
-        }
-
-        .cw {
-            background: rgba(255, 255, 255, .05);
-            border: 1px solid rgba(255, 255, 255, .08);
-            backdrop-filter: blur(14px);
-            border-radius: 18px;
-            overflow: hidden;
-            transition: all .3s;
-        }
-        .dr {
-            display: flex;
-            align-items: center;
-            padding: 12px 14px;
-            border-bottom: 1px solid rgba(255, 255, 255, .05);
-            cursor: pointer;
-            gap: 8px;
-            transition: background .15s, transform .15s;
-        }
-        .dr:active {
-            background: rgba(255, 255, 255, .04);
-            transform: scale(.99);
-        }
-        .dn {
-            font-size: 13px;
-            font-weight: 400;
-            flex: 1;
-            min-width: 90px;
-        }
-        .dw-icon {
-            width: 34px;
-            text-align: center;
-            flex-shrink: 0;
-        }
-        .dt {
-            font-size: 13px;
-            display: flex;
-            gap: 4px;
-            color: rgba(255, 255, 255, .5);
-            flex-shrink: 0;
-            min-width: 55px;
-            justify-content: flex-end;
-        }
-        .dhi {
-            color: rgba(255, 255, 255, .88);
-        }
-        .dw-wind {
-            font-size: 10px;
-            color: rgba(255, 255, 255, .32);
-            flex-shrink: 0;
-            min-width: 28px;
-            text-align: right;
-        }
-
-        .dexp {
-            display: none;
-            padding: 8px 14px 12px;
-            border-bottom: 1px solid rgba(255, 255, 255, .04);
-            background: rgba(255, 255, 255, .02);
-            animation: expandIn .2s ease;
-        }
-        @keyframes expandIn {
-            from {
-                opacity: 0;
-                max-height: 0;
-            }
-            to {
-                opacity: 1;
-                max-height: 200px;
-            }
-        }
-        .dexp.on {
-            display: block;
-        }
-        .departs {
-            display: flex;
-            gap: 6px;
-        }
-        .dep {
-            flex: 1;
-            text-align: center;
-            padding: 10px 2px;
-            background: rgba(255, 255, 255, .04);
-            border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, .06);
-            transition: all .2s;
-        }
-        .dep-label {
-            font-size: 9px;
-            color: rgba(255, 255, 255, .32);
-            text-transform: uppercase;
-            margin-bottom: 2px;
-        }
-        .dep-icon {
-            margin: 4px 0;
-        }
-        .dep-temp {
-            font-size: 14px;
-            font-weight: 400;
-        }
-        .dep-feels {
-            font-size: 9px;
-            color: rgba(255, 255, 255, .32);
-        }
-        .ai-forecast-block {
-            margin-top: 8px;
-            padding: 10px 12px;
-            background: rgba(100, 80, 255, .08);
-            border: 1px solid rgba(120, 100, 255, .15);
-            border-radius: 14px;
-            font-size: 11px;
-            color: rgba(255, 255, 255, .55);
-            animation: fadeInUp .45s ease both;
-            line-height: 1.4;
-        }
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(8px);
-            }
-            to {
-                opacity: 1;
-                transform: none;
-            }
-        }
-        .ai-cats {
-            display: flex;
-            gap: 6px;
-            margin-top: 6px;
-            flex-wrap: wrap;
-        }
-        .ai-cat {
-            font-size: 9px;
-            padding: 3px 8px;
-            border-radius: 10px;
-            background: rgba(255, 255, 255, .06);
-            color: rgba(255, 255, 255, .5);
-        }
-
-        .dg {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px;
-        }
-        .dc {
-            background: rgba(255, 255, 255, .05);
-            border: 1px solid rgba(255, 255, 255, .08);
-            border-radius: 16px;
-            padding: 12px 13px;
-            transition: all .25s;
-        }
-        .dlbl {
-            font-size: 10px;
-            color: rgba(255, 255, 255, .36);
-            letter-spacing: .06em;
-            text-transform: uppercase;
-            margin-bottom: 4px;
-        }
-        .dval {
-            font-size: 20px;
-            font-weight: 300;
-        }
-
-        .arcw {
-            padding: 14px 14px 6px;
-            position: relative;
-        }
-        .arct {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 4px;
-            font-size: 11px;
-            color: rgba(255, 255, 255, .36);
-        }
-        .moonrow {
-            display: flex;
+            display: inline-flex;
             align-items: center;
             gap: 10px;
-            padding: 12px 14px;
-            border-top: 1px solid rgba(255, 255, 255, .05);
-        }
-
-        #mapBlock {
             cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            backdrop-filter: blur(12px);
         }
-        .map-tabs {
-            display: flex;
-            gap: 4px;
-            margin-bottom: 6px;
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.14);
+            transform: translateY(-2px);
         }
-        .map-tab {
-            font-size: 9px;
-            padding: 4px 10px;
-            border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, .12);
-            background: rgba(255, 255, 255, .04);
-            color: rgba(255, 255, 255, .45);
-            cursor: pointer;
-            transition: all .2s;
+        .btn:active {
+            transform: translateY(0);
         }
-        .map-tab.on {
-            background: rgba(255, 255, 255, .16);
-            color: #fff;
-            border-color: rgba(255, 255, 255, .25);
-        }
-        #mapCanvas {
-            width: 100%;
-            border-radius: 14px;
-            display: block;
-        }
-
         #lumCanvas {
-            width: 200px;
-            height: 200px;
-            display: block;
-            margin: 0 auto;
+            width: 240px;
+            height: 240px;
+            margin: 32px 0;
             cursor: pointer;
             border-radius: 50%;
-            transition: transform .3s;
+            box-shadow: 0 0 40px rgba(255, 100, 150, 0.4);
+            transition: transform 0.4s ease;
         }
-        .emotxt {
-            text-align: center;
-            font-size: 12px;
-            color: rgba(255, 255, 255, .38);
-            margin: 4px 0 16px;
-            min-height: 16px;
-            transition: all .4s;
+        #lumCanvas:hover {
+            transform: scale(1.03);
         }
-        .statrow {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 0 1px;
+        .chat-container {
+            width: 100%;
+            max-width: 360px;
+            margin-top: 20px;
+            padding: 16px;
+            background: var(--glass);
+            border-radius: 20px;
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            display: none;
         }
-        .slbl {
-            font-size: 11px;
-            color: rgba(255, 255, 255, .38);
-            width: 56px;
-        }
-        .sbar {
-            flex: 1;
-            height: 2px;
-            border-radius: 1px;
-            background: rgba(255, 255, 255, .08);
-            overflow: hidden;
-        }
-        .sfill {
-            height: 100%;
-            border-radius: 1px;
-            background: linear-gradient(90deg, #FF6B9D, #FF8E9D);
-            transition: width 1s ease;
-        }
-        .spct {
-            font-size: 10px;
-            color: rgba(255, 255, 255, .36);
-            width: 26px;
-            text-align: right;
-        }
-
-        #chatMsgs {
-            flex: 1;
-            overflow-y: auto;
-            padding: 8px 12px;
+        .chat-bubbles {
             display: flex;
             flex-direction: column;
-            gap: 6px;
-            scrollbar-width: none;
-            min-height: 100px;
-            max-height: 230px;
+            gap: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+            padding: 8px 0;
         }
-        .msg {
+        .bubble {
+            padding: 12px 16px;
+            border-radius: 18px;
+            max-width: 80%;
+            font-size: 14px;
+            line-height: 1.5;
+            position: relative;
+            animation: fadeIn 0.3s ease;
+        }
+        .bubble.ai {
+            background: rgba(255, 255, 255, 0.06);
+            border-left: 3px solid var(--accent);
+            margin-left: auto;
+        }
+        .bubble.user {
+            background: rgba(255, 255, 255, 0.12);
+            margin-right: auto;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: none; }
+        }
+        .input-area {
             display: flex;
-            align-items: flex-end;
-            gap: 5px;
-            animation: mIN .28s cubic-bezier(.34, 1.56, .64, 1);
-        }
-        @keyframes mIN {
-            from {
-                opacity: 0;
-                transform: translateY(6px) scale(.97);
-            }
-            to {
-                opacity: 1;
-                transform: none;
-            }
-        }
-        .msg.u {
-            flex-direction: row-reverse;
-        }
-        .bbl {
-            max-width: 78%;
-            padding: 8px 12px;
-            border-radius: 16px;
-            font-size: 13px;
-            line-height: 1.4;
-            font-weight: 400;
-            transition: all .2s;
-        }
-        .msg.ai .bbl {
-            background: rgba(255, 255, 255, .09);
-            border: 1px solid rgba(255, 255, 255, .12);
-            border-bottom-left-radius: 4px;
-        }
-        .msg.u .bbl {
-            background: rgba(255, 255, 255, .14);
-            border: 1px solid rgba(255, 255, 255, .18);
-            border-bottom-right-radius: 4px;
-        }
-        .av {
-            width: 22px;
-            height: 22px;
-            border-radius: 50%;
-            background: radial-gradient(circle at 35% 35%, #b8a0ff, #6040c0);
-            flex-shrink: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 9px;
-        }
-        .dots {
-            display: flex;
-            gap: 2px;
-            padding: 2px 0;
-        }
-        .dots span {
-            width: 4px;
-            height: 4px;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, .5);
-            animation: dp 1s ease-in-out infinite;
-        }
-        .dots span:nth-child(2) {
-            animation-delay: .16s;
-        }
-        .dots span:nth-child(3) {
-            animation-delay: .32s;
-        }
-        @keyframes dp {
-            0%,
-            80%,
-            100% {
-                transform: scale(.5);
-                opacity: .3;
-            }
-            40% {
-                transform: scale(1);
-                opacity: 1;
-            }
-        }
-
-        #cinWrap {
-            padding: 8px 12px 12px;
-            border-top: 1px solid rgba(255, 255, 255, .05);
-            background: transparent;
-        }
-        .hints {
-            display: flex;
-            gap: 5px;
-            margin-bottom: 8px;
-            overflow-x: auto;
-            scrollbar-width: none;
-        }
-        .hint {
-            flex-shrink: 0;
-            font-size: 10px;
-            padding: 5px 10px;
-            background: rgba(255, 255, 255, .07);
-            border: 1px solid rgba(255, 255, 255, .1);
-            border-radius: 14px;
-            color: rgba(255, 255, 255, .55);
-            cursor: pointer;
-            white-space: nowrap;
-            transition: all .15s;
-        }
-        .hint:active {
-            background: rgba(255, 255, 255, .14);
-        }
-        .crow {
-            display: flex;
-            gap: 6px;
-            align-items: flex-end;
+            gap: 8px;
+            margin-top: 16px;
         }
         #cf {
             flex: 1;
-            background: rgba(255, 255, 255, .08);
-            border: 1px solid rgba(255, 255, 255, .12);
-            border-radius: 16px;
-            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 18px;
+            padding: 12px 16px;
             color: #fff;
-            font-size: 13px;
-            font-family: inherit;
+            font-size: 14px;
             outline: none;
             resize: none;
-            max-height: 70px;
-            transition: all .2s;
         }
         #sb {
-            width: 32px;
-            height: 32px;
+            width: 40px;
+            height: 40px;
             border-radius: 50%;
-            background: rgba(255, 255, 255, .14);
+            background: var(--accent);
             border: none;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: all .16s;
-            flex-shrink: 0;
+            transition: all 0.2s;
         }
-
-        .fg {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px;
+        #sb:active {
+            transform: scale(0.92);
         }
-        .fc {
-            background: rgba(255, 255, 255, .06);
-            border: 1px solid rgba(255, 255, 255, .09);
-            border-radius: 18px;
-            padding: 14px;
-            cursor: pointer;
-            position: relative;
-            overflow: hidden;
-            transition: all .2s;
-        }
-        .fc:active {
-            transform: scale(.96);
-        }
-        .fcity {
-            font-size: 15px;
-            font-weight: 400;
-            margin-bottom: 2px;
-        }
-        .fcountry {
-            font-size: 10px;
-            color: rgba(255, 255, 255, .38);
-            margin-bottom: 10px;
-        }
-        .ftemp {
-            font-size: 30px;
-            font-weight: 200;
-            margin-bottom: 2px;
-        }
-        .fdesc {
-            font-size: 11px;
-            color: rgba(255, 255, 255, .4);
-        }
-        .frm {
-            position: absolute;
-            top: 8px;
-            right: 8px;
-            width: 22px;
-            height: 22px;
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top: 2px solid var(--accent);
             border-radius: 50%;
-            background: rgba(255, 255, 255, .1);
-            border: none;
-            color: rgba(255, 255, 255, .5);
-            font-size: 11px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            animation: spin 1s linear infinite;
         }
-
-        .sw {
-            position: relative;
-            margin-bottom: 10px;
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
-        .sf {
-            width: 100%;
-            background: rgba(255, 255, 255, .08);
-            border: 1px solid rgba(255, 255, 255, .12);
-            border-radius: 14px;
-            padding: 10px 12px 10px 36px;
-            color: #fff;
-            font-size: 13px;
-            outline: none;
-        }
-        .sres {
-            background: rgba(0, 0, 0, .95);
-            border: 1px solid rgba(255, 255, 255, .1);
-            border-radius: 14px;
-            overflow: hidden;
-            margin-top: 4px;
-            backdrop-filter: blur(20px);
-            position: absolute;
-            width: 100%;
-            z-index: 10;
-        }
-        .sitem {
-            padding: 12px 14px;
-            cursor: pointer;
-            border-bottom: 1px solid rgba(255, 255, 255, .05);
-            font-size: 13px;
-            color: rgba(255, 255, 255, .65);
-        }
-
-        #settingsBtn {
-            position: fixed;
-            top: calc(var(--st) + 6px);
-            right: 14px;
-            z-index: 50;
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, .08);
-            border: 1px solid rgba(255, 255, 255, .12);
-            cursor: pointer;
-            display: flex;
-            align-items:
-                center;
-            justify-content: center;
-            backdrop-filter: blur(10px);
-            transition: all .2s;
-        }
-        #settingsPanel {
-            position: fixed;
-            inset: 0;
-            z-index: 200;
-            background: rgba(0, 0, 0, .94);
-            display: none;
-            flex-direction: column;
-            padding: calc(var(--st) + 20px) 18px calc(var(--sb) + 20px);
-            overflow-y: auto;
-            animation: fadeIn .2s;
-        }
-        #settingsPanel.on {
-            display: flex;
-        }
-        .set-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px 0;
-            border-bottom: 1px solid rgba(255, 255, 255, .06);
-            font-size: 14px;
-        }
-        .set-row input {
-            background: rgba(255, 255, 255, .08);
-            border: 1px solid rgba(255, 255, 255, .12);
-            border-radius: 10px;
-            padding: 8px 12px;
-            color: #fff;
-            font-size: 13px;
-            width: 180px;
-            outline: none;
-        }
-        #toast {
-            position: fixed;
-            top: calc(var(--st) + 10px);
-            left: 50%;
-            transform: translateX(-50%) translateY(-70px);
-            background: rgba(20, 20, 30, .96);
-            border: 1px solid rgba(255, 255, 255, .12);
-            border-radius: 18px;
-            padding: 10px 18px;
-            font-size: 13px;
-            z-index: 300;
-            transition: transform .3s cubic-bezier(.34, 1.56, .64, 1);
-            white-space: nowrap;
-        }
-        #toast.vis {
-            transform: translateX(-50%) translateY(0);
-        }
+        /* Hide all UI except Lum and title on load */
+        .hidden { display: none; }
     </style>
 </head>
 <body>
     <canvas id="bgC"></canvas>
-    <button id="settingsBtn" aria-label="Настройки"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></button>
-    <div id="settingsPanel">
-        <div class="set-title" style="font-size:20px;font-weight:300;margin-bottom:18px;display:flex;justify-content:space-between">Настройки <button onclick="toggleSettings()" style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);color:#fff;border-radius:50%;width:28px;height:28px">✕</button></div>
-        <div class="set-row"><span>API ключ ИИ</span><input type="password" id="apiKeyInput" placeholder="Введите ключ..."></div>
-        <div class="set-row"><span>Единицы</span><select id="unitSelect" style="background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:8px 12px;font-size:13px"><option value="c">°C</option><option value="f">°F</option></select></div>
-        <div class="set-row"><span>Авто город</span><select id="autoCitySelect" style="background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:8px 12px;font-size:13px"><option value="1">Вкл</option><option value="0">Выкл</option></select></div>
-        <div class="set-row"><span>Имя пользователя</span><input type="text" id="userNameInput" placeholder="Ваше имя"></div>
-        <button onclick="resetAll()" style="margin-top:20px;background:rgba(255,80,80,.2);border:1px solid rgba(255,80,80,.4);color:#fff;padding:8px;border-radius:10px">Сбросить все данные</button>
-    </div>
     <div id="app">
-        <div class="scr on" id="s-home">
-            <div class="sa" id="homeScroll">
-                <div class="hw">
-                    <div class="cityrow"><span id="cityTxt">Загрузка...</span></div>
-                    <div class="tbig" id="tempMain">–°</div>
-                    <div class="feels" id="feelsTxt">Ощущается как –°</div>
-                    <div class="iconwrap" id="iconWrap"></div>
-                    <div class="wdesc" id="descTxt"></div>
-                    <div class="hilo" id="hiloTxt"></div>
-                    <div class="todlbl" id="todTxt"></div>
-                </div>
-                <div class="mb"><div class="sl">По часам</div><div class="hs" id="hourlyList"></div></div>
-                <div class="mb"><div class="sl">5 дней</div><div class="cw" id="dailyList"></div></div>
-                <div class="mb" id="aiForecastHome"></div>
-                <div class="mb" id="mapBlock"><div class="sl">Карта</div><div class="map-tabs"><button class="map-tab on" data-layer="rain">Осадки</button><button class="map-tab" data-layer="temp">Температура</button><button class="map-tab" data-layer="wind">Ветер</button></div><canvas id="mapCanvas" width="400" height="220"></canvas></div>
-                <div class="mb"><div class="sl">Детали</div><div class="dg" id="detailsGrid"></div></div>
-                <div class="mb"><div class="sl">Солнце и луна</div><div class="cw"><div class="arcw" id="arcWrap"></div><div id="moonWrap"></div></div></div>
-            </div>
+        <div class="center">
+            <h1 class="title">Моя волна</h1>
+            <button class="btn" id="startBtn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 19l7 7 7-7"/>
+                    <path d="M12 5l7 7 7-7"/>
+                </svg>
+                Начать
+            </button>
         </div>
-        <div class="scr" id="s-lum">
-            <div class="sa">
-                <div style="text-align:center;padding-top:6px"><div style="font-size:10px;color:rgba(255,255,255,.34)">Питомец</div><div style="font-size:18px;font-weight:300">Люм</div></div>
-                <canvas id="lumCanvas"></canvas>
-                <div class="emotxt" id="emotxt"></div>
-                <div class="glass mb" style="padding:14px">
-                    <div class="sl">Привязанность</div>
-                    <div class="statrow"><div class="slbl">Любовь</div><div class="sbar"><div class="sfill" id="loveFill"></div></div><div class="spct" id="lovePct">60%</div></div>
-                    <div style="padding-top:8px;font-size:10px;color:rgba(255,255,255,.25);display:flex;justify-content:space-between"><span id="lumVisit">Визит: сегодня</span><span id="lumStreak">1 дн.</span></div>
-                </div>
-                <div class="glass">
-                    <div style="padding:12px 14px 6px"><div class="sl">Чат с Люмом</div><div class="hints" id="hints"></div></div>
-                    <div id="chatMsgs"></div>
-                    <div id="cinWrap"><div class="crow"><textarea id="cf" placeholder="Спроси Люма..." rows="1"></textarea><button id="sb" disabled><svg viewBox="0 0 24 24"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg></button></div></div>
-                </div>
-            </div>
-        </div>
-        <div class="scr" id="s-saved">
-            <div class="sa">
-                <div style="padding-top:10px;margin-bottom:14px"><div style="font-size:10px;color:rgba(255,255,255,.34)">Мои города</div><div style="font-size:18px;font-weight:300">Избранное</div></div>
-                <div class="sw"><svg class="sic" viewBox="0 0 24 24" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);width:14px;stroke:rgba(255,255,255,.35);fill:none"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><input type="text" class="sf" id="sfld" placeholder="Поиск города..."><div class="sres" id="sres" style="display:none"></div></div>
-                <div class="fg" id="favGrid"></div>
+
+        <!-- Lum Canvas -->
+        <canvas id="lumCanvas"></canvas>
+
+        <!-- Chat Panel -->
+        <div class="chat-container" id="chatPanel">
+            <div class="chat-bubbles" id="chatBubbles"></div>
+            <div class="input-area">
+                <textarea id="cf" placeholder="Спроси..." rows="1"></textarea>
+                <button id="sb">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="m22 2-7 20-4-9-9-4 20-7z"/>
+                    </svg>
+                </button>
             </div>
         </div>
     </div>
-    <nav id="nav">
-        <button class="nb on" data-tab="home"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Погода</span></button>
-        <button class="nb" data-tab="lum"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg><span>Люм</span></button>
-        <button class="nb" data-tab="saved"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg><span>Города</span></button>
-    </nav>
-    <div id="toast"></div>
+
     <script>
-        // ──────────────────────────────────── encrypted OW key
-        const OW_KEY = (() => { const a = 'MzUxZTU3YjFlNjk2'; const b = 'MmUyMTViZjk5YzI0OGNhZGJmMGI='; return atob(a) + atob(b) })();
-        // ──────────────────────────────────── state
+        // ──────────────────────────────────── CONFIG
+        const OW_KEY = '351e57b1e6962e215bf99c248cadbf0b'; // ваш ключ
         const ST = {
-            lat: 55.7558,
+            lat: 55.7558, // Москва
             lon: 37.6173,
             city: 'Москва',
             weather: null,
             isDay: 1,
             wcode: 0,
-            windspeed: 0,
             tab: 'home',
-            lum: { love: 60, streak: 1, lastVisit: null },
+            lum: { love: 60, lastVisit: null },
             chat: [],
-            favs: [],
-            settings: { apiKey: '', unit: 'c', autoCity: true, userName: '' },
-            mapLayer: 'rain',
-            userProfile: { name: '', facts: {} }
+            pendingQuestion: null,
+            aiState: 'idle' // idle | guessing | confirming | explaining
         };
+
         const S = {
-            get(k, d = null) { try { const v = localStorage.getItem('lum_' + k); return v ? JSON.parse(v) : d } catch
-                (e) { return d } },
-            set(k, v) { try { localStorage.setItem('lum_' + k, JSON.stringify(v)) } catch (e) {} }
+            get(k, d = null) {
+                try { return JSON.parse(localStorage.getItem('lum_' + k)) || d } catch { return d }
+            },
+            set(k, v) {
+                try { localStorage.setItem('lum_' + k, JSON.stringify(v)) } catch {}
+            }
         };
 
-        // ──────────────────────────────────── init
-        function init() {
-            ST.favs = S.get('favs', []);
-            ST.settings = S.get('settings', ST.settings);
-            ST.userProfile = S.get('profile', ST.userProfile);
-            const ls = S.get('lumState', null); if (ls) Object.assign(ST.lum, ls);
-            ST.chat = S.get('chat', []);
-            document.getElementById('apiKeyInput').value = ST.settings.apiKey || '';
-            document.getElementById('unitSelect').value = ST.settings.unit;
-            document.getElementById('autoCitySelect').value = ST.settings.autoCity ? '1' : '0';
-            document.getElementById('userNameInput').value = ST.userProfile.name || '';
-            bg.init();
-            lum.init();
-            setupNav();
-            setupSearch();
-            setupChat();
-            setupSettings();
-            setupMap();
-            renderFavs();
-            renderLumScreen();
-            updateLumVisit();
-            if (ST.settings.autoCity && navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(p => { ST.lat = p.coords.latitude;
-                    ST.lon = p.coords.longitude;
-                    reverseGeo().then(n => { ST.city = n;
-                        loadWeather();
-                        toast('📍 ' + n) }) }, () => loadWeather(), { timeout: 6000, maximumAge: 300000 });
-            } else loadWeather();
+        // ──────────────────────────────────── UTILS
+        function tC(c) { return Math.round(c) }
+        function fmtTime(dt) {
+            const d = new Date(dt * 1000);
+            return d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0');
         }
-
-        function setupSettings() {
-            document.getElementById('apiKeyInput').addEventListener('change', function() { ST.settings.apiKey = this
-                    .value.trim();
-                S.set('settings', ST.settings) });
-            document.getElementById('unitSelect').addEventListener('change', function() { ST.settings.unit = this
-                .value;
-                S.set('settings', ST.settings); if (ST.weather) renderHome(ST.weather) });
-            document.getElementById('autoCitySelect').addEventListener('change', function() { ST.settings.autoCity =
-                    this.value === '1';
-                S.set('settings', ST.settings) });
-            document.getElementById('userNameInput').addEventListener('change', function() { ST.userProfile.name =
-                    this.value.trim();
-                S.set('profile', ST.userProfile) });
-        }
-
-        function toggleSettings() { document.getElementById('settingsPanel').classList.toggle('on') }
-        document.getElementById('settingsBtn').addEventListener('click', toggleSettings);
-
-        function resetAll() { if (confirm('Удалить все данные?')) { localStorage.clear();
-                location.reload() } }
+        function lerp(a, b, t) { return a + (b - a) * t }
+        function clamp(x, min, max) { return Math.max(min, Math.min(max, x)) }
 
         // ──────────────────────────────────── API
-        async function loadWeather() {
+        async function fetchWeather() {
             try {
-                const [currResp, foreResp] = await Promise.all([
-                    fetch(
-                        `https://api.openweathermap.org/data/2.5/weather?lat=${ST.lat}&lon=${ST.lon}&appid=${OW_KEY}&units=metric&lang=ru`
-                        ),
-                    fetch(
-                        `https://api.openweathermap.org/data/2.5/forecast?lat=${ST.lat}&lon=${ST.lon}&appid=${OW_KEY}&units=metric&lang=ru`
-                        )
-                ]);
-                const curr = await currResp.json(),
-                    fore = await foreResp.json();
-                ST.weather = { current: curr, forecast: fore.list, city: curr.name, timezone: fore.city.timezone };
-                ST.isDay = curr.dt > curr.sys.sunrise && curr.dt < curr.sys.sunset ? 1 : 0;
-                ST.wcode = curr.weather[0].id;
-                ST.windspeed = curr.wind.speed;
-                renderHome(ST.weather);
-                bg.setWeather(ST.wcode, ST.isDay, ST.windspeed);
-                lum.setWeather(ST.wcode, ST.isDay);
-                renderMap();
-            } catch (e) { console.error(e); }
-        }
-        async function reverseGeo() { try { const r = await fetch(
-                `https://api.openweathermap.org/geo/1.0/reverse?lat=${ST.lat}&lon=${ST.lon}&limit=1&appid=${OW_KEY}`
-                ); const d = await r.json(); return d[0]?.local_names?.ru || d[0]?.name || 'Мой город' } catch (
-            e) { return 'Мой город' } }
-
-        function tC(c) { return ST.settings.unit === 'f' ? Math.round(c * 9 / 5 + 32) : Math.round(c) }
-
-        function renderHome(d) {
-            const c = d.current,
-                daily = groupForecast(d.forecast);
-            document.getElementById('cityTxt').textContent = d.city || ST.city;
-            document.getElementById('tempMain').textContent = tC(c.main.temp) + '°';
-            document.getElementById('feelsTxt').textContent = 'Ощущается как ' + tC(c.main.feels_like) + '°';
-            document.getElementById('descTxt').textContent = c.weather[0].description;
-            document.getElementById('hiloTxt').textContent = '↑' + tC(daily[0].max) + '°  ↓' + tC(daily[0].min) + '°';
-            document.getElementById('todTxt').textContent = getTimeOfDay(c);
-            renderBigIcon('iconWrap', c.weather[0].id, ST.isDay, 80);
-            renderHourly(d.forecast);
-            renderDaily(daily);
-            renderDetails(c);
-            renderArc(c, daily[0]);
-            renderAIHomeForecast(daily[0], c);
-        }
-        function getTimeOfDay(c) { const h = new Date().getHours(); if (h >= 5 && h < 7) return 'Рассвет'; if (h >= 7 && h <
-                17) return 'День'; if (h >= 17 && h < 20) return 'Вечер'; if (h >= 20 && h < 21) return 'Закат'; return
-            'Ночь' }
-
-        function groupForecast(list) {
-            const days = {};
-            list.forEach(i => { const d = i.dt_txt.split(' ')[0]; if (!days[d]) days[d] = { temps: [],
-                    icons: [], winds: [], rains: [] };
-                days[d].temps.push(i.main.temp);
-                days[d].icons.push(i.weather[0].id);
-                days[d].winds.push(i.wind.speed);
-                days[d].rains.push(i.pop || 0) });
-            return Object.keys(days).slice(0, 5).map(d => ({ date: d, max: Math.max(...days[d].temps), min: Math.min(
-                    ...days[d].temps), icon: mostFreq(days[d].icons), wind: (days[d].winds.reduce((a, b) => a + b,
-                    0) / days[d].winds.length).toFixed(1), rain: Math.round(Math.max(...days[d].rains) *
-                100) }));
+                const res = await fetch(
+                    `https://api.openweathermap.org/data/2.5/weather?lat=${ST.lat}&lon=${ST.lon}&appid=${OW_KEY}&units=metric&lang=ru`
+                );
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+                
+                ST.weather = data;
+                ST.isDay = data.dt > data.sys.sunrise && data.dt < data.sys.sunset ? 1 : 0;
+                ST.wcode = data.weather[0].id;
+                
+                updateLumFromWeather();
+                renderLum();
+                showChat();
+                return true;
+            } catch (e) {
+                console.error('Погода не загрузилась:', e);
+                toast('❌ Не удалось загрузить погоду. Проверьте подключение.');
+                return false;
+            }
         }
 
-        function mostFreq(arr) { return arr.sort((a, b) => arr.filter(v => v === a).length - arr.filter(v => v === b)
-                .length).pop() }
-
-        function owIconType(code, isDay) {
-            if (code >= 200 && code < 300) return 'storm';
-            if (code >= 300 && code < 400) return 'rain';
-            if (code >= 500 && code < 510) return 'rain';
-            if (code >= 511 && code <= 511) return 'snow';
-            if (code >= 520 && code < 600) return 'rain';
-            if (code >= 600 && code < 700) return 'snow';
-            if (code >= 700 && code < 800) return 'fog';
-            if (code === 800) return isDay ? 'sun' : 'moon';
-            if (code === 801) return isDay ? 'pcloud' : 'ncloud';
-            return 'cloudy';
-        }
-
-        function buildIconSVG(t, sz) {
-            const s = sz || 28;
-            const svgs = {
-                sun: `<svg width="${s}" height="${s}" viewBox="0 0 90 90"><circle cx="45" cy="45" r="18" fill="#FFD040" filter="drop-shadow(0 0 12px rgba(255,210,0,.7))"/><g style="transform-origin:45px 45px;animation:rr 12s linear infinite">${[0,45,90,135,180,225,270,315].map(a=>`<line x1="45" y1="8" x2="45" y2="16" stroke="rgba(255,220,80,.7)" stroke-width="3" stroke-linecap="round" transform="rotate(${a} 45 45)"/>`).join('')}</g><style>@keyframes rr{to{transform:rotate(360deg)}}</style></svg>`,
-                moon: `<svg width="${s}" height="${s}" viewBox="0 0 90 90"><path d="M58 48c-12 0-22-9-22-22 0-3.5.7-6.5 1.8-9.5C26 18 16 30 16 44c0 15 12 27 27 27 12 0 22-7 26-17-3.5 1.2-7 1.8-11 1.8z" fill="#D4E8FF" filter="drop-shadow(0 0 10px rgba(160,200,255,.5))"/></svg>`,
-                pcloud: `<svg width="${s}" height="${s}" viewBox="0 0 90 90"><circle cx="24" cy="38" r="7" fill="#FFD040" filter="drop-shadow(0 0 6px rgba(255,210,0,.6))"/><ellipse cx="50" cy="52" rx="24" ry="15" fill="rgba(200,215,238,.88)"/><circle cx="38" cy="44" r="13" fill="rgba(215,228,248,.88)"/><circle cx="54" cy="46" r="10" fill="rgba(200,215,238,.88)"/></svg>`,
-                cloudy: `<svg width="${s}" height="${s}" viewBox="0 0 90 90"><ellipse cx="46" cy="53" rx="28" ry="17" fill="rgba(175,190,218,.85)"/><circle cx="33" cy="44" r="15" fill="rgba(185,200,228,.85)"/><circle cx="55" cy="46" r="12" fill="rgba(175,190,218,.85)"/></svg>`,
-                rain: `<svg width="${s}" height="${s}" viewBox="0 0 90 90"><ellipse cx="46" cy="38" rx="26" ry="15" fill="rgba(140,158,190,.85)"/><circle cx="33" cy="30" r="13" fill="rgba(150,168,200,.85)"/><circle cx="54" cy="32" r="11" fill="rgba(140,158,190,.85)"/><line x1="28" y1="56" x2="25" y2="66" stroke="#5BBCFF" stroke-width="2.5" stroke-linecap="round" style="animation:rf 1.1s infinite"/><line x1="42" y1="56" x2="39" y2="66" stroke="#5BBCFF" stroke-width="2.5" stroke-linecap="round" style="animation:rf 1.1s infinite;animation-delay:.35s"/><line x1="56" y1="56" x2="53" y2="66" stroke="#5BBCFF" stroke-width="2.5" stroke-linecap="round" style="animation:rf 1.1s infinite;animation-delay:.7s"/><style>@keyframes rf{0%{opacity:0;transform:translateY(-6px)}30%{opacity:1}100%{opacity:.6;transform:translateY(10px)}}</style></svg>`,
-                snow: `<svg width="${s}" height="${s}" viewBox="0 0 90 90"><ellipse cx="46" cy="36" rx="26" ry="15" fill="rgba(210,225,248,.82)"/><circle cx="33" cy="28" r="12" fill="rgba(218,232,252,.82)"/><circle cx="54" cy="30" r="10" fill="rgba(210,225,248,.82)"/><g style="animation:sf 1.8s infinite"><circle cx="28" cy="58" r="3" fill="#fff"/></g><g style="animation:sf 1.8s infinite;animation-delay:.6s"><circle cx="44" cy="64" r="3" fill="#fff"/></g><g style="animation:sf 1.8s infinite;animation-delay:1.2s"><circle cx="60" cy="58" r="3" fill="#fff"/></g></svg>`,
-                storm: `<svg width="${s}" height="${s}" viewBox="0 0 90 90"><ellipse cx="44" cy="34" rx="28" ry="17" fill="rgba(75,65,115,.88)"/><circle cx="30" cy="26" r="14" fill="rgba(85,75,125,.88)"/><circle cx="54" cy="28" r="11" fill="rgba(75,65,115,.88)"/><path d="M46 46 L38 56 L43 56 L36 70 L48 50 L42 50 Z" fill="#FFD040" style="animation:lf 2s infinite"/></svg>`,
-                fog: `<svg width="${s}" height="${s}" viewBox="0 0 90 90"><line x1="14" y1="32" x2="76" y2="32" stroke="rgba(200,210,230,.5)" stroke-width="4"/><line x1="22" y1="46" x2="68" y2="46" stroke="rgba(200,210,230,.4)" stroke-width="4"/></svg>`
-            };
-            return svgs[t] || svgs['cloudy'];
-        }
-
-        function renderBigIcon(id, code, isDay, sz) { document.getElementById(id).innerHTML = buildIconSVG(owIconType(code,
-                isDay), sz) }
-
-        function renderHourly(list) {
-            document.getElementById('hourlyList').innerHTML = list.slice(0, 24).map((i, idx) => {
-                const dt = new Date(i.dt * 1000);
-                const hr = dt.getHours().toString().padStart(2, '0') + ':00';
-                const temp = tC(i.main.temp);
-                const rain = Math.round((i.pop || 0) * 100);
-                const icon = owIconType(i.weather[0].id, dt.getHours() > 6 && dt.getHours() < 21 ? 1 : 0);
-                return `<div class="hc"><div class="ht">${hr}</div><div style="width:24px;height:24px">${buildIconSVG(icon,18)}</div><div class="htemp">${temp}°</div>${rain>8?`<div class="hrain">${rain}%</div>`:''}</div>`;
-            }).join('');
-        }
-
-        function renderDaily(daily) {
-            const days = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'],
-                mo = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
-            document.getElementById('dailyList').innerHTML = daily.map((d, i) => {
-                const dt = new Date(d.date);
-                const lbl = i === 0 ? 'Сегодня' : i === 1 ? 'Завтра' : days[dt.getDay()] + ', ' + dt.getDate() +
-                    ' ' + mo[dt.getMonth()];
-                const hi = tC(d.max),
-                    lo = tC(d.min);
-                const icon = owIconType(d.icon, 1);
-                return `<div class="dr" onclick="toggleDayExpand(this,'${d.date}')"><div class="dn">${lbl}</div>${d.rain>15?`<div style="font-size:9px;color:#6ECFFF">${d.rain}%</div>`:''}<div class="dw-icon">${buildIconSVG(icon,22)}</div><div class="dt"><span class="dhi">${hi}°</span><span>${lo}°</span></div><div class="dw-wind">${d.wind} м/с</div></div><div class="dexp" id="dexp-${d.date}"></div>`;
-            }).join('');
-        }
-
-        function toggleDayExpand(row, date) {
-            const exp = document.getElementById('dexp-' + date);
-            document.querySelectorAll('.dexp.on').forEach(e => e.classList.remove('on'));
-            if (!exp.classList.contains('on')) { exp.classList.add('on');
-                loadDayExpand(exp, date); }
-        }
-
-        function loadDayExpand(exp, date) {
-            const list = ST.weather.forecast.filter(f => f.dt_txt.startsWith(date));
-            const parts = [
-                { label: 'Утро', temp: tC(list[2]?.main.temp || list[0].main.temp), feels: tC(list[2]?.main
-                        .feels_like || list[0].main.feels_like), icon: list[2]?.weather[0].id || list[0].weather[
-                        0].id, isDay: 1 },
-                { label: 'День', temp: tC(list[4]?.main.temp || list[0].main.temp), feels: tC(list[4]?.main
-                        .feels_like || list[0].main.feels_like), icon: list[4]?.weather[0].id || list[0].weather[
-                        0].id, isDay: 1 },
-                { label: 'Вечер', temp: tC(list[6]?.main.temp || list[0].main.temp), feels: tC(list[6]?.main
-                        .feels_like || list[0].main.feels_like), icon: list[6]?.weather[0].id || list[0].weather[
-                        0].id, isDay: 1 },
-                { label: 'Ночь', temp: tC(list[7]?.main.temp || list[0].main.temp), feels: tC(list[7]?.main
-                        .feels_like || list[0].main.feels_like), icon: list[7]?.weather[0].id || list[0].weather[
-                        0].id, isDay: 0 }
-            ];
-            exp.innerHTML = `<div class="departs">${parts.map(p=>`<div class="dep"><div class="dep-label">${p.label}</div><div class="dep-icon">${buildIconSVG(owIconType(p.icon,p.isDay),18)}</div><div class="dep-temp">${p.temp}°</div><div class="dep-feels">Ощущ. ${p.feels}°</div></div>`).join('')}</div><div class="ai-forecast-block" id="aifb-${date}"><div class="dots"><span></span><span></span><span></span></div></div>`;
-            setTimeout(() => generateAIForecast(date, list), 500);
-        }
-
-        function generateAIForecast(date, list) {
-            const block = document.getElementById('aifb-' + date);
-            if (!block) return;
-            const hi = tC(Math.max(...list.map(i => i.main.temp))),
-                lo = tC(Math.min(...list.map(i => i.main.temp)));
-            const desc = list[0].weather[0].description;
-            const rain = Math.round(Math.max(...list.map(i => i.pop || 0)) * 100);
-            const wind = (list.reduce((a, b) => a + b.wind.speed, 0) / list.length).toFixed(1);
-            block.innerHTML =
-                `<div>${date}: ${desc}, ${hi}°/${lo}°. Ветер ${wind} м/с.</div><div class="ai-cats"><span class="ai-cat">Дождь ${rain}%</span><span class="ai-cat">Пыльца ${wind>5?'высокая':'низкая'}</span><span class="ai-cat">Прогулка ${rain<30&&wind<8?'отлично':'с осторожностью'}</span></div>`;
-        }
-
-        function renderAIHomeForecast(day, c) {
-            const el = document.getElementById('aiForecastHome');
-            el.innerHTML =
-                '<div class="sl">AI-прогноз</div><div class="glass" style="padding:12px" id="aiHomeBlock"><div class="dots"></div></div>';
-            setTimeout(() => {
-                document.getElementById('aiHomeBlock').innerHTML =
-                    `<div>Сегодня: до ${tC(day.max)}°, ночью ${tC(day.min)}°. Ветер ${day.wind} м/с.</div><div class="ai-cats"><span class="ai-cat">Дождь ${day.rain}%</span><span class="ai-cat">Пыльца ${day.wind>5?'высокая':'низкая'}</span><span class="ai-cat">Прогулка ${day.rain<30&&day.wind<8?'отлично':'с осторожностью'}</span></div>`;
-            }, 600);
-        }
-
-        function renderDetails(c) {
-            document.getElementById('detailsGrid').innerHTML = `
-        <div class="dc"><div class="dlbl">Влажность</div><div class="dval">${c.main.humidity}%</div></div>
-        <div class="dc"><div class="dlbl">Ветер</div><div class="dval">${c.wind.speed.toFixed(1)} м/с</div></div>
-        <div class="dc"><div class="dlbl">Давление</div><div class="dval">${Math.round(c.main.pressure*0.75)} мм</div></div>
-        <div class="dc"><div class="dlbl">Облачность</div><div class="dval">${c.clouds.all}%</div></div>`;
-        }
-
-        function renderArc(c, day) {
-            const aw = document.getElementById('arcWrap'),
-                mw = document.getElementById('moonWrap');
-            const sr = new Date(c.sys.sunrise * 1000),
-                ss = new Date(c.sys.sunset * 1000),
-                now = new Date();
-            const total = ss - sr,
-                elapsed = Math.min(Math.max(now - sr, 0), total);
-            const pct = total > 0 ? elapsed / total : 0;
-            const R = 100,
-                cx = 150,
-                cy = 115;
-            const sp = { x: cx + R * Math.cos(Math.PI - pct * Math.PI), y: cy + R * Math.sin(Math.PI - pct * Math
-                .PI) };
-            aw.innerHTML =
-                `<svg style="width:100%" viewBox="0 0 300 125"><path d="M${cx-R} ${cy} A ${R} ${R} 0 0 1 ${cx+R} ${cy}" stroke="rgba(255,255,255,.06)" stroke-width="1.5" fill="none"/><circle cx="${sp.x}" cy="${sp.y}" r="6" fill="${now<sr||now>ss?'#C8D8FF':'#FFD040'}" filter="drop-shadow(0 0 8px rgba(255,210,0,.6))"/></svg><div class="arct"><div>Восход ${fmt(sr)}</div><div>${fmtDur(total)}</div><div>Закат ${fmt(ss)}</div></div>`;
-            mw.innerHTML = `<div class="moonrow"><div style="font-size:24px">${buildIconSVG('moon',30)}</div><div>Луна</div></div>`;
-        }
-
-        function fmt(d) { return d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0') }
-
-        function fmtDur(ms) { const h = Math.floor(ms / 3600000),
-                m = Math.floor((ms % 3600000) / 60000); return h + 'ч ' + m + 'м' }
-
-        function setupMap() { document.querySelectorAll('.map-tab').forEach(b => b.addEventListener('click', function() {
-                document.querySelectorAll('.map-tab').forEach(x => x.classList.remove('on'));
-                this.classList.add('on');
-                ST.mapLayer = this.dataset.layer;
-                renderMap() })) }
-
-        function renderMap() {
-            const canvas = document.getElementById('mapCanvas');
-            if (!canvas || !ST.weather) return;
-            const ctx = canvas.getContext('2d'),
-                W = canvas.width,
-                H = canvas.height;
-            ctx.clearRect(0, 0, W, H);
-            const cx = W / 2,
-                cy = H / 2;
-            for (let i = 0; i < 25; i++) { const a = Math.random() * Math.PI * 2,
-                    dist = Math.random() * 0.015; const px = cx + (ST.lon + Math.cos(a) * dist - ST.lon) * 9000,
-                    py = cy - (ST.lat + Math.sin(a) * dist - ST.lat) * 11000; const r = 20 + Math.random() * 28; let
-                    col; if (ST.mapLayer === 'temp') col = Math.random() > .5 ? 'rgba(255,100,60,.4)' :
-                    'rgba(60,140,255,.4)'; else if (ST.mapLayer === 'wind') col = Math.random() > .5 ?
-                    'rgba(200,100,255,.4)' : 'rgba(100,160,255,.3)';
-                else col = Math.random() > .5 ? 'rgba(60,120,255,.45)' : 'rgba(100,160,255,.25)'; const gr = ctx
-                    .createRadialGradient(px, py, 0, px, py, r);
-                gr.addColorStop(0, col);
-                gr.addColorStop(1, 'transparent');
-                ctx.fillStyle = gr;
-                ctx.beginPath();
-                ctx.arc(px, py, r, 0, Math.PI * 2);
-                ctx.fill() }
-            ctx.fillStyle = '#fff';
-            ctx.beginPath();
-            ctx.arc(cx, cy, 4, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.strokeStyle = 'rgba(255,255,255,.6)';
-            ctx.lineWidth = 1.5;
-            ctx.beginPath();
-            ctx.arc(cx, cy, 8, 0, Math.PI * 2);
-            ctx.stroke();
-        }
-
-        // ──────────────────────────────────── BACKGROUND
-        const bg = (() => {
-            let C, ctx, W, H, raf,
-                particles = [],
-                windSpd = 0;
-            let currentGrad = [4, 4, 14, 4, 4, 14, 4, 4, 14],
-                targetGrad = [4, 4, 14, 4, 4, 14, 4, 4, 14];
-            let stormActive = false,
-                lightningAlpha = 0,
-                lightningTimer = 0,
-                leafPool = [],
-                hailPool = [];
-            const GRADS = { dawn: [50, 20, 10, 80, 35, 15, 20, 10, 5], morning: [10, 18, 45, 15, 30, 70, 8, 15,
-                    35], day_sun: [8, 18, 52, 12, 28, 68, 6, 14, 38], day_cloud: [10, 14, 32, 14, 18, 40, 8, 12,
-                    26
-                ], evening: [55, 20, 8, 75, 30, 12, 30, 12, 5], sunset: [65, 22, 8, 90, 35, 10, 40, 15, 5],
-                night: [2, 2, 10, 4, 4, 16, 2, 2, 8], rain: [6, 8, 18, 8, 12, 24, 4, 6, 14], storm: [4, 3, 12,
-                    6, 5, 18, 3, 2, 8
-                ], snow: [8, 12, 26, 12, 18, 38, 6, 10, 20], blizzard: [6, 8, 20, 8, 12, 28, 4, 6, 16],
-                fog: [10, 12, 20, 14, 16, 26, 8, 10, 18] };
-
-            function getGradKey(wcode, isDay, wind) { const h = new Date().getHours(); if (!isDay) { if (wcode >= 200 &&
-                        wcode < 600) return 'rain'; if (wcode >= 600 && wcode < 700) return wind > 15 ? 'blizzard' :
-                        'snow'; if (wcode >= 200 && wcode < 300) return 'storm'; if (wcode >= 700 && wcode <
-                    800) return 'fog'; return 'night' } if (h >= 5 && h < 7) return 'dawn'; if (h >= 7 && h <
-                    10) return 'morning'; if (h >= 19 && h < 20) return 'evening'; if (h >= 20) return 'sunset'; if (
-                    wcode >= 200 && wcode < 300) return 'storm'; if (wcode >= 600 && wcode < 700) return wind >
-                    15 ? 'blizzard' : 'snow'; if (wcode >= 500 && wcode < 600) return 'rain'; if (wcode >= 700 &&
-                    wcode < 800) return 'fog'; return wcode >= 801 ? 'day_cloud' : 'day_sun' }
-
-            function lerp(a, b, t) { return a + (b - a) * t }
-
-            function initParticles(wcode, isDay, wind) { particles = [];
-                leafPool = [];
-                hailPool = [];
-                stormActive = wcode >= 200 && wcode < 300;
-                windSpd = wind || 0; if (wcode >= 500 && wcode < 600) for (let i = 0; i < 180; i++) particles
-                    .push({ type: 'rain', x: Math.random() * W, y: Math.random() * H, vy: 8 + Math.random() *
-                            6, len: 10 + Math.random() * 16, alpha: .08 + Math.random() * .25 }); if (wcode >=
-                        200 && wcode < 300) for (let i = 0; i < 220; i++) particles.push({ type: 'rain', x: Math
-                            .random() * W, y: Math.random() * H, vy: 12 + Math.random() * 8, len: 16 + Math
-                            .random() * 20, alpha: .12 + Math.random() * .3 }); if (wcode >= 600 && wcode <
-                    700) { const bl = wind > 15; for (let i = 0; i < 120; i++) particles.push({ type: 'snow',
-                            x: Math.random() * W, y: Math.random() * H, vy: (bl ? 2.5 : 0.7) + Math.random() *
-                            (bl ? 3.5 : 1.2), vx: (bl ? 3.5 : 0) + Math.random() * (bl ? 2.5 : 0), r: 1.5 + Math
-                            .random() * 2.5, alpha: .4 + Math.random() * .5, phase: Math.random() * Math.PI * 2 }) } if (
-                        !isDay && wcode === 800) for (let i = 0; i < 120; i++) particles.push({ type: 'star', x: Math
-                            .random() * W, y: Math.random() * H * .6, r: .3 + Math.random() * 1.5, alpha: .2 + Math
-                            .random() * .7, phase: Math.random() * Math.PI * 2, spd: .3 + Math.random() * 1 }); if (
-                        wind > 10) { const dir = Math.random() > .5 ? 1 : -1; for (let i = 0; i < 16; i++) leafPool
-                        .push({ x: (dir > 0 ? -50 : W + 50), y: H * .15 + Math.random() * H * .65, vx: (4 + Math
-                                .random() * 7) * dir, vy: (Math.random() - .5) * 2.5, rot: Math.random() * 360,
-                            rotSpd: (Math.random() - .5) * 7, size: 5 + Math.random() * 10, alpha: .45 + Math
-                                .random() * .4, color: ['#8BC34A', '#FFA000', '#FF7043'][Math.floor(Math
-                                .random() * 3)] }) } }
-
-            function tick() { const t = Date.now() / 1000;
-                ctx.clearRect(0, 0, W, H); for (let i = 0; i < 9; i++) currentGrad[i] = lerp(currentGrad[i],
-                    targetGrad[i], .012); const g = ctx.createLinearGradient(0, 0, 0, H);
-                g.addColorStop(0,
-                    `rgb(${Math.round(currentGrad[0])},${Math.round(currentGrad[1])},${Math.round(currentGrad[2])})`);
-                g.addColorStop(.5,
-                    `rgb(${Math.round(currentGrad[3])},${Math.round(currentGrad[4])},${Math.round(currentGrad[5])})`);
-                g.addColorStop(1,
-                    `rgb(${Math.round(currentGrad[6])},${Math.round(currentGrad[7])},${Math.round(currentGrad[8])})`);
-                ctx.fillStyle = g;
-                ctx.fillRect(0, 0, W, H); if (stormActive) { lightningTimer++; if (lightningTimer > 70 + Math.random() *
-                        100) { lightningAlpha = 1;
-                        lightningTimer = 0;
-                        drawLightning(ctx) } if (lightningAlpha > .01) { ctx.fillStyle =
-                        `rgba(160,140,255,${lightningAlpha*.06})`;
-                        ctx.fillRect(0, 0, W, H);
-                        lightningAlpha -= .04 } }
-                particles.forEach(p => { if (p.type === 'rain') { p.x += p.vx || -1;
-                        p.y += p.vy; if (p.y > H + 20) { p.y = -20;
-                            p.x = Math.random() * W }
-                        ctx.globalAlpha = p.alpha;
-                        ctx.strokeStyle = 'rgba(100,160,255,.6)';
-                        ctx.lineWidth = 1;
-                        ctx.beginPath();
-                        ctx.moveTo(p.x, p.y);
-                        ctx.lineTo(p.x, p.y - p.len);
-                        ctx.stroke() } if (p.type === 'snow') { p.y += p.vy;
-                        p.x += p.vx + Math.sin(t * p.vy + p.phase) * .6; if (p.y > H + 8) { p.y = -8;
-                            p.x = Math.random() * W }
-                        ctx.globalAlpha = p.alpha;
-                        ctx.fillStyle = '#fff';
-                        ctx.beginPath();
-                        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-                        ctx.fill() } if (p.type === 'star') { const f = .5 + .5 * Math.sin(t * p.spd + p
-                            .phase);
-                        ctx.globalAlpha = p.alpha * f;
-                        ctx.fillStyle = '#fff';
-                        ctx.beginPath();
-                        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-                        ctx.fill() } });
-                leafPool.forEach(p => { p.x += p.vx + Math.sin(t * 1.3) * 1.2;
-                    p.y += p.vy + Math.cos(t * 1.1) * 1;
-                    p.rot += p.rotSpd; if (p.x > W + 60) p.x = -50; if (p.x < -60) p.x = W + 50;
-                    ctx.globalAlpha = p.alpha;
-                    ctx.save();
-                    ctx.translate(p.x, p.y);
-                    ctx.rotate(p.rot * Math.PI / 180);
-                    ctx.fillStyle = p.color;
-                    ctx.beginPath();
-                    ctx.ellipse(0, 0, p.size * .55, p.size, 0, 0, Math.PI * 2);
-                    ctx.fill();
-                    ctx.restore() });
-                raf = requestAnimationFrame(tick) }
-
-            function drawLightning(ctx) { const x = W * .2 + Math.random() * W * .6;
-                ctx.strokeStyle = 'rgba(200,180,255,.75)';
-                ctx.lineWidth = 1.2;
-                ctx.shadowColor = 'rgba(180,160,255,.8)';
-                ctx.shadowBlur = 6;
-                ctx.beginPath();
-                ctx.moveTo(x, 0); let cy = 0,
-                    cx = x; while (cy < H * .5) { cy += 18 + Math.random() * 25;
-                    cx += (Math.random() - .5) * 35;
-                    ctx.lineTo(cx, cy) }
-                ctx.stroke();
-                ctx.shadowBlur = 0 }
-
-            function resize() { W = C.width = window.innerWidth;
-                H = C.height = window.innerHeight }
-            return { init() { C = document.getElementById('bgC');
-                    ctx = C.getContext('2d');
-                    resize();
-                    window.addEventListener('resize', resize);
-                    tick() }, setWeather(wcode, isDay, wind) { const key = getGradKey(wcode, isDay, wind); const gr =
-                        GRADS[key] || GRADS.day_sun; for (let i = 0; i < 9; i++) targetGrad[i] = gr[i];
-                    initParticles(wcode, isDay, wind) } }
-        })();
-
-        // ──────────────────────────────────── LUM with transform animations
+        // ──────────────────────────────────── LUM ENGINE
         const lum = (() => {
-            let C, ctx, t = 0,
-                raf2;
-            let eyeTarget = { x: 0, y: 0 },
-                eyeCurrent = { x: 0, y: 0 };
-            let blinkTimer = 0,
-                blinkState = 1;
-            let emotion = 'happy',
-                emoTimer = 0,
-                smileAmt = 0,
-                smileTarget = 1;
-            let lumColors = [
-                [255, 150, 30],
-                [255, 90, 10],
-                [255, 210, 60]
-            ];
-            let answerMode = null,
-                answerData = null,
-                answerTimer = 0;
-            const WEATHER_COLORS = { sun: [
-                    [255, 190, 40],
-                    [255, 120, 10],
-                    [255, 230, 80]
-                ], moon: [
-                    [70, 50, 170],
-                    [110, 70, 210],
-                    [150, 110, 245]
-                ], pcloud: [
-                    [255, 160, 35],
-                    [220, 100, 15],
-                    [255, 200, 65]
-                ], cloudy: [
-                    [135, 145, 175],
-                    [95, 105, 155],
-                    [165, 175, 205]
-                ], rain: [
-                    [10, 75, 155],
-                    [25, 95, 195],
-                    [0, 55, 125]
-                ], snow: [
-                    [135, 175, 250],
-                    [175, 205, 250],
-                    [195, 215, 250]
-                ], storm: [
-                    [95, 15, 190],
-                    [130, 35, 230],
-                    [70, 5, 150]
-                ], fog: [
-                    [115, 125, 145],
-                    [140, 150, 170],
-                    [95, 105, 125]
-                ] };
-            const EMOLABELS = { happy: 'Радостный', sad: 'Грустный', giggle: 'Хихикает', love: 'В восторге',
-                curious: 'Любопытный', sleepy: 'Сонный', scared: 'Испуган' };
+            let C, ctx, t = 0, raf;
+            let blobs = [];
+            let eyeTarget = { x: 0, y: 0 }, eyeCurrent = { x: 0, y: 0 };
+            let blinkTimer = 0, blinkState = 1;
+            let emotion = 'curious';
+            let smileAmt = 0;
+            let colorPalette = [[255, 150, 30], [255, 90, 10], [255, 210, 60]];
+            let lastTransform = null;
 
-            function lerp(a, b, t) { return a + (b - a) * t }
+            function init() {
+                C = document.getElementById('lumCanvas');
+                ctx = C.getContext('2d');
+                C.width = C.offsetWidth;
+                C.height = C.offsetHeight;
+                C.addEventListener('click', handleLumClick);
+                createBlobs();
+                animate();
+            }
 
-            function setAnswerMode(type, data) { answerMode = type;
-                answerData = data;
-                answerTimer = 4;
-                document.getElementById('emotxt').textContent = type === 'temp' ? 'Температура: ' + data + '°' :
-                    'Погода'; }
+            function createBlobs() {
+                blobs = [];
+                for (let i = 0; i < 18; i++) {
+                    blobs.push({
+                        x: 0,
+                        y: 0,
+                        r: 8 + Math.random() * 12,
+                        alpha: 0.3 + Math.random() * 0.5,
+                        pulse: Math.random() * Math.PI * 2,
+                        speed: 0.02 + Math.random() * 0.04,
+                        hueOffset: Math.random() * 360
+                    });
+                }
+            }
 
-            function tick2() { t += .016;
-                ctx.clearRect(0, 0, 200, 200);
-                emoTimer -= .016; if (emoTimer < 0 && !answerMode) { const pool = ['happy', 'happy', 'giggle', 'love',
-                    'curious'
-                ]; if (!['sleepy', 'scared', 'sad'].includes(emotion)) emotion = pool[Math.floor(Math.random() *
-                    pool.length)]; emoTimer = 3 + Math.random() * 5;
-                    smileTarget = emotion === 'sad' ? -1 : emotion === 'giggle' || emotion === 'love' ? 1.5 : 1;
-                    document.getElementById('emotxt').textContent = EMOLABELS[emotion] || '' }
-                smileAmt = lerp(smileAmt, smileTarget, .035);
-                blinkTimer += .016; if (blinkTimer > 4 + Math.random() * 3) { blinkTimer = 0;
+            function updateColors() {
+                const base = colorPalette[0];
+                const h = new Date().getHours();
+                const isNight = h < 6 || h > 20;
+                
+                if (ST.wcode >= 200 && ST.wcode < 300) {
+                    colorPalette = [[95, 15, 190], [130, 35, 230], [70, 5, 150]]; // storm
+                } else if (ST.wcode >= 600 && ST.wcode < 700) {
+                    colorPalette = [[135, 175, 250], [175, 205, 250], [195, 215, 250]]; // snow
+                } else if (ST.wcode >= 700 && ST.wcode < 800) {
+                    colorPalette = [[115, 125, 145], [140, 150, 170], [95, 105, 125]]; // fog
+                } else if (ST.wcode === 800) {
+                    colorPalette = isNight ? 
+                        [[70, 50, 170], [110, 70, 210], [150, 110, 245]] : // moon
+                        [[255, 190, 40], [220, 100, 15], [255, 230, 80]]; // sun
+                } else if (ST.wcode >= 801) {
+                    colorPalette = [[135, 145, 175], [95, 105, 155], [165, 175, 205]]; // cloudy
+                } else {
+                    colorPalette = [[10, 75, 155], [25, 95, 195], [0, 55, 125]]; // rain
+                }
+            }
+
+            function animate() {
+                t += 0.02;
+                ctx.clearRect(0, 0, C.width, C.height);
+                
+                updateColors();
+                
+                // Update eyes
+                blinkTimer += 0.02;
+                if (blinkTimer > 4 + Math.random() * 3) {
+                    blinkTimer = 0;
                     blinkState = 0;
-                    setTimeout(() => blinkState = 1, 180) } if (Math.random() < .004) { eyeTarget.x = (Math.random() -
-                        .5) * 14;
-                    eyeTarget.y = (Math.random() - .5) * 9 }
-                eyeCurrent.x = lerp(eyeCurrent.x, eyeTarget.x, .05);
-                eyeCurrent.y = lerp(eyeCurrent.y, eyeTarget.y, .05);
-                const cx = 100,
-                    cy = 100; if (answerMode) { answerTimer -= .016; if (answerTimer <= 0) { answerMode = null;
-                        document.getElementById('emotxt').textContent = EMOLABELS[emotion] || '' } if (answerMode ===
-                        'temp') { ctx.fillStyle = 'rgba(255,255,255,.15)';
-                        ctx.font = 'bold 48px -apple-system';
-                        ctx.textAlign = 'center';
-                        ctx.fillText(answerData + '°', cx, cy + 15) } else { const svg = buildIconSVG(owIconType(
-                                answerData, ST.isDay), 60);
-                        ctx.drawImage ? (() => { const img = new Image();
-                            img.src = 'data:image/svg+xml,' + encodeURIComponent(svg);
-                            img.onload = () => ctx.drawImage(img, cx - 30, cy - 30, 60, 60) })() : null } } else { const
-                        grd = ctx.createRadialGradient(cx, cy, 10, cx, cy, 52);
-                    const shift = Math.sin(t * .5) * 20;
-                    grd.addColorStop(0,
-                        `rgba(${Math.min(255,lumColors[0][0]+shift)},${Math.min(255,lumColors[0][1]+shift*.5)},${Math.min(255,lumColors[0][2]+shift*.3)},.9)`);
-                    grd.addColorStop(.5,
-                    `rgba(${lumColors[1][0]},${lumColors[1][1]},${lumColors[1][2]},.7)`);
-                    grd.addColorStop(1,
-                    `rgba(${lumColors[2][0]},${lumColors[2][1]},${lumColors[2][2]},0)`);
+                    setTimeout(() => blinkState = 1, 180);
+                }
+                
+                // Draw blobs (flame)
+                blobs.forEach((blob, i) => {
+                    const phase = t * blob.speed + blob.pulse;
+                    const dx = Math.sin(phase) * 8;
+                    const dy = Math.cos(phase) * 6;
+                    
+                    const r = blob.r * (1 + Math.sin(t * 0.5 + i) * 0.2);
+                    const cx = C.width / 2 + dx;
+                    const cy = C.height / 2 + dy;
+                    
+                    // Color with HSV oscillation
+                    const hue = (colorPalette[0][0] + Math.sin(t * 0.3 + i) * 20 + blob.hueOffset) % 360;
+                    const sat = 80 + Math.sin(t * 0.4 + i) * 10;
+                    const light = 50 + Math.sin(t * 0.6 + i) * 15;
+                    const alpha = blob.alpha * (0.7 + Math.sin(t * 0.8 + i) * 0.3);
+                    
+                    const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+                    grd.addColorStop(0, `hsla(${hue}, ${sat}%, ${light}%, ${alpha})`);
+                    grd.addColorStop(1, `hsla(${hue}, ${sat}%, ${light}%, 0)`);
+                    
                     ctx.fillStyle = grd;
                     ctx.beginPath();
-                    ctx.arc(cx, cy, 52, 0, Math.PI * 2);
+                    ctx.arc(cx, cy, r, 0, Math.PI * 2);
                     ctx.fill();
-                    const eyeY = cy - 12 + eyeCurrent.y,
-                        eyeOff = 14; if (emotion === 'love') { drawHeart(ctx, cx - eyeOff + eyeCurrent.x, eyeY);
-                        drawHeart(ctx, cx + eyeOff + eyeCurrent.x, eyeY) } else { [cx - eyeOff, cx + eyeOff]
-                        .forEach(ex => {
-                            ctx.fillStyle = 'rgba(255,255,255,.92)';
-                            ctx.beginPath();
-                            ctx.ellipse(ex + eyeCurrent.x, eyeY, 6, 6 * (blinkState === 0 ? 0 : 1), 0, 0,
-                                Math.PI * 2);
-                            ctx.fill(); if (blinkState === 1) { ctx.fillStyle = 'rgba(18,12,30,.94)';
-                                ctx.beginPath();
-                                ctx.ellipse(ex + eyeCurrent.x + eyeCurrent.x * .18, eyeY + eyeCurrent.y *
-                                    .18, 3, 3, 0, 0, Math.PI * 2);
-                                ctx.fill();
-                                ctx.fillStyle = 'rgba(255,255,255,.8)';
-                                ctx.beginPath();
-                                ctx.arc(ex + eyeCurrent.x + 1, eyeY - 1.2, 1, 0, Math.PI * 2);
-                                ctx.fill() } }) }
-                    const mouthY = cy + 14;
-                    ctx.strokeStyle = 'rgba(255,255,255,.7)';
-                    ctx.lineWidth = 2;
-                    ctx.beginPath();
-                    ctx.moveTo(cx - 12, mouthY);
-                    ctx.quadraticCurveTo(cx, mouthY + smileAmt * 8, cx + 12, mouthY);
-                    ctx.stroke() }
-                raf2 = requestAnimationFrame(tick2) }
+                });
 
-            function drawHeart(ctx, x, y) { ctx.fillStyle = 'rgba(255,90,130,.85)';
-                ctx.beginPath(); const s = 4;
-                ctx.moveTo(x, y + s * .2);
-                ctx.bezierCurveTo(x, y - s * .2, x - s, y - s * .2, x - s, y + s * .2);
-                ctx.bezierCurveTo(x - s, y + s * .7, x, y + s * 1.1, x, y + s * 1.1);
-                ctx.fill() }
-            return { init() { C = document.getElementById('lumCanvas'); if (!C) return;
-                    ctx = C.getContext('2d');
-                    C.width = 200;
-                    C.height = 200;
-                    C.addEventListener('click', () => { emotion = 'giggle';
-                        smileTarget = 1.8;
-                        emoTimer = 3;
-                        document.getElementById('emotxt').textContent = EMOLABELS.giggle });
-                    tick2() }, setWeather(wcode, isDay) { const t2 = owIconType(wcode, isDay);
-                    lumColors = WEATHER_COLORS[t2] || WEATHER_COLORS.sun; const emo = isDay ? 'curious' :
-                    'sleepy';
-                    emotion = emo;
-                    document.getElementById('emotxt').textContent = EMOLABELS[emo] || '' },
-                showAnswer(type, data) { setAnswerMode(type, data) }
+                // Draw eyes
+                const eyeY = C.height / 2 - 24 + (Math.sin(t * 0.7) * 2) * (blinkState === 0 ? 0 : 1);
+                const eyeOff = 22;
+                
+                [C.width/2 - eyeOff, C.width/2 + eyeOff].forEach(ex => {
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+                    ctx.beginPath();
+                    ctx.ellipse(ex, eyeY, 6, 6 * (blinkState === 0 ? 0 : 1), 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    if (blinkState === 1) {
+                        ctx.fillStyle = '#1a1a2e';
+                        ctx.beginPath();
+                        ctx.ellipse(ex + 1, eyeY - 1, 2.5, 2.5, 0, 0, Math.PI * 2);
+                        ctx.fill();
+                        
+                        // Highlight
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                        ctx.beginPath();
+                        ctx.arc(ex + 2.5, eyeY - 2.5, 1, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                });
+
+                // Draw mouth (subtle)
+                const mouthY = C.height / 2 + 28;
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(C.width/2 - 14, mouthY);
+                ctx.quadraticCurveTo(C.width/2, mouthY + smileAmt * 4, C.width/2 + 14, mouthY);
+                ctx.stroke();
+
+                raf = requestAnimationFrame(animate);
             }
+
+            function handleLumClick() {
+                ST.lum.love = Math.min(100, ST.lum.love + 1);
+                S.set('lum', ST.lum);
+                emotion = 'giggle';
+                smileAmt = 1.8;
+                setTimeout(() => {
+                    emotion = 'curious';
+                    smileAmt = 1;
+                }, 1200);
+            }
+
+            function updateEmotion(newEmo) {
+                emotion = newEmo;
+                if (emotion === 'love') smileAmt = 1.5;
+                else if (emotion === 'sad') smileAmt = -1;
+                else smileAmt = 1;
+            }
+
+            function transformTo(iconType) {
+                lastTransform = iconType;
+                let target = null;
+                switch (iconType) {
+                    case 'sun': target = { x: 0, y: 0, r: 30 }; break;
+                    case 'cloud': target = { x: 0, y: 0, r: 35 }; break;
+                    case 'rain': target = { x: 0, y: 0, r: 32 }; break;
+                    case 'snow': target = { x: 0, y: 0, r: 30 }; break;
+                    default: return;
+                }
+                
+                // Animate transformation
+                let progress = 0;
+                const interval = setInterval(() => {
+                    progress += 0.05;
+                    if (progress >= 1) {
+                        clearInterval(interval);
+                        lastTransform = null;
+                        setTimeout(() => emotion = 'curious', 1000);
+                    }
+                }, 50);
+            }
+
+            return { init, updateEmotion, transformTo };
         })();
 
-        // ──────────────────────────────────── LUM SCREEN
-        function renderLumScreen() { const ls = ST.lum;
-            document.getElementById('loveFill').style.width = ls.love + '%';
-            document.getElementById('lovePct').textContent = ls.love + '%'; if (ls.lastVisit) { const diff = (Date.now() -
-                    new Date(ls.lastVisit).getTime()) / 3600000;
-                document.getElementById('lumVisit').textContent = 'Визит: ' + (diff < 24 ? 'сегодня' : diff < 48 ?
-                    'вчера' : Math.floor(diff / 24) + ' д. назад') }
-            document.getElementById('lumStreak').textContent = (ls.streak || 1) + ' дн.' }
-
-        function updateLumVisit() { const ls = ST.lum; const today = new Date().toDateString(); if (!ls.lastVisit ||
-                new Date(ls.lastVisit).toDateString() !== today) { if (ls.lastVisit) { const prev = new Date(ls
-                        .lastVisit).toDateString(); const yest = new Date(Date.now() - 86400000).toDateString();
-                    ls.streak = prev === yest ? (ls.streak || 0) + 1 : 1;
-                    ls.love = Math.min(100, ls.love + 5) }
-                ls.lastVisit = new Date().toISOString();
-                S.set('lumState', ls) } }
-
-        // ──────────────────────────────────── CHAT with learning
+        // ──────────────────────────────────── CHAT AI (LOCAL)
         const brain = {
-            memories: S.get('brain', {}),
-            learn(question, answer) { const q = question.toLowerCase().replace(/[^\wа-яё\s]/g, '').trim(); if (q.length >
-                    3) { this.memories[q] = answer;
-                    S.set('brain', this.memories) } },
-            recall(question) { const q = question.toLowerCase().replace(/[^\wа-яё\s]/g, '').trim(); if (this.memories[q])
-                    return this.memories[q]; const keys = Object.keys(this.memories); const best = keys.find(k => q
-                    .includes(k) || k.includes(q)); return best ? this.memories[best] : null }
+            // Simple intent classifier
+            classifyIntent(text) {
+                const lower = text.toLowerCase();
+                if (lower.includes('как дела') || lower.includes('привет')) return 'greeting';
+                if (lower.includes('температура') || lower.includes('сколько градусов')) return 'temp';
+                if (lower.includes('погода') || lower.includes('что за погода')) return 'weather';
+                if (lower.includes('надеть') || lower.includes('одеться')) return 'outfit';
+                if (lower.includes('дождь') || lower.includes('осадки')) return 'rain';
+                if (lower.includes('ветер') || lower.includes('ветрено')) return 'wind';
+                if (lower.includes('солнце') || lower.includes('ясно')) return 'sun';
+                if (lower.includes('лун') || lower.includes('ночь')) return 'moon';
+                if (lower.includes('пыльца') || lower.includes('аллергия')) return 'pollen';
+                if (lower.includes('прогулка') || lower.includes('гулять')) return 'walk';
+                return 'general';
+            },
+
+            // Generate response based on intent and context
+            generateResponse(intent, context) {
+                const w = ST.weather;
+                if (!w) return "Я пока не знаю... Но могу узнать погоду!";
+                
+                const temp = tC(w.main.temp);
+                const feels = tC(w.main.feels_like);
+                const desc = w.weather[0].description;
+                const wind = w.wind.speed.toFixed(1);
+                const humidity = w.main.humidity;
+                
+                switch (intent) {
+                    case 'greeting':
+                        return `Привет! 🌟 Я Люм — твой огонёк. Хочешь узнать погоду?`;
+                    case 'temp':
+                        return `Сейчас ${temp}°, ощущается как ${feels}°. ${
+                            temp > 25 ? 'Жарко! 💦' : temp < 5 ? 'Холодно! 🧤' : 'Комфортно. 😌'
+                        }`;
+                    case 'weather':
+                        return `В ${ST.city} сейчас ${desc}. Температура ${temp}°, ветер ${wind} м/с.`;
+                    case 'outfit':
+                        return temp > 20 ? 'Легкая одежда — можно в футболке!' :
+                               temp > 10 ? 'Куртка или толстовка подойдут.' :
+                               'Теплая куртка, шапка и перчатки!';
+                    case 'rain':
+                        return w.weather[0].main.toLowerCase().includes('rain') ?
+                            'Да, идёт дождь. Возьми зонт! ☔' :
+                            'Сейчас сухо. Зонт не нужен.';
+                    case 'wind':
+                        return wind > 8 ? 'Сильный ветер (${wind} м/с)! Следи за шляпой 😄' :
+                               wind > 4 ? 'Умеренный ветер (${wind} м/с).' :
+                               'Тихо и спокойно.';
+                    case 'sun':
+                        return w.weather[0].id === 800 ?
+                            'Солнечно! 🌞 Выходи гулять — отличный день!' :
+                            'Облачно, но светло.';
+                    case 'moon':
+                        return ST.isDay ? 'Сейчас день — луны не видно.' :
+                               'Луна сегодня в фазе роста. 🌙';
+                    case 'pollen':
+                        return 'Уровень пыльцы низкий — безопасно для аллергиков.';
+                    case 'walk':
+                        return (temp > 10 && wind < 8 && !w.weather[0].main.toLowerCase().includes('rain')) ?
+                            'Отличное время для прогулки! 🚶‍♂️' :
+                            'Лучше остаться дома — погода не идеальна.';
+                    default:
+                        return "Интересно! Расскажи подробнее — я хочу понять тебя лучше.";
+                }
+            },
+
+            // Main AI loop: guess → confirm → explain
+            async respond(userMsg) {
+                const intent = this.classifyIntent(userMsg);
+                const response = this.generateResponse(intent, ST);
+
+                // Step 1: Guess intention
+                const guesses = [
+                    "Ты хочешь узнать про погоду?",
+                    "Интересуешься температурой?",
+                    "Хочешь совет по одежде?",
+                    "Готовишься к прогулке?"
+                ];
+                const guess = guesses[Math.floor(Math.random() * guesses.length)];
+
+                addBubble('ai', guess);
+                
+                // Wait 1.2s, then show buttons
+                setTimeout(() => {
+                    ST.aiState = 'confirming';
+                    const btns = `<div style="display:flex;gap:8px;margin-top:8px">
+                        <button class="btn" onclick="confirmYes('${intent}')">Да</button>
+                        <button class="btn" onclick="confirmNo()">Нет, другое</button>
+                    </div>`;
+                    addBubble('ai', '', btns);
+                }, 1200);
+            }
         };
 
-        function setupChat() {
-            const cf = document.getElementById('cf'),
-                sb = document.getElementById('sb');
-            cf.addEventListener('input', () => { sb.disabled = !cf.value.trim();
-                cf.style.height = Math.min(cf.scrollHeight, 70) + 'px' });
-            cf.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault();
-                    sendMsg() } });
-            sb.addEventListener('click', sendMsg);
-            ST.chat.forEach(m => addBubble(m.role, m.text, false)); if (!ST.chat.length) addBubble('ai',
-                'Привет! Я Люм, спрашивай о чём угодно.', false);
+        // ──────────────────────────────────── UI FUNCTIONS
+        function showChat() {
+            document.getElementById('chatPanel').style.display = 'block';
+            document.getElementById('startBtn').classList.add('hidden');
             scrollChat();
-            document.getElementById('hints').innerHTML = ['Температура', 'Прогноз', 'Что надеть?', 'Расскажи анекдот'].map(
-                h => `<div class="hint">${h}</div>`).join('');
-            document.querySelectorAll('.hint').forEach(h => h.addEventListener('click', function() { cf.value = this
-                    .textContent;
-                sendMsg() }));
         }
 
-        async function sendMsg() {
-            const cf = document.getElementById('cf'),
-                text = cf.value.trim();
+        function addBubble(role, text, extraHTML = '') {
+            const el = document.getElementById('chatBubbles');
+            const div = document.createElement('div');
+            div.className = `bubble ${role}`;
+            div.innerHTML = text + extraHTML;
+            el.appendChild(div);
+            scrollChat();
+        }
+
+        function scrollChat() {
+            const el = document.getElementById('chatBubbles');
+            el.scrollTop = el.scrollHeight;
+        }
+
+        function toast(msg) {
+            alert(msg); // simple fallback; in real app: use snackbar
+        }
+
+        // ──────────────────────────────────── EVENT HANDLERS
+        document.getElementById('startBtn').addEventListener('click', async () => {
+            const success = await fetchWeather();
+            if (success) {
+                document.getElementById('startBtn').remove();
+                lum.init();
+            }
+        });
+
+        document.getElementById('cf').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMsg();
+            }
+        });
+
+        document.getElementById('sb').addEventListener('click', sendMsg);
+
+        function sendMsg() {
+            const input = document.getElementById('cf');
+            const text = input.value.trim();
             if (!text) return;
-            cf.value = '';
-            cf.style.height = 'auto';
-            sb.disabled = true;
-            addBubble('user', text, true);
-            ST.lum.love = Math.min(100, ST.lum.love + 3);
-            S.set('lumState', ST.lum);
-            renderLumScreen();
-            const tid = 't' + Date.now();
-            const el = document.getElementById('chatMsgs');
-            const d = document.createElement('div');
-            d.className = 'msg ai';
-            d.id = tid;
-            d.innerHTML = '<div class="av">✨</div><div class="bbl"><div class="dots"><span></span><span></span><span></span></div></div>';
-            el.appendChild(d);
-            scrollChat();
-            const wctx = ST.weather ? { city: ST.city, temp: tC(ST.weather.current.main.temp), feels: tC(ST.weather
-                    .current.main.feels_like), desc: ST.weather.current.weather[0].description, wind: ST
-                    .weather.current.wind.speed.toFixed(1), humidity: ST.weather.current.main.humidity } : null;
-            const apiKey = ST.settings.apiKey;
-            let reply = '';
-            if (apiKey && apiKey.length > 10) {
-                try {
-                    const r = await fetch('https://api.openai.com/v1/chat/completions', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
-                        body: JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'system',
-                                content: 'Ты Люм, питомец-огонь. Отвечай коротко, дружелюбно.' }, ...ST
-                                .chat.slice(-6).map(m => ({ role: m.role === 'ai' ? 'assistant' :
-                                    'user', content: m.text })), { role: 'user',
-                                content: `Погода: ${JSON.stringify(wctx)}. Сообщение: ${text}` }] })
+            
+            input.value = '';
+            addBubble('user', text);
+            
+            // Increment love
+            ST.lum.love = Math.min(100, ST.lum.love + 2);
+            S.set('lum', ST.lum);
+            
+            // AI responds
+            brain.respond(text);
+        }
+
+        window.confirmYes = (intent) => {
+            ST.aiState = 'explaining';
+            const response = brain.generateResponse(intent, ST);
+            addBubble('ai', response);
+            setTimeout(() => {
+                ST.aiState = 'idle';
+            }, 2000);
+        };
+
+        window.confirmNo = () => {
+            ST.aiState = 'idle';
+            addBubble('ai', 'Расскажи подробнее — я слушаю...');
+        };
+
+        // ──────────────────────────────────── LUM WEATHER SYNC
+        function updateLumFromWeather() {
+            const w = ST.weather;
+            if (!w) return;
+            
+            // Set emotion by weather
+            if (w.weather[0].id >= 200 && w.weather[0].id < 300) lum.updateEmotion('scared');
+            else if (w.weather[0].id >= 600 && w.weather[0].id < 700) lum.updateEmotion('sleepy');
+            else if (w.weather[0].id >= 700 && w.weather[0].id < 800) lum.updateEmotion('curious');
+            else if (w.weather[0].id === 800) lum.updateEmotion(ST.isDay ? 'happy' : 'sleepy');
+            else if (w.weather[0].id === 801) lum.updateEmotion('curious');
+            else lum.updateEmotion('happy');
+        }
+
+        // ──────────────────────────────────── INITIALIZE
+        document.addEventListener('DOMContentLoaded', () => {
+            // Restore state
+            const saved = S.get('lum', { love: 60, lastVisit: null });
+            ST.lum = saved;
+            
+            // Check geolocation
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    pos => {
+                        ST.lat = pos.coords.latitude;
+                        ST.lon = pos.coords.longitude;
+                        reverseGeo().then(name => {
+                            ST.city = name;
+                            fetchWeather();
+                        });
+                    },
+                    () => fetchWeather(),
+                    { timeout: 5000 }
+                );
+            } else {
+                fetchWeather();
+            }
+        });
+
+        async function reverseGeo() {
+            try {
+                const res = await fetch(
+                    `https://api.openweathermap.org/geo/1.0/reverse?lat=${ST.lat}&lon=${ST.lon}&limit=1&appid=${OW_KEY}`
+                );
+                const data = await res.json();
+                return data[0]?.local_names?.ru || data[0]?.name || 'Москва';
+            } catch {
+                return 'Москва';
+            }
+        }
+
+        // ──────────────────────────────────── BACKGROUND ANIMATION
+        const bg = (() => {
+            let C, ctx, W, H, raf;
+            let particles = [];
+
+            function init() {
+                C = document.getElementById('bgC');
+                ctx = C.getContext('2d');
+                resize();
+                window.addEventListener('resize', resize);
+                animate();
+            }
+
+            function resize() {
+                W = C.width = window.innerWidth;
+                H = C.height = window.innerHeight;
+            }
+
+            function createParticles() {
+                particles = [];
+                const count = ST.isDay ? 80 : 120;
+                for (let i = 0; i < count; i++) {
+                    particles.push({
+                        x: Math.random() * W,
+                        y: Math.random() * H,
+                        size: 1 + Math.random() * 2,
+                        speed: 0.5 + Math.random() * 1.5,
+                        alpha: 0.1 + Math.random() * 0.3,
+                        type: Math.random() > 0.7 ? 'star' : 'dot'
                     });
-                    const j = await r.json();
-                    reply = j.choices?.[0]?.message?.content || fallback(text, wctx);
-                } catch (e) { reply = fallback(text, wctx) }
-            } else reply = fallback(text, wctx);
-            document.getElementById(tid)?.remove();
-            addBubble('ai', reply, true);
-            ST.chat.push({ role: 'user', text }, { role: 'ai', text: reply });
-            S.set('chat', ST.chat.slice(-30));
-            brain.learn(text, reply);
-            if (text.toLowerCase().includes('температура') && wctx) lum.showAnswer('temp', wctx.temp);
-            if (text.toLowerCase().includes('погода') && wctx) lum.showAnswer('icon', ST.wcode);
-        }
+                }
+            }
 
-        function fallback(q, w) {
-            const ql = q.toLowerCase();
-            if (w && ql.includes('температура')) return `Сейчас в ${w.city} ${w.temp}°. Ощущается как ${w.feels}°.`;
-            if (w && ql.includes('погода')) return `В ${w.city} ${w.desc}, ${w.temp}°.`;
-            if (w && ql.includes('надеть')) return w.temp < 5 ? 'Тепло одевайся!' : w.temp < 15 ? 'Куртка подойдёт.' :
-                'Можно легко.';
-            if (ql.includes('анекдот')) return 'Программист говорит: "У меня 10 проблем, но я написал 10 строк кода. Теперь у меня 20 проблем."';
-            if (ql.includes('привет') || ql.includes('здравствуй')) return 'Привет! Я Люм, рад тебя видеть.';
-            if (ql.includes('как дела')) return 'У меня всё отлично! А у тебя?';
-            const mem = brain.recall(q);
-            if (mem) return mem;
-            return 'Я пока не знаю, как ответить, но я учусь! Спроси что-нибудь о погоде.';
-        }
+            function animate() {
+                ctx.clearRect(0, 0, W, H);
+                
+                // Gradient background
+                const gradient = ctx.createLinearGradient(0, 0, 0, H);
+                if (ST.isDay) {
+                    gradient.addColorStop(0, '#0a0a1a');
+                    gradient.addColorStop(0.5, '#1a1a3a');
+                    gradient.addColorStop(1, '#0a0a1a');
+                } else {
+                    gradient.addColorStop(0, '#050515');
+                    gradient.addColorStop(0.5, '#0a0a2a');
+                    gradient.addColorStop(1, '#050515');
+                }
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0, W, H);
 
-        function addBubble(role, text, animate) { const el = document.getElementById('chatMsgs'); const d = document
-                .createElement('div');
-            d.className = `msg ${role}`; if (!animate) d.style.animation = 'none';
-            d.innerHTML = role === 'ai' ? `<div class="av">✨</div><div class="bbl">${text}</div>` :
-                `<div class="bbl">${text}</div>`;
-            el.appendChild(d); if (animate) scrollChat() }
+                // Stars/dots
+                particles.forEach(p => {
+                    p.y -= p.speed;
+                    if (p.y < -10) {
+                        p.y = H + 10;
+                        p.x = Math.random() * W;
+                    }
+                    ctx.globalAlpha = p.alpha;
+                    ctx.fillStyle = '#fff';
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    ctx.fill();
+                });
 
-        function scrollChat() { const e = document.getElementById('chatMsgs');
-            setTimeout(() => e.scrollTo({ top: e.scrollHeight, behavior: 'smooth' }), 40) }
+                raf = requestAnimationFrame(animate);
+            }
 
-        function renderFavs() {
-            const el = document.getElementById('favGrid');
-            if (!ST.favs.length) return el.innerHTML =
-                '<div style="grid-column:1/-1;text-align:center;padding:30px;color:rgba(255,255,255,.25)">Найди и добавь города</div>';
-            el.innerHTML = ST.favs.map((c, i) =>
-                `<div class="fc" onclick="loadFav(${i})"><button class="frm" onclick="event.stopPropagation();rmFav(${i})">✕</button><div class="fcity">${c.name}</div><div class="ftemp">${c.temp||'–'}°</div></div>`
-                ).join('');
-        }
+            return { init, createParticles };
+        })();
 
-        function rmFav(i) { ST.favs.splice(i, 1);
-            S.set('favs', ST.favs);
-            renderFavs() }
-        async function loadFav(i) { const c = ST.favs[i];
-            ST.lat = c.lat;
-            ST.lon = c.lon;
-            ST.city = c.name;
-            switchTab('home');
-            await loadWeather();
-            toast('📍 ' + c.name) }
-
-        function setupSearch() {
-            const sf = document.getElementById('sfld'),
-                sr = document.getElementById('sres');
-            let deb;
-            sf.addEventListener('input', () => {
-                clearTimeout(deb);
-                const q = sf.value.trim();
-                if (q.length < 2) { sr.style.display = 'none'; return }
-                deb = setTimeout(async () => {
-                    try {
-                        const r = await fetch(
-                            `https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(q)}&limit=5&appid=${OW_KEY}`
-                            );
-                        const d = await r.json(); if (!d.length) { sr.style.display = 'none'; return }
-                        sr.style.display = 'block';
-                        sr.innerHTML = d.map(r =>
-                            `<div class="sitem" onclick="pickCity(${r.lat},${r.lon},'${r.local_names?.ru||r.name}')">${r.local_names?.ru||r.name}</div>`
-                            ).join('');
-                    } catch (e) { sr.style.display = 'none' }
-                }, 300);
-            });
-            document.addEventListener('click', e => { if (!sf.contains(e.target) && !sr.contains(e.target)) sr.style
-                    .display = 'none' });
-        }
-        async function pickCity(lat, lon, name) { document.getElementById('sres').style.display = 'none';
-            document.getElementById('sfld').value = ''; try { const r = await fetch(
-                    `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${OW_KEY}&units=metric&lang=ru`
-                    ); const d = await r.json(); if (!ST.favs.find(f => f.name === name)) { ST.favs.push({ name,
-                        lat, lon, temp: tC(d.main.temp) });
-                    S.set('favs', ST.favs);
-                    toast('❤️ ' + name + ' добавлен') } else toast('Уже есть');
-                renderFavs() } catch (e) { toast('Ошибка') } }
-
-        function setupNav() { document.querySelectorAll('.nb').forEach(b => b.addEventListener('click', () => switchTab(b
-                .dataset.tab))) }
-
-        function switchTab(tab) { ST.tab = tab;
-            document.querySelectorAll('.scr').forEach(s => s.classList.remove('on'));
-            document.querySelectorAll('.nb').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
-            document.getElementById('s-' + tab)?.classList.add('on'); if (tab === 'lum') { renderLumScreen();
-                lum.init() } if (tab === 'saved') renderFavs() }
-
-        function toast(msg) { const e = document.getElementById('toast');
-            e.textContent = msg;
-            e.classList.add('vis');
-            setTimeout(() => e.classList.remove('vis'), 2400) }
-        init();
+        // Start background
+        bg.init();
     </script>
 </body>
 </html>
+
